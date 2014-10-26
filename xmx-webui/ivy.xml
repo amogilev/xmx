@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing,
+   software distributed under the License is distributed on an
+   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+   KIND, either express or implied.  See the License for the
+   specific language governing permissions and limitations
+   under the License.    
+-->
+<ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
+    <info
+        organisation="am.xmx"
+        module="xmx-webui"
+        status="integration">
+	</info>
+	<configurations>
+		<conf name="default" visibility="public" description="default "/>
+		<conf name="war" visibility="public" description="Dependencies deployed to war" extends="default" />
+		<conf name="compile" visibility="public" description="Additional dependencies required for compilation" extends="war" />
+		<conf name="test" visibility="public" description="Additional test libraries" />
+	</configurations>
+	<publications>
+		<artifact ext="war" type="war" conf="default"/>
+	</publications>
+	<dependencies>
+		<dependency org="am.xmx" name="xmx-api" rev="latest.[any status]" conf="compile->default" />
+		
+		<dependency org="org.springframework" name="spring-webmvc" rev="4.1.0.RELEASE" conf="war->default" />
+		<dependency org="org.apache.commons" name="commons-collections4" rev="4.0" conf="war->default" />
+		
+		<dependency org="javax.servlet.jsp" name="jsp-api" rev="2.2" conf="compile->default" />
+		<dependency org="taglibs" name="standard" rev="1.1.2" conf="war->default" />
+		<dependency org="javax.servlet.jsp.jstl" name="jstl-api" rev="1.2" conf="war->default" transitive="false" />
+
+		<dependency org="junit" name="junit" rev="4.11" conf="test->default"/>
+ 		<dependency org="org.springframework" name="spring-test" rev="4.1.0.RELEASE" conf="test->default" transitive="false" />
+    </dependencies>
+</ivy-module>
