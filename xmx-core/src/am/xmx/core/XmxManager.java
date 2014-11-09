@@ -152,7 +152,7 @@ public class XmxManager {
 		XmxInstructionsAdder xMXInstructionsAdder = new XmxInstructionsAdder(cw);
 
 		ClassReader cr = new ClassReader(classBytes);
-		cr.accept(xMXInstructionsAdder, ClassReader.SKIP_DEBUG);
+		cr.accept(xMXInstructionsAdder, 0);
 		return cw.toByteArray();
 	}
 	
