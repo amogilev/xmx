@@ -1,23 +1,6 @@
 package am.xmx.core;
 
 
-import am.xmx.dto.XmxClassInfo;
-import am.xmx.dto.XmxObjectDetails;
-import am.xmx.dto.XmxObjectInfo;
-import am.xmx.dto.XmxRuntimeException;
-import am.xmx.dto.XmxObjectDetails.FieldInfo;
-import am.xmx.dto.XmxObjectDetails.MethodInfo;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.TypeAdapter;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-
-import org.apache.catalina.loader.WebappClassLoader;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-
 import java.io.IOException;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -31,6 +14,23 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+
+import am.specr.SpeculativeProcessorFactory;
+import am.xmx.dto.XmxClassInfo;
+import am.xmx.dto.XmxObjectDetails;
+import am.xmx.dto.XmxObjectDetails.FieldInfo;
+import am.xmx.dto.XmxObjectDetails.MethodInfo;
+import am.xmx.dto.XmxObjectInfo;
+import am.xmx.dto.XmxRuntimeException;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 
 public class XmxManager {
 
@@ -49,6 +49,15 @@ public class XmxManager {
 		});
 		gson = builder.create();
 	}
+	
+	private static SpeculativeProcessorFactory<IWebappNameExtractor> extractorsFactory = 
+			new SpeculativeProcessorFactory<>(IWebappNameExtractor.class);
+	static {
+		extractorsFactory.registerProcessor(
+				"am.xmx.core.CatalinaWebappNameExtractor", 
+				"org.apache.catalina.loader.WebappClassLoader");
+	}
+	
 
 	public static byte[] transformClass(ClassLoader classLoader, String className, byte[] classBuffer) {
 		System.err.println("transformClass: " + className);
@@ -96,13 +105,8 @@ public class XmxManager {
 		objectsStorage.put(idx, new WeakReference<>(obj, managedObjectsRefQueue));
 	
 		Class<?> objClass = obj.getClass();
-		ClassLoader objClassLoader = objClass.getClassLoader();
-		
 		String className = objClass.getName();
-		String appName = "";
-		if (objClassLoader instanceof WebappClassLoader) {
-			appName = ((WebappClassLoader)objClassLoader).getContextName();
-		}
+		String appName = obtainWebAppName(obj);
 		
 		Map<String, Integer> classIdsByName = classIdsByAppAndName.get(appName);
 		if (classIdsByName == null) {
@@ -125,6 +129,21 @@ public class XmxManager {
 			objectIdsByClassIds.put(classInfoIdx, objectIds);
 		}
 		objectIds.add(idx);
+	}
+
+	private static String obtainWebAppName(Object obj) {
+		List<IWebappNameExtractor> extractors = extractorsFactory.getProcessorsFor(obj);
+		if (extractors != null) {
+			for (IWebappNameExtractor extractor : extractors) {
+				String name = extractor.extract(obj);
+				if (name != null) {
+					return name;
+				}
+			}
+		}
+			
+		// no extractor found, or all failed
+		return "";
 	}
 
 	public static byte[] instrument(byte[] classBytes) {
@@ -303,8 +322,12 @@ public class XmxManager {
 			}
 			
 			Object returnValue = m.invoke(obj, methodArgs);
-			// TODO support JSON
-			return returnValue.toString();
+			if (returnValue == null) {
+				return "null";
+			} else {
+				// TODO support JSON
+				return returnValue.toString();
+			}
 		} catch (Exception e) {
 			throw new XmxRuntimeException("Failed to invoke method", e);
 		}

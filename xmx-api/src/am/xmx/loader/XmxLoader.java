@@ -33,6 +33,14 @@ public class XmxLoader {
 		ClassLoader parentClassLoader = XmxLoader.class.getClassLoader();
 		// TODO better use JarInTheJar concept for xmx libs, but for now separate folder is fine
 		URL xmxLibUrl = parentClassLoader.getResource("xmx");
+		if (xmxLibUrl == null) {
+			// TODO temporal solution, replace with jar-in-jar
+			try {
+				xmxLibUrl = new File("W:\\Projects\\xmx\\distr\\xmxlib").toURI().toURL();
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			}
+		}
 		if (xmxLibUrl == null || xmxLibUrl.getFile() == null || xmxLibUrl.getFile().equals("") || !new File(xmxLibUrl.getFile()).isDirectory()) {
 			logError("Could not find loadable XMX lib directory, XMX functionality is disabled");
 			xmxClassLoader = null;
