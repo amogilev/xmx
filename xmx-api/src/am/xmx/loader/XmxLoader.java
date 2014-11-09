@@ -22,12 +22,7 @@ public class XmxLoader {
 
 	private static Method xmxManagerInstrumentMethod;
 	private static Method xmxManagerRegisterMethod;
-	private static Method xmxManagerGetAppNamesMethod;
-	private static Method xmxManagerGetClassInfosMethod;
-	private static Method xmxManagerGetObjectsMethod;
-	private static Method xmxManagerGetDetailsMethod;
-	private static Method xmxManagerSetFieldMethod;
-	private static Method xmxManagerInvokeMethodMethod;
+	private static Method xmxGetServiceMethod;
 	
 	static {
 		ClassLoader parentClassLoader = XmxLoader.class.getClassLoader();
@@ -66,21 +61,14 @@ public class XmxLoader {
 				xmxClassLoader = new URLClassLoader(jarUrls.toArray(new URL[jarUrls.size()]), XmxLoader.class.getClassLoader());
 				try {
 					xmxManagerClass = Class.forName("am.xmx.core.XmxManager", true, xmxClassLoader);
+					
+					xmxGetServiceMethod = xmxManagerClass.getDeclaredMethod("getService");
+					
+					// TODO: maybe add to XmxService? (or XmxServiceEx?)
 					xmxManagerInstrumentMethod = xmxManagerClass.getDeclaredMethod("transformClass", 
 							ClassLoader.class, String.class, byte[].class); 
 					xmxManagerRegisterMethod = xmxManagerClass.getDeclaredMethod("registerObject", 
 							Object.class); 
-					xmxManagerGetAppNamesMethod = xmxManagerClass.getDeclaredMethod("getApplicationNames"); 
-					xmxManagerGetClassInfosMethod = xmxManagerClass.getDeclaredMethod("findManagedClassInfos", 
-							String.class, String.class);
-					xmxManagerGetObjectsMethod = xmxManagerClass.getDeclaredMethod("getManagedObjects", 
-							Integer.class);
-					xmxManagerGetDetailsMethod = xmxManagerClass.getDeclaredMethod("getObjectDetails", 
-							int.class);
-					xmxManagerSetFieldMethod = xmxManagerClass.getDeclaredMethod("setObjectField", 
-							int.class, int.class, String.class);
-					xmxManagerInvokeMethodMethod = xmxManagerClass.getDeclaredMethod("invokeObjectMethod", 
-							int.class, int.class, String[].class);
 					
 				} catch (Exception e) {
 					logError("Failed to find or instantiate XmxManager, XMX functionality is disabled");
@@ -117,93 +105,13 @@ public class XmxLoader {
 		}
 	}
 	
-	private static final XmxService xmxServiceImpl = new XmxService() {
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public List<String> getApplicationNames() {
-			try {
-				return (List<String>) xmxManagerGetAppNamesMethod.invoke(null);
-			} catch (IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException e) {
-				logError("getApplicationNames() failed", e);
-				throw new XmxRuntimeException(e);
-			}
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public List<XmxClassInfo> findManagedClassInfos(String appNameOrNull,
-				String classNamePatternOrNull) {
-			try {
-				return (List<XmxClassInfo>) xmxManagerGetClassInfosMethod.invoke(null, 
-						appNameOrNull, classNamePatternOrNull);
-			} catch (IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException e) {
-				logError("findManagedClassInfos() failed", e);
-				throw new XmxRuntimeException(e);
-			}
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public List<XmxObjectInfo> getManagedObjects(Integer classId) {
-			try {
-				return (List<XmxObjectInfo>) xmxManagerGetObjectsMethod.invoke(null, 
-						classId);
-			} catch (IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException e) {
-				logError("getManagedObjects() failed", e);
-				throw new XmxRuntimeException(e);
-			}
-		}
-
-		@Override
-		public XmxObjectDetails getObjectDetails(int objectId)
-				throws XmxRuntimeException {
-			try {
-				return (XmxObjectDetails) xmxManagerGetDetailsMethod.invoke(null, 
-						objectId);
-			} catch (IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException e) {
-				logError("getObjectDetails() failed", e);
-				throw new XmxRuntimeException(e);
-			}
-		}
-
-		@Override
-		public XmxObjectDetails setObjectField(int objectId, int fieldId,
-				String newValue) throws XmxRuntimeException {
-			try {
-				return (XmxObjectDetails) xmxManagerSetFieldMethod.invoke(null, 
-						objectId, fieldId, newValue);
-			} catch (IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException e) {
-				logError("setObjectField() failed", e);
-				throw new XmxRuntimeException(e);
-			}
-		}
-
-		@Override
-		public String invokeObjectMethod(int objectId, int methodId,
-				String... args) throws XmxRuntimeException {
-			try {
-				return (String) xmxManagerInvokeMethodMethod.invoke(null, 
-						objectId, methodId, args);
-			} catch (IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException e) {
-				logError("invokeObjectMethod() failed", e);
-				throw new XmxRuntimeException(e);
-			}
-		}
-		
-	};
 	
 	/**
 	 * Return singleton implementation of {@link XmxService}
 	 */
-	public static XmxService getService() {
-		return xmxServiceImpl;
+	public static XmxService getService() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		Object result = xmxGetServiceMethod.invoke(null);
+		return (XmxService) result;
 	}
 
 	private static boolean maybeInterested(ClassLoader classLoader,

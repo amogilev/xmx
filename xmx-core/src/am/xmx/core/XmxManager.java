@@ -21,6 +21,7 @@ import org.objectweb.asm.ClassWriter;
 import am.specr.SpeculativeProcessorFactory;
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
+import am.xmx.dto.XmxService;
 import am.xmx.dto.XmxObjectDetails.FieldInfo;
 import am.xmx.dto.XmxObjectDetails.MethodInfo;
 import am.xmx.dto.XmxObjectInfo;
@@ -32,7 +33,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-public class XmxManager {
+public class XmxManager implements XmxService {
 
 	private static Gson gson;
 	static {
@@ -58,11 +59,6 @@ public class XmxManager {
 				"org.apache.catalina.loader.WebappClassLoader");
 	}
 	
-
-	public static byte[] transformClass(ClassLoader classLoader, String className, byte[] classBuffer) {
-		System.err.println("transformClass: " + className);
-		return instrument(classBuffer);
-	}
 	
 	/**
 	 * Storage of weak references to each managed objects, mapped by object ID
@@ -95,6 +91,19 @@ public class XmxManager {
 	private static AtomicInteger managedClassesCounter = new AtomicInteger();
 	
 	private static ReferenceQueue<Object> managedObjectsRefQueue = new ReferenceQueue<>();
+	
+	private static final XmxManager instance = new XmxManager();
+	
+	// Non-public static API, used through reflection 
+	
+	public static XmxService getService() {
+		return instance;
+	}
+	
+	public static byte[] transformClass(ClassLoader classLoader, String className, byte[] classBuffer) {
+		System.err.println("transformClass: " + className);
+		return instrument(classBuffer);
+	}
 	
 	/**
 	 * Registers a managed object into XMX system.
@@ -161,7 +170,8 @@ public class XmxManager {
 	/**
 	 * Returns names (contexts) of all recognized web applications.
 	 */
-	synchronized public static List<String> getApplicationNames() {
+	@Override
+	synchronized public List<String> getApplicationNames() {
 		return new ArrayList<>(classIdsByAppAndName.keySet());
 	}
 	
@@ -174,7 +184,8 @@ public class XmxManager {
 	 * 
 	 * @return matching classes information
 	 */
-	synchronized public static List<XmxClassInfo> findManagedClassInfos(String appNameOrNull, String classNamePatternOrNull) {
+	@Override
+	synchronized public List<XmxClassInfo> findManagedClassInfos(String appNameOrNull, String classNamePatternOrNull) {
 		List<XmxClassInfo> result = new ArrayList<>();
 		Pattern classNamePattern = classNamePatternOrNull == null ? null : Pattern.compile(classNamePatternOrNull);
 		if (appNameOrNull != null) {
@@ -195,7 +206,8 @@ public class XmxManager {
 	 *  
 	 * @param classId unique class ID (or null to return all objects)
 	 */
-	synchronized public static List<XmxObjectInfo> getManagedObjects(Integer classId) {
+	@Override
+	synchronized public List<XmxObjectInfo> getManagedObjects(Integer classId) {
 		List<XmxObjectInfo> result = new ArrayList<>();
 		
 		if (classId != null) {
@@ -215,7 +227,8 @@ public class XmxManager {
 	 *  
 	 * @param objectId the unique object ID
 	 */
-	public static XmxObjectDetails getObjectDetails(int objectId) {
+	@Override
+	public XmxObjectDetails getObjectDetails(int objectId) {
 		
 		Object obj = getObjectById(objectId);
 		if (obj == null) {
@@ -245,7 +258,8 @@ public class XmxManager {
 	 *  
 	 * @throws XmxRuntimeException if failed to assign field
 	 */
-	synchronized public static XmxObjectDetails setObjectField(int objectId, 
+	@Override
+	synchronized public XmxObjectDetails setObjectField(int objectId, 
 			int fieldId, String newValue) {
 		
 		Object obj = getObjectById(objectId);
@@ -289,7 +303,8 @@ public class XmxManager {
 	 *  
 	 * @throws XmxRuntimeException if failed to invoke the method, or the method throws exception
 	 */
-	public static String invokeObjectMethod(int objectId, 
+	@Override
+	public String invokeObjectMethod(int objectId, 
 			int methodId, String...args) {
 		
 		Object obj = getObjectById(objectId);
