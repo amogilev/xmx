@@ -1,4 +1,0 @@
-Manifest-Version: 1.0
-Premain-Class: am.xmx.agent.XmxAgent
-Agent-Class: am.xmx.agent.XmxAgent
-Can-Retransform-Classes: true

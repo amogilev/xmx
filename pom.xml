@@ -1,0 +1,70 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>am.xmx</groupId>
+  <artifactId>xmx</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+
+  <packaging>pom</packaging>
+
+  <name>XMX</name>
+  <description>Parent POM for all XMX modules</description>
+
+  <properties>
+    <java.version>1.7</java.version>
+    <spring.version>4.1.1.RELEASE</spring.version>
+    <junit.version>4.11</junit.version>
+    <tomcat.version>7.0.29</tomcat.version>
+  </properties>
+  
+  <developers>
+    <developer>
+      <id>amogilev</id>
+      <name>Andrey Mogilev</name>
+      <email>amogilev@gmail.com</email>
+    </developer>
+  </developers>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+            </manifest>
+            <manifestEntries>
+              <Built-By>amogilev</Built-By>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>  
+    </plugins>
+  </build>
+
+  <modules>
+    <module>xmx-api</module>
+    <module>xmx-core</module>
+    <module>xmx-agent</module>
+    <module>xmx-webui</module>
+  </modules>
+</project>
