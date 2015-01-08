@@ -46,7 +46,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>2.4</version>
+        <version>2.5</version>
         <configuration>
           <archive>
             <manifest>
@@ -58,13 +58,19 @@
           </archive>
         </configuration>
       </plugin>  
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.5.3</version>
+      </plugin>
+
     </plugins>
   </build>
 
   <modules>
-    <module>xmx-api</module>
-    <module>xmx-core</module>
-    <module>xmx-agent</module>
-    <module>xmx-webui</module>
+    <module>../xmx-api</module>
+    <module>../xmx-core</module>
+    <module>../xmx-agent</module>
+    <module>../xmx-webui</module>
+    <module>../xmx-distribution</module>
   </modules>
 </project>

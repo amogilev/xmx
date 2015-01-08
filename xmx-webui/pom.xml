@@ -3,7 +3,7 @@
     <groupId>am.xmx</groupId>
     <artifactId>xmx</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>../pom.xml</relativePath>
+    <relativePath>../xmx/pom.xml</relativePath>
   </parent>  
 
   <modelVersion>4.0.0</modelVersion>
@@ -18,7 +18,7 @@
     <dependency>
       <groupId>am.xmx</groupId>
       <artifactId>xmx-api</artifactId>
-      <version>${pom.version}</version>
+      <version>${project.version}</version>
       <scope>provided</scope>
     </dependency>
 
