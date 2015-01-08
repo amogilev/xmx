@@ -13,6 +13,8 @@ public class XmxInstructionsAdder extends ClassVisitor {
 	@Override
 	public MethodVisitor visitMethod(final int access, String name, final String desc, String signature, String[] exceptions) {
 		MethodVisitor parentVisitor = super.visitMethod(access, name, desc, signature, exceptions);
+		
+		// TODO: optimization: skip transformation if constructor calls this(args)
 		if (name.startsWith("<init>")) {
 			return new MethodVisitor(Opcodes.ASM5, parentVisitor) {
 				@Override

@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 
 import am.specr.SpeculativeProcessorFactory;
 import am.xmx.dto.XmxClassInfo;
@@ -110,9 +111,6 @@ public class XmxManager implements XmxService {
 	 * A new unique ID is generated for an object, and a weak reference to the object is saved into the storage.
 	 */
 	synchronized public static void registerObject(Object obj) {
-		int idx = managedObjectsCounter.getAndIncrement();
-		objectsStorage.put(idx, new WeakReference<>(obj, managedObjectsRefQueue));
-	
 		Class<?> objClass = obj.getClass();
 		String className = objClass.getName();
 		String appName = obtainWebAppName(obj);
@@ -122,6 +120,7 @@ public class XmxManager implements XmxService {
 			classIdsByName = new HashMap<>();
 			classIdsByAppAndName.put(appName, classIdsByName);
 		}
+		
 		Integer classInfoIdx = classIdsByName.get(className);
 		if (classInfoIdx == null) {
 			classInfoIdx = managedClassesCounter.getAndIncrement();
@@ -137,6 +136,23 @@ public class XmxManager implements XmxService {
 			objectIds = new ArrayList<>(2);
 			objectIdsByClassIds.put(classInfoIdx, objectIds);
 		}
+		
+		// check if object is already registered, e.g. from superclass
+		for (Integer id : objectIds) {
+			// check all registered objects of this class
+			WeakReference<Object> ref = objectsStorage.get(id);
+			if (ref != null) {
+				Object existingObj = ref.get();
+				if (existingObj == obj) {
+					// already registered, skip
+					return;
+				}
+			}
+		}
+		
+		// not registered yet, store
+		int idx = managedObjectsCounter.getAndIncrement();
+		objectsStorage.put(idx, new WeakReference<>(obj, managedObjectsRefQueue));
 		objectIds.add(idx);
 	}
 
@@ -161,6 +177,15 @@ public class XmxManager implements XmxService {
 		XmxInstructionsAdder xMXInstructionsAdder = new XmxInstructionsAdder(cw);
 
 		ClassReader cr = new ClassReader(classBytes);
+		
+		// TODO: decide whether to instrument abstract classes, or only "leafs"
+		int access = cr.getAccess();
+		if ((access & (Opcodes.ACC_ENUM | Opcodes.ACC_INTERFACE)) > 0) {
+			// do not instrument enums and interfaces
+			return classBytes;
+		}
+		
+		
 		cr.accept(xMXInstructionsAdder, 0);
 		return cw.toByteArray();
 	}
