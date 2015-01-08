@@ -21,27 +21,24 @@ public class XmxLoader {
 	private static Method xmxGetServiceMethod;
 	
 	static {
-		ClassLoader parentClassLoader = XmxLoader.class.getClassLoader();
-		// TODO better use JarInTheJar concept for xmx libs, but for now separate folder is fine
-		URL xmxLibUrl = parentClassLoader.getResource("xmx");
-		if (xmxLibUrl == null) {
-			// TODO temporal solution, replace with jar-in-jar
-			try {
-				xmxLibUrl = new File("W:\\Projects\\xmx\\distr\\xmxlib").toURI().toURL();
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
-			}
+		File xmxLibDir = null;
+		try {
+			URL jarLocation = XmxLoader.class.getProtectionDomain().getCodeSource().getLocation();
+			xmxLibDir = new File(jarLocation.toURI()).getParentFile();
+		} catch (Exception e) {
+			logError("", e);
 		}
-		if (xmxLibUrl == null || xmxLibUrl.getFile() == null || xmxLibUrl.getFile().equals("") || !new File(xmxLibUrl.getFile()).isDirectory()) {
+		
+		if (xmxLibDir == null || !xmxLibDir.isDirectory() || !new File(xmxLibDir, "xmx-core.jar").isFile()) {
 			logError("Could not find loadable XMX lib directory, XMX functionality is disabled");
 			xmxClassLoader = null;
 		} else {
 			List<URL> jarUrls = new ArrayList<>();
 			
-			File xmxLibDir = new File(xmxLibUrl.getFile());
 			File[] files = xmxLibDir.listFiles();
 			for (File f : files) {
-				if (f.getName().toLowerCase().endsWith(".jar")) {
+				String fname = f.getName().toLowerCase(); 
+				if (fname.endsWith(".jar") && !fname.startsWith("xmx-api.")) {
 					try {
 						jarUrls.add(f.toURI().toURL());
 					} catch (MalformedURLException e) {
