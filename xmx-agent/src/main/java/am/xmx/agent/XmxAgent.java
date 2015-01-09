@@ -15,7 +15,7 @@ public class XmxAgent {
 		try {
 			URL jarLocation = XmxAgent.class.getProtectionDomain().getCodeSource().getLocation();
 			File agentBaseDir = new File(jarLocation.toURI()).getParentFile();
-			File xmxApiJarFile = new File(agentBaseDir, "..\\lib\\xmx-api.jar");
+			File xmxApiJarFile = new File(agentBaseDir, ".." + File.separator + "lib" + File.separator + "xmx-api.jar");
 			
 			instr.appendToSystemClassLoaderSearch(new JarFile(xmxApiJarFile));
 			instr.addTransformer(new XmxClassTransformer());

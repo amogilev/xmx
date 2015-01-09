@@ -1,11 +1,13 @@
 package am.xmx.core;
 
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -22,11 +24,11 @@ import org.objectweb.asm.Opcodes;
 import am.specr.SpeculativeProcessorFactory;
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
-import am.xmx.dto.XmxService;
 import am.xmx.dto.XmxObjectDetails.FieldInfo;
 import am.xmx.dto.XmxObjectDetails.MethodInfo;
 import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
+import am.xmx.dto.XmxService;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -58,8 +60,9 @@ public class XmxManager implements XmxService {
 		extractorsFactory.registerProcessor(
 				"am.xmx.core.CatalinaWebappNameExtractor", 
 				"org.apache.catalina.loader.WebappClassLoader");
+		
+		// TODO: add support for Jetty
 	}
-	
 	
 	/**
 	 * Storage of weak references to each managed objects, mapped by object ID
@@ -486,6 +489,23 @@ public class XmxManager implements XmxService {
 			}
 		}
 	}
-
-
+	
+	// TODO: skip if run from xmx-webui-all.war (i.e. from target app server)
+	/**
+	 * Starts Embedded Jetty Server to serve xmx-webui.war
+	 */
+	public static void startUI() {
+		File xmxLibDir = null;
+		try {
+			URL jarLocation = XmxManager.class.getProtectionDomain().getCodeSource().getLocation();
+			xmxLibDir = new File(jarLocation.toURI()).getParentFile();
+		} catch (Exception e) {
+			throw new XmxRuntimeException(e);
+		}
+		
+		File uiWarFile = new File(xmxLibDir.getParentFile(), "bin" + File.separator + "xmx-webui.war");
+		 
+		// start asynchronously so that main initialization is less affected
+		new Thread(new EmbeddedJettyStarter(uiWarFile), "XMX Embedded Jetty Startup Thread").start();
+	}
 }

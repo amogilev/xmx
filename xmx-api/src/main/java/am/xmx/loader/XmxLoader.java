@@ -18,7 +18,7 @@ public class XmxLoader {
 
 	private static Method xmxManagerInstrumentMethod;
 	private static Method xmxManagerRegisterMethod;
-	private static Method xmxGetServiceMethod;
+	private static Method xmxManagerGetServiceMethod;
 	
 	static {
 		File xmxLibDir = null;
@@ -55,13 +55,17 @@ public class XmxLoader {
 				try {
 					xmxManagerClass = Class.forName("am.xmx.core.XmxManager", true, xmxClassLoader);
 					
-					xmxGetServiceMethod = xmxManagerClass.getDeclaredMethod("getService");
+					xmxManagerGetServiceMethod = xmxManagerClass.getDeclaredMethod("getService");
 					
 					// TODO: maybe add to XmxService? (or XmxServiceEx?)
 					xmxManagerInstrumentMethod = xmxManagerClass.getDeclaredMethod("transformClass", 
 							ClassLoader.class, String.class, byte[].class); 
 					xmxManagerRegisterMethod = xmxManagerClass.getDeclaredMethod("registerObject", 
 							Object.class); 
+					
+					// start UI (wmx-webui.war in Embedded Jetty)
+					Method xmxManagerStartUIMethod = xmxManagerClass.getDeclaredMethod("startUI");
+					xmxManagerStartUIMethod.invoke(null);
 					
 				} catch (Exception e) {
 					logError("Failed to find or instantiate XmxManager, XMX functionality is disabled");
@@ -103,7 +107,7 @@ public class XmxLoader {
 	 * Return singleton implementation of {@link XmxService}
 	 */
 	public static XmxService getService() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-		Object result = xmxGetServiceMethod.invoke(null);
+		Object result = xmxManagerGetServiceMethod.invoke(null);
 		return (XmxService) result;
 	}
 
