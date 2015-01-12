@@ -13,6 +13,8 @@ import am.xmx.dto.XmxService;
 
 public class XmxLoader {
 	
+	private static final String XMX_HOME_PROP = "xmx.home.dir";
+	
 	private static ClassLoader xmxClassLoader;
 	private static Class<?> xmxManagerClass;
 
@@ -21,14 +23,26 @@ public class XmxLoader {
 	private static Method xmxManagerGetServiceMethod;
 	
 	static {
-		File xmxLibDir = null;
-		try {
+		String homeDir = System.getProperty(XMX_HOME_PROP);
+		if (homeDir == null) {
+			// not proper "agent" start... but still try to determine by this jar location
 			URL jarLocation = XmxLoader.class.getProtectionDomain().getCodeSource().getLocation();
-			xmxLibDir = new File(jarLocation.toURI()).getParentFile();
-		} catch (Exception e) {
-			logError("", e);
+			if (jarLocation != null) {
+				try {
+					homeDir = new File(jarLocation.toURI()).getParentFile().getParentFile().getAbsolutePath();
+					System.setProperty(XMX_HOME_PROP, homeDir);
+				} catch (Exception e) {
+					logError("", e);
+				}
+			} else {
+				// seems there is now way to determine JAR location for for bootstrap class loader in
+				// this implementation of Java; 
+				// TODO check getResource for non-class resources
+			}
 		}
 		
+		
+		File xmxLibDir = homeDir == null ? null : new File(homeDir, "lib");
 		if (xmxLibDir == null || !xmxLibDir.isDirectory() || !new File(xmxLibDir, "xmx-core.jar").isFile()) {
 			logError("Could not find loadable XMX lib directory, XMX functionality is disabled");
 			xmxClassLoader = null;
@@ -70,7 +84,7 @@ public class XmxLoader {
 				} catch (Exception e) {
 					logError("Failed to find or instantiate XmxManager, XMX functionality is disabled");
 					xmxClassLoader = null;
-					throw new IllegalArgumentException(e);
+					throw new RuntimeException(e);
 				}
 			}
 		}
