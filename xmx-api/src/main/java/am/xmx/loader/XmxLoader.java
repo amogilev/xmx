@@ -1,6 +1,7 @@
 package am.xmx.loader;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -8,12 +9,12 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
+import am.xmx.dto.XmxRuntimeException;
 import am.xmx.dto.XmxService;
 
 public class XmxLoader {
-	
-	private static final String XMX_HOME_PROP = "xmx.home.dir";
 	
 	private static ClassLoader xmxClassLoader;
 	private static Class<?> xmxManagerClass;
@@ -23,14 +24,14 @@ public class XmxLoader {
 	private static Method xmxManagerGetServiceMethod;
 	
 	static {
-		String homeDir = System.getProperty(XMX_HOME_PROP);
+		String homeDir = System.getProperty(XmxService.XMX_HOME_PROP);
 		if (homeDir == null) {
 			// not proper "agent" start... but still try to determine by this jar location
 			URL jarLocation = XmxLoader.class.getProtectionDomain().getCodeSource().getLocation();
 			if (jarLocation != null) {
 				try {
 					homeDir = new File(jarLocation.toURI()).getParentFile().getParentFile().getAbsolutePath();
-					System.setProperty(XMX_HOME_PROP, homeDir);
+					System.setProperty(XmxService.XMX_HOME_PROP, homeDir);
 				} catch (Exception e) {
 					logError("", e);
 				}
@@ -41,32 +42,27 @@ public class XmxLoader {
 			}
 		}
 		
-		
+		// create xmxClassLoader from xmx-core.jar; dependencies loaded automatically by manifest's classpath
 		File xmxLibDir = homeDir == null ? null : new File(homeDir, "lib");
 		if (xmxLibDir == null || !xmxLibDir.isDirectory() || !new File(xmxLibDir, "xmx-core.jar").isFile()) {
 			logError("Could not find loadable XMX lib directory, XMX functionality is disabled");
 			xmxClassLoader = null;
 		} else {
-			List<URL> jarUrls = new ArrayList<>();
-			
-			File[] files = xmxLibDir.listFiles();
-			for (File f : files) {
-				String fname = f.getName().toLowerCase(); 
-				if (fname.endsWith(".jar") && !fname.startsWith("xmx-api.")) {
-					try {
-						jarUrls.add(f.toURI().toURL());
-					} catch (MalformedURLException e) {
-						logError("Corrupted XMX library: " + f, e);
-					}
+			// find xmx-core.jar, support optional version (like xmx-core-1.0.0.jar) 
+			File[] coreImpls = xmxLibDir.listFiles(new FilenameFilter() {
+				@Override
+				public boolean accept(File dir, String name) {
+					name = name.toLowerCase(Locale.ENGLISH);
+					return name.equals("xmx-core.jar") || (name.startsWith("xmx-core-") && name.endsWith(".jar")); 
 				}
-			}
-			
-			if (jarUrls.isEmpty()) {
-				logError("Could not find XMX jars, XMX functionality is disabled");
+			});
+			if (coreImpls.length == 0) {
+				logError("Could not find xmx-core.jar, XMX functionality is disabled");
 				xmxClassLoader = null;
 			} else {
-				xmxClassLoader = new URLClassLoader(jarUrls.toArray(new URL[jarUrls.size()]), XmxLoader.class.getClassLoader());
 				try {
+					URL[] urls = new URL[]{coreImpls[0].toURI().toURL()};
+					xmxClassLoader = new URLClassLoader(urls, XmxLoader.class.getClassLoader());
 					xmxManagerClass = Class.forName("am.xmx.core.XmxManager", true, xmxClassLoader);
 					
 					xmxManagerGetServiceMethod = xmxManagerClass.getDeclaredMethod("getService");

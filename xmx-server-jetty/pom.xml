@@ -1,0 +1,74 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>am.xmx</groupId>
+    <artifactId>xmx</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../xmx/pom.xml</relativePath>
+  </parent>  
+
+  <artifactId>xmx-server-jetty</artifactId>
+
+  <name>XMX Jetty Server</name>
+  <description>Embedded Jetty Server for XMX Web UI</description>
+  
+  <dependencies>
+    <dependency>
+      <groupId>am.xmx</groupId>
+      <artifactId>xmx-api</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>am.xmx</groupId>
+      <artifactId>xmx-core</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+    <!-- TODO: remove if JSP not needed anymore -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-annotations</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>apache-jsp</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>apache-jstl</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>    
+   
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <XMX-Server-Launcher-Class>am.xmx.server.impl.XmxEmbeddedJettyLauncher</XMX-Server-Launcher-Class>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>  
+    </plugins>
+  </build>
+
+</project>

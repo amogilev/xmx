@@ -2,19 +2,23 @@ package am.xmx.core;
 
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
 import org.objectweb.asm.ClassReader;
@@ -29,6 +33,7 @@ import am.xmx.dto.XmxObjectDetails.MethodInfo;
 import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
 import am.xmx.dto.XmxService;
+import am.xmx.server.IXmxServerLauncher;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -97,6 +102,8 @@ public class XmxManager implements XmxService {
 	private static ReferenceQueue<Object> managedObjectsRefQueue = new ReferenceQueue<>();
 	
 	private static final XmxManager instance = new XmxManager();
+	
+	private static final String LAUNCHER_CLASS_ATTR = "XMX-Server-Launcher-Class";
 	
 	// Non-public static API, used through reflection 
 	
@@ -495,17 +502,56 @@ public class XmxManager implements XmxService {
 	 * Starts Embedded Jetty Server to serve xmx-webui.war
 	 */
 	public static void startUI() {
-		File xmxLibDir = null;
-		try {
-			URL jarLocation = XmxManager.class.getProtectionDomain().getCodeSource().getLocation();
-			xmxLibDir = new File(jarLocation.toURI()).getParentFile();
-		} catch (Exception e) {
-			throw new XmxRuntimeException(e);
+		File xmxHomeDir = new File(System.getProperty(XMX_HOME_PROP));
+		final File uiWarFile = new File(xmxHomeDir, "bin" + File.separator + "xmx-webui.war");
+		File xmxLibDir = new File(xmxHomeDir, "lib");
+		
+		// TODO configure server impl to use?
+		
+		// select first available server implementation jar
+		File[] serverImpls = xmxLibDir.listFiles(new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String name) {
+				name = name.toLowerCase(Locale.ENGLISH);
+				return name.startsWith("xmx-server-") && name.endsWith(".jar"); 
+			}
+		});
+		if (serverImpls.length == 0) {
+			throw new XmxRuntimeException("No XMX Server implementations found; check XMX_HOME/lib/xmx-server-*.jar");
 		}
 		
-		File uiWarFile = new File(xmxLibDir.getParentFile(), "bin" + File.separator + "xmx-webui.war");
-		 
+		File implFile = serverImpls[0];
+		URL[] urls;
+		String launcherClassName;
+		try(JarFile implJar = new JarFile(implFile)) {
+			launcherClassName = implJar.getManifest().getMainAttributes().getValue(LAUNCHER_CLASS_ATTR);
+			urls = new URL[]{serverImpls[0].toURI().toURL()};
+		} catch (IOException e) {
+			throw new XmxRuntimeException("Failed to read " + implFile.getAbsolutePath(), e);
+		}
+		
+		if (launcherClassName == null || launcherClassName.isEmpty()) {
+			throw new XmxRuntimeException("Invalid server implementation in " + implFile.getAbsolutePath() + 
+					": no " + LAUNCHER_CLASS_ATTR + " in manifest");
+		}
+		
+		final IXmxServerLauncher launcher;
+		try {
+			// use classloader of xmx-api as parent; xmx-core itself is not visible for the server
+			ClassLoader serverCL = new URLClassLoader(urls, XmxService.class.getClassLoader());
+			Class<? extends IXmxServerLauncher> launcherClass = 
+					Class.forName(launcherClassName, true, serverCL).asSubclass(IXmxServerLauncher.class);
+			launcher = launcherClass.getConstructor().newInstance();
+		} catch(Exception e) {
+			throw new XmxRuntimeException("Failed to instantiate XMX server launcher (" + launcherClassName + ")", e);
+		}
+		
 		// start asynchronously so that main initialization is less affected
-		new Thread(new EmbeddedJettyStarter(uiWarFile), "XMX Embedded Jetty Startup Thread").start();
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				launcher.launchServer(uiWarFile);
+			}
+		}, "XMX Embedded Server Startup Thread").start();
 	}
 }

@@ -8,6 +8,11 @@ import java.util.List;
 public interface XmxService {
 	
 	/**
+	 * Property name for XMX home folder.
+	 */
+	String XMX_HOME_PROP = "xmx.home.dir";	
+	
+	/**
 	 * Returns names (contexts) of all recognized web applications.
 	 */
 	List<String> getApplicationNames() throws XmxRuntimeException;

@@ -1,4 +1,4 @@
-package am.xmx.core;
+package am.xmx.server.impl;
 
 import java.io.File;
 import java.util.Arrays;
@@ -10,29 +10,24 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import am.xmx.dto.XmxRuntimeException;
+import am.xmx.server.IXmxServerLauncher;
 
 /**
  * Starter for Embedded Jetty running xmx-webui.war 
  * 
  * @author Andrey Mogilev
  */
-public class EmbeddedJettyStarter implements Runnable {
+public class XmxEmbeddedJettyLauncher implements IXmxServerLauncher {
 	
-	private File warFile;
-	
-	public EmbeddedJettyStarter(File warFile) {
-		this.warFile = warFile;
-	}
-
 	@Override
-	public void run() {
+	public void launchServer(File warFile) {
 		// TODO redirect Jetty logging somewhere
 //		 LoggingUtil.config();
 //		 Log.setLog(new JavaUtilLog());
 		
 		
 		try {
-			Thread.currentThread().setContextClassLoader(XmxManager.class.getClassLoader());
+			Thread.currentThread().setContextClassLoader(XmxEmbeddedJettyLauncher.class.getClassLoader());
 			
 			Server server = new Server(8081); // TODO: specify port in configuration
 			
@@ -66,5 +61,4 @@ public class EmbeddedJettyStarter implements Runnable {
 			throw new XmxRuntimeException(e);
 		}
 	}
-
 }
