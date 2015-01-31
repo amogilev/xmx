@@ -55,6 +55,7 @@
             </manifest>
             <manifestEntries>
               <Built-By>amogilev</Built-By>
+              <Implementation-Version>${project.version}</Implementation-Version>
             </manifestEntries>
           </archive>
         </configuration>
