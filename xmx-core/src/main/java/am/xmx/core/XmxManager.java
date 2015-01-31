@@ -65,8 +65,10 @@ public class XmxManager implements XmxService {
 		extractorsFactory.registerProcessor(
 				"am.xmx.core.CatalinaWebappNameExtractor", 
 				"org.apache.catalina.loader.WebappClassLoader");
-		
-		// TODO: add support for Jetty
+		extractorsFactory.registerProcessor(
+				true, // Jetty's WebAppClassLoader shadows all server classes, need to check its parent 
+				"am.xmx.core.JettyWebappNameExtractor", 
+				"org.eclipse.jetty.webapp.WebAppClassLoader");
 	}
 	
 	/**
