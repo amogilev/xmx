@@ -13,7 +13,10 @@
   <packaging>pom</packaging>
 
   <name>XMX Special Single-File Distributions</name>
-  <description>Assembly descriptors to build special '-all' versions of XMX distributions</description>
+  <description>
+    Assembly descriptors to build special '-all' versions of XMX distributions: agent and UI 
+    archives with all other required files integrated
+  </description>
 
   <dependencies>
     <dependency>
