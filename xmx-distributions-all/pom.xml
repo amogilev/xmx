@@ -39,20 +39,23 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-assembly-plugin</artifactId>
             <executions>
+
               <execution>
                 <id>create-agent-all</id>
                 <phase>package</phase>
                 <goals>
                   <goal>single</goal>
                 </goals>
-                
+
                 <configuration>
-                
+
                   <archive>
                     <manifestEntries>
                       <Premain-Class>am.xmx.agent.XmxAgent</Premain-Class>
                       <Agent-Class>am.xmx.agent.XmxAgent</Agent-Class>
                       <Can-Retransform-Classes>am.xmx.agent.XmxAgent</Can-Retransform-Classes>
+                      <Built-By>amogilev</Built-By>
+                      <Implementation-Version>${project.version}</Implementation-Version>
                     </manifestEntries>
                   </archive>
 
@@ -63,10 +66,36 @@
                     <descriptor>src/main/assembly/agent-all-bin.xml</descriptor>
                   </descriptors>
                 </configuration>
-                
+
               </execution>
+
+              <execution>
+                <id>create-webui-all</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+
+                <configuration>
+
+                  <appendAssemblyId>false</appendAssemblyId>
+                  <finalName>xmx-webui-all</finalName>
+
+                  <archive>
+                    <manifestEntries>
+                      <Built-By>amogilev</Built-By>
+                      <Implementation-Version>${project.version}</Implementation-Version>
+                    </manifestEntries>
+                  </archive>
+
+                  <descriptors>
+                    <descriptor>src/main/assembly/webui-all-bin.xml</descriptor>
+                  </descriptors>
+                </configuration>
+
+              </execution>
+
             </executions>
-            <!-- TODO create-war-all-bin -->
           </plugin>
         </plugins>
       </build>
