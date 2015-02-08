@@ -1,0 +1,76 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>am.xmx</groupId>
+    <artifactId>xmx</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../xmx/pom.xml</relativePath>
+  </parent>
+
+  <artifactId>xmx-distributions-all</artifactId>
+
+  <packaging>pom</packaging>
+
+  <name>XMX Special Single-File Distributions</name>
+  <description>Assembly descriptors to build special '-all' versions of XMX distributions</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>xmx-distribution</artifactId>
+      <version>${project.version}</version>
+      <classifier>bin</classifier>
+      <type>zip</type>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+
+    <!-- Profile to assemble release artifacts -->
+    <profile>
+      <id>release</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-agent-all</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                
+                <configuration>
+                
+                  <archive>
+                    <manifestEntries>
+                      <Premain-Class>am.xmx.agent.XmxAgent</Premain-Class>
+                      <Agent-Class>am.xmx.agent.XmxAgent</Agent-Class>
+                      <Can-Retransform-Classes>am.xmx.agent.XmxAgent</Can-Retransform-Classes>
+                    </manifestEntries>
+                  </archive>
+
+                  <appendAssemblyId>false</appendAssemblyId>
+                  <finalName>xmx-agent-all-${project.version}</finalName>
+
+                  <descriptors>
+                    <descriptor>src/main/assembly/agent-all-bin.xml</descriptor>
+                  </descriptors>
+                </configuration>
+                
+              </execution>
+            </executions>
+            <!-- TODO create-war-all-bin -->
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

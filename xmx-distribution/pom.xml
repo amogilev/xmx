@@ -12,7 +12,7 @@
   <packaging>pom</packaging>
 
   <name>XMX Distribution</name>
-  <description>Assembly descriptors to build XMX distributions</description>
+  <description>Assembly descriptors to build primary XMX distributions</description>
 
   <dependencies>
     <dependency>
@@ -43,27 +43,70 @@
     </dependency>
   </dependencies>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>create-distro</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <descriptors>
-                <descriptor>src/main/assembly/bin.xml</descriptor>
-              </descriptors>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
+  <profiles>
+  
+    <!-- 
+        Profile to assemble release artifacts 
+    -->
+    <profile>
+      <id>release</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-bin-distr</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <descriptors>
+                    <descriptor>src/main/assembly/bin.xml</descriptor>
+                  </descriptors>
+                </configuration>
+              </execution>
+            </executions>
+            <!-- TODO create-src-distr -->
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    
+    <!-- 
+       Profile to assemble "base" XMX home image in single directory under xmx-distribution/target,
+       useful for running from Eclipse for development and debugging aims    
+    -->
+    <profile>
+      <id>dev</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-dev-dir</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <descriptors>
+                    <descriptor>src/main/assembly/devdir-bin.xml</descriptor>
+                  </descriptors>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
  
 </project>
