@@ -32,8 +32,9 @@ import am.xmx.dto.XmxObjectDetails.FieldInfo;
 import am.xmx.dto.XmxObjectDetails.MethodInfo;
 import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
-import am.xmx.dto.XmxService;
 import am.xmx.server.IXmxServerLauncher;
+import am.xmx.service.IXmxService;
+import am.xmx.service.IXmxServiceEx;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -41,7 +42,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-public class XmxManager implements XmxService {
+public class XmxManager implements IXmxServiceEx {
 
 	private static Gson gson;
 	static {
@@ -109,20 +110,19 @@ public class XmxManager implements XmxService {
 	
 	// Non-public static API, used through reflection 
 	
-	public static XmxService getService() {
+	public static IXmxServiceEx getService() {
 		return instance;
 	}
 	
-	public static byte[] transformClass(ClassLoader classLoader, String className, byte[] classBuffer) {
-		System.err.println("transformClass: " + className);
-		return instrument(classBuffer);
-	}
+	
+	// Inner Implementation of XmxServiceEx API
 	
 	/**
 	 * Registers a managed object into XMX system.
 	 * A new unique ID is generated for an object, and a weak reference to the object is saved into the storage.
 	 */
-	synchronized public static void registerObject(Object obj) {
+	@Override
+	synchronized public void registerObject(Object obj) {
 		Class<?> objClass = obj.getClass();
 		String className = objClass.getName();
 		String appName = obtainWebAppName(obj);
@@ -183,24 +183,42 @@ public class XmxManager implements XmxService {
 		return "";
 	}
 
-	public static byte[] instrument(byte[] classBytes) {
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public byte[] transformClassIfInterested(ClassLoader classLoader, String className, byte[] classBuffer) {
+		if (!isClassManaged(classLoader, className)) {
+			return classBuffer;
+		}
+		
+		System.err.println("transformClass: " + className);
+		
 		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 
 		XmxInstructionsAdder xMXInstructionsAdder = new XmxInstructionsAdder(cw);
 
-		ClassReader cr = new ClassReader(classBytes);
+		ClassReader cr = new ClassReader(classBuffer);
 		
 		// TODO: decide whether to instrument abstract classes, or only "leafs"
 		int access = cr.getAccess();
 		if ((access & (Opcodes.ACC_ENUM | Opcodes.ACC_INTERFACE)) > 0) {
 			// do not instrument enums and interfaces
-			return classBytes;
+			return classBuffer;
 		}
 		
 		
 		cr.accept(xMXInstructionsAdder, 0);
 		return cw.toByteArray();
 	}
+	
+	private static boolean isClassManaged(ClassLoader classLoader,
+			String className) {
+		// TODO: read pattern from config, maybe check ClassLoader too
+		return className.endsWith("Service") || className.endsWith("ServiceImpl") 
+				|| className.endsWith("DataSource");
+	}
+	
 	
 	// Inner Implementation of XmxService API
 	
@@ -545,7 +563,7 @@ public class XmxManager implements XmxService {
 		final IXmxServerLauncher launcher;
 		try {
 			// use classloader of xmx-api as parent; xmx-core itself is not visible for the server
-			ClassLoader serverCL = new URLClassLoader(urls, XmxService.class.getClassLoader());
+			ClassLoader serverCL = new URLClassLoader(urls, IXmxService.class.getClassLoader());
 			Class<? extends IXmxServerLauncher> launcherClass = 
 					Class.forName(launcherClassName, true, serverCL).asSubclass(IXmxServerLauncher.class);
 			launcher = launcherClass.getConstructor().newInstance();
@@ -561,4 +579,5 @@ public class XmxManager implements XmxService {
 			}
 		}, "XMX Embedded Server Startup Thread").start();
 	}
+	
 }

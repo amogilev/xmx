@@ -2,7 +2,7 @@ package am.xmx.ui;
 
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
-import am.xmx.dto.XmxService;
+import am.xmx.service.IXmxService;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,7 @@ public class RestController {
 
 
 	@Autowired
-	private XmxService xmxService;
+	private IXmxService xmxService;
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String getAppsAndClasses(ModelMap model) {

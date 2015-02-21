@@ -1,11 +1,16 @@
-package am.xmx.dto;
+package am.xmx.service;
 
 import java.util.List;
+
+import am.xmx.dto.XmxClassInfo;
+import am.xmx.dto.XmxObjectDetails;
+import am.xmx.dto.XmxObjectInfo;
+import am.xmx.dto.XmxRuntimeException;
 
 /**
  * Interface of XMX service provided for web apps.
  */
-public interface XmxService {
+public interface IXmxService {
 	
 	/**
 	 * Property name for XMX home folder.
