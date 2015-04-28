@@ -372,6 +372,9 @@ public class XmxManager implements XmxService {
 					methodArgs[i] = args[i];
 				}
 			}
+
+			// set context class loader to enable functionality which depends on it, like JNDI
+			Thread.currentThread().setContextClassLoader(clazz.getClassLoader());
 			
 			Object returnValue = m.invoke(obj, methodArgs);
 			if (returnValue == null) {
