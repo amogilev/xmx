@@ -476,6 +476,7 @@ public class XmxManager implements XmxService {
 
 	private static XmxObjectInfo convertToObjectInfo(int id, Object obj, XmxClassInfo xmxClassInfo) {
 		String json = "";
+/*
 		try {
 			json = gson.toJson(obj);
 		} catch (Throwable e) {
@@ -485,6 +486,7 @@ public class XmxManager implements XmxService {
 			// better switch to impl which supports recursion limit
 			System.err.println(e);
 		}
+*/
 		return new XmxObjectInfo(id, xmxClassInfo, obj.toString(), json);
 	}
 
