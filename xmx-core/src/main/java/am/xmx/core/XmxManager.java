@@ -26,6 +26,9 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 
 import am.specr.SpeculativeProcessorFactory;
+import am.xmx.cfg.IXmxConfig;
+import am.xmx.cfg.Properties;
+import am.xmx.cfg.impl.XmxIniConfig;
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
 import am.xmx.dto.XmxObjectDetails.FieldInfo;
@@ -44,6 +47,8 @@ import com.google.gson.stream.JsonWriter;
 
 public class XmxManager implements IXmxServiceEx {
 
+	public static IXmxConfig config = XmxIniConfig.getDefault();
+	
 	private static Gson gson;
 	static {
 		GsonBuilder builder = new GsonBuilder();
@@ -169,10 +174,15 @@ public class XmxManager implements IXmxServiceEx {
 	}
 
 	private static String obtainWebAppName(Object obj) {
-		List<IWebappNameExtractor> extractors = extractorsFactory.getProcessorsFor(obj);
+		return obtainAppNameByLoader(obj.getClass().getClassLoader());
+	}
+	
+	private static String obtainAppNameByLoader(ClassLoader loader) {
+		// TODO: cache?
+		List<IWebappNameExtractor> extractors = extractorsFactory.getProcessorsFor(loader);
 		if (extractors != null) {
 			for (IWebappNameExtractor extractor : extractors) {
-				String name = extractor.extract(obj);
+				String name = extractor.extract(loader);
 				if (name != null) {
 					return name;
 				}
@@ -182,6 +192,7 @@ public class XmxManager implements IXmxServiceEx {
 		// no extractor found, or all failed
 		return "";
 	}
+	
 
 	/**
 	 * {@inheritDoc}
@@ -214,9 +225,13 @@ public class XmxManager implements IXmxServiceEx {
 	
 	private static boolean isClassManaged(ClassLoader classLoader,
 			String className) {
-		// TODO: read pattern from config, maybe check ClassLoader too
-		return className.endsWith("Service") || className.endsWith("ServiceImpl") 
-				|| className.endsWith("DataSource");
+		String appName = obtainWebAppName(classLoader);
+		
+		boolean managed = config.getAppConfig(appName).getClassProperty(className, Properties.SP_MANAGED).asBool();
+		return managed;
+		
+//		return className.endsWith("Service") || className.endsWith("ServiceImpl") 
+//				|| className.endsWith("DataSource");
 	}
 	
 	

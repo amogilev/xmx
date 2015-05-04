@@ -74,23 +74,29 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 	 * 
 	 * @throws IOException if xmx.ini file in user home folder is corrupted, or cannot be written 
 	 */
-	public static XmxIniConfig getDefault() throws IOException {
+	public static XmxIniConfig getDefault() {
 		File userHome = new File(System.getProperty("user.home"));
 		File iniFile = new File(userHome, XMX_INI);
 		
 		Ini ini = makeIni();
 		ini.setFile(iniFile);
 		
-		if (iniFile.createNewFile()) {
-			// new file was created
-			fillMissingDefaultValues(ini);
-			ini.store();
-		} else {
-			// avoid using Ini4J's load(File), to have more reliable streams closing
-			try (FileInputStream in = new FileInputStream(iniFile)) {
-				ini.load(in);
+		try {
+			if (iniFile.createNewFile()) {
+				// new file was created
 				fillMissingDefaultValues(ini);
+				ini.store();
+			} else {
+				// avoid using Ini4J's load(File), to have more reliable streams closing
+				try (FileInputStream in = new FileInputStream(iniFile)) {
+					ini.load(in);
+					fillMissingDefaultValues(ini);
+				}
 			}
+		} catch (IOException e) {
+			// report error but continue with default in-memory config
+			System.err.println("Failed to read xmx.ini: " + e);
+			fillMissingDefaultValues(ini);
 		}
 		
 		return XmxIniParser.parse(ini);

@@ -195,8 +195,9 @@ public class SpeculativeProcessorFactory<P> {
 	 * @return all processors for the specified object
 	 */
 	public List<P> getProcessorsFor(Object processedObject) {
-		return Collections.unmodifiableList(
-				getProcessorWith(processedObject.getClass().getClassLoader()));
+		ClassLoader loader = processedObject instanceof ClassLoader ? (ClassLoader)processedObject : 
+			processedObject.getClass().getClassLoader();
+		return Collections.unmodifiableList(getProcessorsWith(loader));
 	}
 	
 	/**
@@ -217,7 +218,7 @@ public class SpeculativeProcessorFactory<P> {
 	
 	///// IMPLEMENTATION FOLLOWS ////
 	
-	private List<P> getProcessorWith(ClassLoader classLoader) {
+	private List<P> getProcessorsWith(ClassLoader classLoader) {
 		List<P> cachedList = processorsByClassLoaderCache.get(classLoader);
 		if (cachedList != null) {
 			return cachedList;

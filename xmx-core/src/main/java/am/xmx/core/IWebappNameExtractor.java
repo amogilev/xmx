@@ -2,19 +2,18 @@ package am.xmx.core;
 
 
 /**
- * Abstract extractor of web application name of corresponding bean objects.
+ * Abstract extractor of application names by bean objects and their class loaders.
  * <p/>
- * The implementations are specific for application servers, 
- * are selected according to the available classes, and generally use the 
- * class loaders for the object class. 
+ * The implementations are specific for application servers and are selected according 
+ * to the available classes. 
  */
 public interface IWebappNameExtractor {
 	
 	/**
-	 * Tries to obtain the webapp name for the bean object. Shall 
+	 * Tries to obtain the app name for the bean object. Shall 
 	 * return {@code null} if app cannot be determined.
 	 * 
-	 * @param obj the bean object
+	 * @param beanLoader the class loader of the bean object
 	 */
-	String extract(Object obj);
+	String extract(ClassLoader beanLoader);
 }

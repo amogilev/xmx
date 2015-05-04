@@ -5,8 +5,7 @@ import org.apache.catalina.loader.WebappClassLoader;
 public class CatalinaWebappNameExtractor implements IWebappNameExtractor {
 	
 	@Override
-	public String extract(Object obj) {
-		ClassLoader cl = obj.getClass().getClassLoader();
+	public String extract(ClassLoader cl) {
 		if (cl instanceof WebappClassLoader) {
 			return ((WebappClassLoader)cl).getContextName();
 		}

@@ -7,8 +7,7 @@ import org.eclipse.jetty.webapp.WebAppContext;
 public class JettyWebappNameExtractor implements IWebappNameExtractor {
 
 	@Override
-	public String extract(Object obj) {
-		ClassLoader cl = obj.getClass().getClassLoader();
+	public String extract(ClassLoader cl) {
 		if (cl instanceof WebAppClassLoader) {
 			Context context = ((WebAppClassLoader)cl).getContext();
 			if (context instanceof WebAppContext) {
