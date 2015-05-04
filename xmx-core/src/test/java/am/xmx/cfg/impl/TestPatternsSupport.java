@@ -69,6 +69,13 @@ public class TestPatternsSupport {
 	}
 	
 	@Test
+	public void testMatchesClassMask() {
+		assertTrue(matches("am.xmx.Foo", "am.xmx.Foo"));
+		assertTrue(matches("*.Foo", "am.xmx.Foo"));
+		assertTrue(matches("*.Foo$Bar", "am.xmx.Foo$Bar"));
+	}
+	
+	@Test
 	public void testMatchesJavaPattern() {
 		assertTrue(matches("^(my|our)app\\d*$", "ourapp2"));
 		assertFalse(matches("^(my|our)app\\d*$", "1ourapp"));

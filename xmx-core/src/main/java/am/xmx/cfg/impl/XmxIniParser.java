@@ -45,7 +45,7 @@ public class XmxIniParser implements SectionsNamespace {
 		return new XmxIniConfig(ini, systemSection, sections);
 	}
 	
-	private SectionHeader parseSectionHeader(String curSectionName) {
+	SectionHeader parseSectionHeader(String curSectionName) {
 		parseSectionNameParts(curSectionName);
 		if (!sectionNameParts.containsKey(PART_APP)) {
 			throw new XmxIniParseException("Wrong section name - no App part: " + curSectionName);
@@ -77,8 +77,6 @@ public class XmxIniParser implements SectionsNamespace {
 		return header;
 	}
 
-	// TODO unit tests
-
 	void parseSectionNameParts(String str) {
 		sectionNameParts.clear();
 		
@@ -99,18 +97,25 @@ public class XmxIniParser implements SectionsNamespace {
 		int n = findUnquotedChar(part, '=', 0);
 		if (n < 0) {
 			// whole part is a key, with empty value 
-			sectionNameParts.put(part.trim(), "");
+			String key = unquote(part.trim());
+			if (!key.isEmpty()) {
+				sectionNameParts.put(key, "");
+			}
 		} else {
-			String key = part.substring(0, n).trim();
-			String value = part.substring(n + 1).trim();
+			String key = unquote(part.substring(0, n).trim());
+			String value = unquote(part.substring(n + 1).trim());
 			sectionNameParts.put(key, value);
 		}
+	}
+
+	private String unquote(String str) {
+		return PatternsSupport.unquote(str);
 	}
 
 	static int findUnquotedChar(String str, char c, int from) {
 		int len = str.length();
 		boolean quoted = false, escaped = false;
-		for (int i = 0; i < len; i++) {
+		for (int i = Math.max(0, from); i < len; i++) {
 			char ch = str.charAt(i);
 			if (ch == c && !quoted) {
 				return i;

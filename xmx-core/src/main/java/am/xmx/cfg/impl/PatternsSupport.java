@@ -21,7 +21,8 @@ import java.util.regex.PatternSyntaxException;
  */
 public class PatternsSupport {
 	
-	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[\\w\\*\\|]*$");
+//	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[\\w\\*\\|]*$");
+	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[\\*\\|\\.\\p{javaJavaIdentifierPart}]*$");
 	
 	public static Pattern parse(String patternValue) throws XmxIniParseException {
 		patternValue = patternValue.trim();
@@ -36,7 +37,7 @@ public class PatternsSupport {
 				return Pattern.compile("^\\Q" + patternValue + "\\E$");
 			} else if (SIMPLE_PATTERN_OR_LITERAL.matcher(patternValue).matches()) {
 				// simple pattern or simple literal
-				patternValue = patternValue.replace("*", ".*");
+				patternValue = patternValue.replace(".", "\\.").replace("$", "\\$").replace("*", ".*");
 				return Pattern.compile("^(?:" + patternValue + ")$");
 			}
 		} catch (PatternSyntaxException e) {

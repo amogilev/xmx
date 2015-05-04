@@ -1,4 +1,4 @@
-package am.xmx.config;
+package am.xmx.ini4j;
 
 import static org.junit.Assert.*;
 
@@ -10,7 +10,7 @@ import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
 import org.junit.Test;
 
-public class TestConfigCreation {
+public class TestIni4JConfig {
 	
 	private String defaultXmxIniContents =
 		"[Global]" + "\n" +

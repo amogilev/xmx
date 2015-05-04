@@ -72,7 +72,7 @@ public class AppSubConfig implements IAppPropertiesSource {
 			if (sh.getHeader().matchesAfterApp(className, null)) {
 				if (sh.getSection().containsKey(propName)) {
 					return PropertyValueImpl.of(sh.getSection().get(propName)); 
-				} else if (className == null && sh.getSection().containsKey(propClassForm)) {
+				} else if (sh.getHeader().classSpec == null && sh.getSection().containsKey(propClassForm)) {
 					String patternValue = sh.getSection().get(propClassForm);
 					boolean propValue = PatternsSupport.matches(patternValue, className);
 					return PropertyValueImpl.of(Boolean.toString(propValue));

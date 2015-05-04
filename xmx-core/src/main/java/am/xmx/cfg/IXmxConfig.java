@@ -19,6 +19,6 @@ package am.xmx.cfg;
  * 
  * @author Andrey Mogilev
  */
-public interface IXmxConfig extends IXmxPropertiesSource, IConfigManager {
+public interface IXmxConfig extends IXmxPropertiesSource /*, IConfigManager */ {
 	
 }

@@ -5,15 +5,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
 
-import am.xmx.cfg.CfgEntity;
 import am.xmx.cfg.IAppPropertiesSource;
-import am.xmx.cfg.IEntityConfigManager;
 import am.xmx.cfg.IXmxConfig;
 import am.xmx.cfg.Properties;
 import am.xmx.cfg.PropertyValue;
@@ -198,18 +195,18 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 	// Implementation of IConfigManager is not implemented yet
 	// 
 
-	@Override
-	public Map<String, String> getAllSystemProperties() {
-		throw new UnsupportedOperationException("Not implemented yet");
-	}
-
-	@Override
-	public void setAllSystemProperties(Map<String, String> systemProperties) {
-		throw new UnsupportedOperationException("Not implemented yet");
-	}
-
-	@Override
-	public IEntityConfigManager getEntityConfigManager(CfgEntity entity) {
-		throw new UnsupportedOperationException("Not implemented yet");
-	}
+//	@Override
+//	public Map<String, String> getAllSystemProperties() {
+//		throw new UnsupportedOperationException("Not implemented yet");
+//	}
+//
+//	@Override
+//	public void setAllSystemProperties(Map<String, String> systemProperties) {
+//		throw new UnsupportedOperationException("Not implemented yet");
+//	}
+//
+//	@Override
+//	public IEntityConfigManager getEntityConfigManager(CfgEntity entity) {
+//		throw new UnsupportedOperationException("Not implemented yet");
+//	}
 }
