@@ -14,7 +14,8 @@ public interface IXmxServerLauncher {
 	 * Launch the server and deploy the specified WAR application there.
 	 * 
 	 * @param warFile the web application archive file
+	 * @param port the port to use 
 	 */
-	void launchServer(File warFile);
+	void launchServer(File warFile, int port);
 	
 }

@@ -45,7 +45,6 @@ public class AppSubConfig implements IAppPropertiesSource {
 	/**
 	 * Internal method which works with all property levels from App to Member. 
 	 */
-	// TODO: maybe somehow generalize?
 	private PropertyValue getProperty(String className,
 			String memberName, String propName) {
 		

@@ -20,7 +20,7 @@ import am.xmx.server.IXmxServerLauncher;
 public class XmxEmbeddedJettyLauncher implements IXmxServerLauncher {
 	
 	@Override
-	public void launchServer(File warFile) {
+	public void launchServer(File warFile, int port) {
 		// TODO redirect Jetty logging somewhere
 //		 LoggingUtil.config();
 //		 Log.setLog(new JavaUtilLog());
@@ -29,7 +29,7 @@ public class XmxEmbeddedJettyLauncher implements IXmxServerLauncher {
 		try {
 			Thread.currentThread().setContextClassLoader(XmxEmbeddedJettyLauncher.class.getClassLoader());
 			
-			Server server = new Server(8081); // TODO: specify port in configuration
+			Server server = new Server(port);
 			
 	        WebAppContext webapp = new WebAppContext();
 	        webapp.setWar(warFile.getAbsolutePath());

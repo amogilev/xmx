@@ -130,7 +130,7 @@ public class XmxManager implements IXmxServiceEx {
 	synchronized public void registerObject(Object obj) {
 		Class<?> objClass = obj.getClass();
 		String className = objClass.getName();
-		String appName = obtainWebAppName(obj);
+		String appName = obtainAppName(obj);
 		
 		Map<String, Integer> classIdsByName = classIdsByAppAndName.get(appName);
 		if (classIdsByName == null) {
@@ -173,12 +173,11 @@ public class XmxManager implements IXmxServiceEx {
 		objectIds.add(idx);
 	}
 
-	private static String obtainWebAppName(Object obj) {
+	private static String obtainAppName(Object obj) {
 		return obtainAppNameByLoader(obj.getClass().getClassLoader());
 	}
 	
 	private static String obtainAppNameByLoader(ClassLoader loader) {
-		// TODO: cache?
 		List<IWebappNameExtractor> extractors = extractorsFactory.getProcessorsFor(loader);
 		if (extractors != null) {
 			for (IWebappNameExtractor extractor : extractors) {
@@ -225,7 +224,7 @@ public class XmxManager implements IXmxServiceEx {
 	
 	private static boolean isClassManaged(ClassLoader classLoader,
 			String className) {
-		String appName = obtainWebAppName(classLoader);
+		String appName = obtainAppNameByLoader(classLoader);
 		
 		boolean managed = config.getAppConfig(appName).getClassProperty(className, Properties.SP_MANAGED).asBool();
 		return managed;
@@ -542,22 +541,26 @@ public class XmxManager implements IXmxServiceEx {
 	 * Starts Embedded Jetty Server to serve xmx-webui.war
 	 */
 	public static void startUI() {
+		if (!config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
+			// do nothing
+			return;
+		}
+		
 		File xmxHomeDir = new File(System.getProperty(XMX_HOME_PROP));
 		final File uiWarFile = new File(xmxHomeDir, "bin" + File.separator + "xmx-webui.war");
 		File xmxLibDir = new File(xmxHomeDir, "lib");
 		
-		// TODO configure server impl to use?
+		String serverImpl = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_IMPL).asString();
+		final String serverImplJarName = "xmx-server-" + serverImpl + ".jar";
 		
-		// select first available server implementation jar
 		File[] serverImpls = xmxLibDir.listFiles(new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String name) {
-				name = name.toLowerCase(Locale.ENGLISH);
-				return name.startsWith("xmx-server-") && name.endsWith(".jar"); 
+				return name.equalsIgnoreCase(serverImplJarName); 
 			}
 		});
 		if (serverImpls.length == 0) {
-			throw new XmxRuntimeException("No XMX Server implementations found; check XMX_HOME/lib/xmx-server-*.jar");
+			throw new XmxRuntimeException("Missing file XMX_HOME/lib/" + serverImplJarName);
 		}
 		
 		File implFile = serverImpls[0];
@@ -585,12 +588,13 @@ public class XmxManager implements IXmxServiceEx {
 		} catch(Exception e) {
 			throw new XmxRuntimeException("Failed to instantiate XMX server launcher (" + launcherClassName + ")", e);
 		}
-		
+	
 		// start asynchronously so that main initialization is less affected
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				launcher.launchServer(uiWarFile);
+				int port = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT).asInt();
+				launcher.launchServer(uiWarFile, port);
 			}
 		}, "XMX Embedded Server Startup Thread").start();
 	}

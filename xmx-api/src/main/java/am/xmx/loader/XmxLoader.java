@@ -61,7 +61,7 @@ public class XmxLoader {
 					Method getServiceMethod = xmxManagerClass.getDeclaredMethod("getService");
 					xmxService = (IXmxServiceEx) getServiceMethod.invoke(null);
 					
-					// start UI (wmx-webui.war in Embedded Jetty)
+					// start UI if needed (xmx-webui.war in Embedded Jetty or another server)
 					Method xmxManagerStartUIMethod = xmxManagerClass.getDeclaredMethod("startUI");
 					xmxManagerStartUIMethod.invoke(null);
 					
