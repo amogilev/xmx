@@ -82,7 +82,7 @@ public class XmxIniParser implements SectionsNamespace {
 		
 		int partStart = 0;
 		for (;;) {
-			int partEnd = findUnquotedChar(str, ',', partStart);
+			int partEnd = findUnquotedChar(str, ';', partStart);
 			if (partEnd > 0) {
 				parseSectionNamePart(str.substring(partStart, partEnd));
 				partStart = partEnd + 1;

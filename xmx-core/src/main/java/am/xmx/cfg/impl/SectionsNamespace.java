@@ -10,7 +10,7 @@ public interface SectionsNamespace {
 	/** The global [System] section*/
 	String SECTION_SYSTEM = "System";
 	
-	/** Parts keys of the comlex section headers, like in [App=Foo,Class=Bar,Member=*] */
+	/** Parts keys of the comlex section headers, like in [App=Foo;Class=Bar;Member=*] */
 	String PART_APP = "App";
 	String PART_CLASS = "Class";
 	String PART_MEMBER = "Member";

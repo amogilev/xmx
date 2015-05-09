@@ -68,7 +68,7 @@ public class TestXmxIniParser {
 	
 	@Test
 	public void testParseSectionNameParts2() {
-		uut.parseSectionNameParts("Part1=a,Part2=b");
+		uut.parseSectionNameParts("Part1=a;Part2=b");
 		assertEquals(2, uut.sectionNameParts.size());
 		assertEquals("a", uut.sectionNameParts.get("Part1"));
 		assertEquals("b", uut.sectionNameParts.get("Part2"));
@@ -76,10 +76,10 @@ public class TestXmxIniParser {
 	
 	@Test
 	public void testParseSectionNameParts3() {
-		uut.parseSectionNameParts("Part1=a=b,Part2=\"a,b\", Part3,,Part4");
+		uut.parseSectionNameParts("Part1=a=b;Part2=\"a;b\"; Part3;;Part4");
 		assertEquals(4, uut.sectionNameParts.size());
 		assertEquals("a=b", uut.sectionNameParts.get("Part1"));
-		assertEquals("a,b", uut.sectionNameParts.get("Part2"));
+		assertEquals("a;b", uut.sectionNameParts.get("Part2"));
 		assertEquals("", uut.sectionNameParts.get("Part3"));
 		assertEquals("", uut.sectionNameParts.get("Part4"));
 		assertEquals(null, uut.sectionNameParts.get("Part5"));
@@ -87,7 +87,7 @@ public class TestXmxIniParser {
 	
 	@Test
 	public void testSectionHeader() {
-		SectionHeader sh = uut.parseSectionHeader("App=*,Class=am.xmx.Foo");
+		SectionHeader sh = uut.parseSectionHeader("App=*;Class=am.xmx.Foo");
 		assertEquals("*", sh.appSpec);
 		assertEquals("am.xmx.Foo", sh.classSpec);
 		assertTrue(sh.matches("myapp", "am.xmx.Foo", null));
