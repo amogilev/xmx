@@ -15,7 +15,7 @@ public class XmxIniParser implements SectionsNamespace {
 	// shared map for parsed parts of section names
 	Map<String, String> sectionNameParts = new HashMap<>(4);
 	
-	public static XmxIniConfig parse(Ini ini) {
+	static XmxIniConfig parse(Ini ini) {
 		return new XmxIniParser().parseSections(ini);
 	}
 
@@ -24,9 +24,8 @@ public class XmxIniParser implements SectionsNamespace {
 		
 		ArrayList<SectionWithHeader> sections = new ArrayList<>();
 		
-		for (Entry<String, Section> e : ini.entrySet()) {
-			String curSectionName = e.getKey().trim();
-			Section section = e.getValue();
+		for (Section section : ini.values()) {
+			String curSectionName = section.getName().trim();
 			if (curSectionName.equals(SECTION_SYSTEM)) {
 				if (systemSection != null) {
 					throw new XmxIniParseException("Duplicate [System] section");

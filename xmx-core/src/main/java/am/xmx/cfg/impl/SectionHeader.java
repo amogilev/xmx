@@ -75,4 +75,24 @@ class SectionHeader {
 		return pattern.matcher(name).matches();
 	}
 
+	@Override
+	public String toString() {
+		if (appSpec == null) {
+			return "[No specs]";
+		}
+		StringBuilder sb = new StringBuilder(64);
+		
+		sb.append("[App=").append(appSpec);
+		if (classSpec != null) {
+			sb.append(";Class=").append(classSpec);
+		}
+		if (memberSpec != null) {
+			sb.append(";Member=").append(memberSpec);
+		}
+		sb.append(']');
+		return sb.toString();
+	}
+	
+	
+
 }

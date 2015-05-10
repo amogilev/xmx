@@ -80,7 +80,21 @@ public class TestPatternsSupport {
 		assertTrue(matches("^(my|our)app\\d*$", "ourapp2"));
 		assertFalse(matches("^(my|our)app\\d*$", "1ourapp"));
 	}
-
+	
+	@Test
+	public void testDefaultManagedPattern() {
+		String defaultPattern = "^.*(Service|(?<![rR]eference)Manager|Engine|DataSource)\\d*(Impl\\d*)?$";
+		assertTrue(matches(defaultPattern, "am.xmx.MyServiceImpl"));
+		assertTrue(matches(defaultPattern, "am.xmx.MyService2"));
+		assertTrue(matches(defaultPattern, "am.xmx.MyService2Impl3"));
+		assertFalse(matches(defaultPattern, "am.xmx.MyServiceImplNot"));
+		assertTrue(matches(defaultPattern, "DataSource"));
+		assertTrue(matches(defaultPattern, "someManager"));
+		assertFalse(matches(defaultPattern, "referenceManager"));
+		assertFalse(matches(defaultPattern, "someReferenceManager"));
+	}
+			
+			
 	@Test(expected=XmxIniParseException.class)
 	public void testParseIllegalSpace() {
 		parse("foo bar"); // spaces not supported in simple literals

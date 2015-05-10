@@ -20,4 +20,9 @@ class SectionWithHeader {
 		return section;
 	}
 
+	@Override
+	public String toString() {
+		return "SectionWithHeader" + header;
+	}
+
 }

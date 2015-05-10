@@ -62,6 +62,7 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		try (FileInputStream in = new FileInputStream(iniFile)) {
 			ini.load(in);
 		}
+		fillMissingDefaultValues(ini);
 	
 		return XmxIniParser.parse(ini);
 	}
@@ -126,7 +127,7 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		checkProperty(allApps, Properties.APP_ENABLED, true, 
 				"Whether management is enabled for an application");
 		checkProperty(allApps, Properties.specialClassesForm(Properties.SP_MANAGED), 
-				"^.*(Service|Manager|Engine|DataSource)(Impl)?$", 
+				"^.*(Service|(?<![rR]eference)Manager|Engine|DataSource)\\d*(Impl\\d*)?$", 
 				"Determines instances of which classes and interfaces will be managed by XMX");
 	}
 
