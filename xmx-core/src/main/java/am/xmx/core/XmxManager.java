@@ -405,14 +405,18 @@ public class XmxManager implements IXmxServiceEx {
 			}
 
 			// set context class loader to enable functionality which depends on it, like JNDI
+			ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
 			Thread.currentThread().setContextClassLoader(clazz.getClassLoader());
-			
-			Object returnValue = m.invoke(obj, methodArgs);
-			if (returnValue == null) {
-				return "null";
-			} else {
-				// TODO support JSON
-				return returnValue.toString();
+			try {
+				Object returnValue = m.invoke(obj, methodArgs);
+				if (returnValue == null) {
+					return "null";
+				} else {
+					// TODO support JSON
+					return returnValue.toString();
+				}
+			} finally {
+				Thread.currentThread().setContextClassLoader(prevClassLoader);
 			}
 		} catch (Exception e) {
 			throw new XmxRuntimeException("Failed to invoke method", e);
