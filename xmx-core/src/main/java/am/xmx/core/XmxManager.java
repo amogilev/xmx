@@ -12,10 +12,12 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
@@ -79,8 +81,7 @@ public class XmxManager implements IXmxServiceEx {
 	/**
 	 * Storage of weak references to each managed objects, mapped by object ID
 	 */
-	// TODO: maybe store ObjectInfo, but needs a cleaning thread & ReferenceQueue
-	private static Map<Integer, WeakReference<Object>> objectsStorage = new HashMap<>(64*1024);
+	private static Map<Integer, ManagedObjectWeakRef> objectsStorage = new HashMap<>(64*1024);
 	
 	/**
 	 * Generator of unique IDs for managed objects.
@@ -99,7 +100,7 @@ public class XmxManager implements IXmxServiceEx {
 	private static Map<String, Map<String, Integer>> classIdsByAppAndName = new HashMap<>();
 	
 	// classInfoIdx -> [objectInfoIdx]
-	private static Map<Integer, List<Integer>> objectIdsByClassIds = new HashMap<>();
+	private static Map<Integer, Set<Integer>> objectIdsByClassIds = new HashMap<>();
 	
 	/**
 	 * Generator of unique IDs for classes of managed objects.
@@ -107,6 +108,28 @@ public class XmxManager implements IXmxServiceEx {
 	private static AtomicInteger managedClassesCounter = new AtomicInteger();
 	
 	private static ReferenceQueue<Object> managedObjectsRefQueue = new ReferenceQueue<>();
+	
+	static {
+		Thread cleanerThread = new Thread("XMX-Cleaner-Thread") {
+			@Override
+			public void run() {
+				while (true) {
+					try {
+						ManagedObjectWeakRef objRef = (ManagedObjectWeakRef) managedObjectsRefQueue.remove();
+						synchronized(instance) {
+							Set<Integer> objectIds = objectIdsByClassIds.get(objRef.classId);
+							if (objectIds != null) {
+								objectIds.remove(objRef.objectId);
+							}
+							objectsStorage.remove(objRef.objectId);
+						}
+					} catch (InterruptedException e) {
+					}
+				}
+			}
+		};
+		cleanerThread.setDaemon(true);
+	}
 	
 	private static final XmxManager instance = new XmxManager();
 	
@@ -137,26 +160,26 @@ public class XmxManager implements IXmxServiceEx {
 			classIdsByAppAndName.put(appName, classIdsByName);
 		}
 		
-		Integer classInfoIdx = classIdsByName.get(className);
-		if (classInfoIdx == null) {
-			classInfoIdx = managedClassesCounter.getAndIncrement();
-			classIdsByName.put(className, classInfoIdx);
+		Integer classId = classIdsByName.get(className);
+		if (classId == null) {
+			classId = managedClassesCounter.getAndIncrement();
+			classIdsByName.put(className, classId);
 			
 			// TODO: classLoader ID
-			XmxClassInfo classInfo = new XmxClassInfo(classInfoIdx, className, 0, appName);
-			classesInfoById.put(classInfoIdx, classInfo);
+			XmxClassInfo classInfo = new XmxClassInfo(classId, className, 0, appName);
+			classesInfoById.put(classId, classInfo);
 		}
 		
-		List<Integer> objectIds = objectIdsByClassIds.get(classInfoIdx);
+		Set<Integer> objectIds = objectIdsByClassIds.get(classId);
 		if (objectIds == null) {
-			objectIds = new ArrayList<>(2);
-			objectIdsByClassIds.put(classInfoIdx, objectIds);
+			objectIds = new HashSet<>(2);
+			objectIdsByClassIds.put(classId, objectIds);
 		}
 		
 		// check if object is already registered, e.g. from superclass
 		for (Integer id : objectIds) {
 			// check all registered objects of this class
-			WeakReference<Object> ref = objectsStorage.get(id);
+			ManagedObjectWeakRef ref = objectsStorage.get(id);
 			if (ref != null) {
 				Object existingObj = ref.get();
 				if (existingObj == obj) {
@@ -167,9 +190,9 @@ public class XmxManager implements IXmxServiceEx {
 		}
 		
 		// not registered yet, store
-		int idx = managedObjectsCounter.getAndIncrement();
-		objectsStorage.put(idx, new WeakReference<>(obj, managedObjectsRefQueue));
-		objectIds.add(idx);
+		int objectId = managedObjectsCounter.getAndIncrement();
+		objectsStorage.put(objectId, new ManagedObjectWeakRef(obj, managedObjectsRefQueue, objectId, classId));
+		objectIds.add(objectId);
 	}
 
 	private static String obtainAppName(Object obj) {
@@ -500,9 +523,9 @@ public class XmxManager implements IXmxServiceEx {
 	
 	private static void fillLiveObjects(List<XmxObjectInfo> result, Integer classId) {
 		XmxClassInfo xmxClassInfo = classesInfoById.get(classId);
-		List<Integer> objectIds = objectIdsByClassIds.get(classId);
+		Set<Integer> objectIds = objectIdsByClassIds.get(classId);
 		for (Integer id : objectIds) {
-			WeakReference<Object> ref = objectsStorage.get(id);
+			ManagedObjectWeakRef ref = objectsStorage.get(id);
 			if (ref != null) {
 				Object obj = ref.get();
 				if (obj != null) {
