@@ -4,6 +4,7 @@ package am.xmx.core;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
@@ -21,6 +22,10 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import javax.management.modelmbean.ModelMBeanInfo;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -122,6 +127,10 @@ public class XmxManager implements IXmxServiceEx {
 								objectIds.remove(objRef.objectId);
 							}
 							objectsStorage.remove(objRef.objectId);
+							
+							if (objRef.jmxObjectName != null) {
+								JmxSupport.unregisterBean(jmxServer, objRef.jmxObjectName);
+							}
 						}
 					} catch (InterruptedException e) {
 					}
@@ -129,6 +138,14 @@ public class XmxManager implements IXmxServiceEx {
 			}
 		};
 		cleanerThread.setDaemon(true);
+	}
+	
+	private static MBeanServer jmxServer = null;
+	static {
+		if (config.getSystemProperty(Properties.GLOBAL_JMX_ENABLED).asBool()) {
+			// TODO maybe create a custom server instead, with custom connectors etc.
+			jmxServer = ManagementFactory.getPlatformMBeanServer();
+		}
 	}
 	
 	private static final XmxManager instance = new XmxManager();
@@ -160,14 +177,18 @@ public class XmxManager implements IXmxServiceEx {
 			classIdsByAppAndName.put(appName, classIdsByName);
 		}
 		
+		XmxClassInfo classInfo;
 		Integer classId = classIdsByName.get(className);
 		if (classId == null) {
-			classId = managedClassesCounter.getAndIncrement();
-			classIdsByName.put(className, classId);
+			// TODO: use classLoader in class ID
+			classInfo = makeNewClassInfo(objClass, appName);
 			
-			// TODO: classLoader ID
-			XmxClassInfo classInfo = new XmxClassInfo(classId, className, 0, appName);
+			classId = classInfo.getId();
+			classIdsByName.put(className, classId);
 			classesInfoById.put(classId, classInfo);
+		} else {
+			classInfo = classesInfoById.get(classId);
+			assert classInfo != null;
 		}
 		
 		Set<Integer> objectIds = objectIdsByClassIds.get(classId);
@@ -191,9 +212,33 @@ public class XmxManager implements IXmxServiceEx {
 		
 		// not registered yet, store
 		int objectId = managedObjectsCounter.getAndIncrement();
-		objectsStorage.put(objectId, new ManagedObjectWeakRef(obj, managedObjectsRefQueue, objectId, classId));
+		ObjectName jmxObjectName = null;
+		if (jmxServer != null && classInfo.getJmxClassModel() != null) {
+			jmxObjectName = JmxSupport.registerBean(jmxServer, objectId, obj, classInfo);
+		}
+		objectsStorage.put(objectId, new ManagedObjectWeakRef(obj, managedObjectsRefQueue, 
+				objectId, classId, jmxObjectName));
 		objectIds.add(objectId);
+		
 	}
+
+	private XmxClassInfo makeNewClassInfo(Class<?> objClass, String appName) {
+		int classId = managedClassesCounter.getAndIncrement();
+		String className = objClass.getName();
+		
+		ModelMBeanInfo jmxClassModel = null;
+		String jmxObjectNamePart = null;
+		if (jmxServer != null) {
+			jmxClassModel = JmxSupport.createModelForClass(objClass, appName, config);
+			if (jmxClassModel != null) {
+				jmxObjectNamePart = JmxSupport.createClassObjectNamePart(objClass, appName);
+				assert jmxObjectNamePart != null; 
+			}
+		}
+		
+		return new XmxClassInfo(classId, className, jmxClassModel, jmxObjectNamePart);
+	}
+
 
 	private static String obtainAppName(Object obj) {
 		return obtainAppNameByLoader(obj.getClass().getClassLoader());
@@ -250,9 +295,6 @@ public class XmxManager implements IXmxServiceEx {
 		
 		boolean managed = config.getAppConfig(appName).getClassProperty(className, Properties.SP_MANAGED).asBool();
 		return managed;
-		
-//		return className.endsWith("Service") || className.endsWith("ServiceImpl") 
-//				|| className.endsWith("DataSource");
 	}
 	
 	

@@ -111,6 +111,7 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		checkProperty(global, Properties.GLOBAL_EMB_SERVER_ENABLED, true);
 		checkProperty(global, Properties.GLOBAL_EMB_SERVER_IMPL, "Jetty", "Only Jetty is supported now");
 		checkProperty(global, Properties.GLOBAL_EMB_SERVER_PORT, 8081);
+		checkProperty(global, Properties.GLOBAL_JMX_ENABLED, true, "Whether to publish managed objects to JMX");
 		
 		Section allApps = ensureSection(ini, "App=*", 
 				" Per-application settings sections follow, marked as [App=app_name_pattern],\n" +

@@ -3,8 +3,8 @@ package am.xmx.ui;
 import am.xmx.dto.XmxClassInfo;
 
 public class AdvancedXmxClassInfo extends XmxClassInfo {
-	public AdvancedXmxClassInfo(int id, String className, int classLoaderId, String appName) {
-		super(id, className, classLoaderId, appName);
+	public AdvancedXmxClassInfo(int id, String className) {
+		super(id, className, null, null);
 	}
 
 	/**

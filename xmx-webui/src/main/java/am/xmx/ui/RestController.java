@@ -38,9 +38,7 @@ public class RestController {
 					for (XmxClassInfo managedClassInfo : managedClassInfos) {
 						AdvancedXmxClassInfo advancedXmxClassInfo = new AdvancedXmxClassInfo(
 								managedClassInfo.getId(),
-								managedClassInfo.getClassName(),
-								managedClassInfo.getClassLoaderId(),
-								managedClassInfo.getAppName());
+								managedClassInfo.getClassName());
 						advancedXmxClassInfo.setNumberOfObjects(CollectionUtils.size(
 										xmxService.getManagedObjects(advancedXmxClassInfo.getId()))
 						);

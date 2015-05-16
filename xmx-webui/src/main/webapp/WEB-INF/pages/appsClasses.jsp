@@ -6,7 +6,6 @@
     <thead style="font-style: italic">
     <tr>
         <td>Class</td>
-        <td>ClassLoader ID</td>
         <td>Objects number</td>
     </tr>
     </thead>
@@ -18,7 +17,6 @@
         <c:forEach items="${entry.value}" var="classInfo">
             <tr>
                 <td>${classInfo.className}</td>
-                <td>${classInfo.classLoaderId}</td>
                 <td>${classInfo.numberOfObjects} (<a href="${pageContext.request.contextPath}/getClassObjects?classId=${classInfo.id}&className=${classInfo.className}">Look</a>)</td>
             </tr>
         </c:forEach>

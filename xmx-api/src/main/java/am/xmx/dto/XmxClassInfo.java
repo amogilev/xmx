@@ -1,5 +1,7 @@
 package am.xmx.dto;
 
+import javax.management.modelmbean.ModelMBeanInfo;
+
 public class XmxClassInfo {
 	
 	/**
@@ -13,22 +15,23 @@ public class XmxClassInfo {
 	private String className;
 	
 	/**
-	 * Unique ID within XMX system of the class loader of the class.
+	 * JMX model for managed class instances, or {@code null}
+	 * if they need not to be published to JMX.
 	 */
-	private int classLoaderId;
+	ModelMBeanInfo jmxClassModel;
 	
 	/**
-	 * Name of the web application, if known
+	 * Part of JMX ObjectName (without object ID) used for managed 
+	 * class instances, or {@code null} if they need not to be 
+	 * published to JMX.
 	 */
-	private String appName;
-
-	public XmxClassInfo(int id, String className, int classLoaderId,
-			String appName) {
-		super();
+	String jmxObjectNamePart;
+	
+	public XmxClassInfo(int id, String className, ModelMBeanInfo jmxClassModel, String jmxObjectNamePart) {
 		this.id = id;
 		this.className = className;
-		this.classLoaderId = classLoaderId;
-		this.appName = appName;
+		this.jmxClassModel = jmxClassModel;
+		this.jmxObjectNamePart = jmxObjectNamePart;
 	}
 	
 	public int getId() {
@@ -38,23 +41,23 @@ public class XmxClassInfo {
 	public String getClassName() {
 		return className;
 	}
-
-	public int getClassLoaderId() {
-		return classLoaderId;
-	}
-
-	public String getAppName() {
-		return appName;
+	
+	
+	public ModelMBeanInfo getJmxClassModel() {
+		return jmxClassModel;
 	}
 	
-	// NOTE: no ID in hashCode & equals!
+	public String getJmxObjectNamePart() {
+		return jmxObjectNamePart;
+	}
+
+
+	// NOTE: no ID and JMX info in hashCode & equals!
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((appName == null) ? 0 : appName.hashCode());
-		result = prime * result + classLoaderId;
 		result = prime * result
 				+ ((className == null) ? 0 : className.hashCode());
 		return result;
@@ -69,13 +72,6 @@ public class XmxClassInfo {
 		if (getClass() != obj.getClass())
 			return false;
 		XmxClassInfo other = (XmxClassInfo) obj;
-		if (appName == null) {
-			if (other.appName != null)
-				return false;
-		} else if (!appName.equals(other.appName))
-			return false;
-		if (classLoaderId != other.classLoaderId)
-			return false;
 		if (className == null) {
 			if (other.className != null)
 				return false;
