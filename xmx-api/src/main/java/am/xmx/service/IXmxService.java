@@ -1,5 +1,6 @@
 package am.xmx.service;
 
+import java.lang.reflect.Method;
 import java.util.List;
 
 import am.xmx.dto.XmxClassInfo;
@@ -65,17 +66,40 @@ public interface IXmxService {
 	XmxObjectDetails setObjectField(int objectId, int fieldId, String newValue) throws XmxRuntimeException;
 	
 	/**
-	 * Invokes the specified method of the object, and returns the returned value as JSON string.
+	 * Invokes the specified method of the object.
 	 * 
-	 * @param objectId the ID of the object, obtained from {@link XmxObjectInfo#getObjectId()}
-	 * @param methodId the ID of the method to invoke, obtained from {@link XmxObjectDetails.MethodInfo#getId()}
-	 * @param args string representation of the arguments to pass, if any
+	 * @param obj the object to use
+	 * @param m the method to invoke
+	 * @param args the arguments to pass, if any
 	 *  
-	 * @return the method's returned value serialized to JSON
+	 * @return the method's returned value
 	 *  
 	 * @throws XmxRuntimeException if failed to invoke the method, or the method throws exception
 	 */
-	String invokeObjectMethod(int objectId, int methodId, String...args) throws XmxRuntimeException;
+	Object invokeObjectMethod(Object obj, Method m, Object...args) throws XmxRuntimeException;
+
+	/**
+	 * Returns the managed object with the specified ID, or {@code null} if no
+	 * object with such ID is managed now.
+	 * <p/>
+	 * For example, {@code null} is returned if the managed object is GC'ed.  
+	 * 
+	 * @param objectId the internal object ID
+	 * 
+	 * @return the object, or {@code null}
+	 */
+	Object getObjectById(int objectId);
+	
+	/**
+	 * Resolves and returns actual Method by internal method ID. 
+	 * 
+	 * @param obj the object to which the method belongs
+	 * @param methodId the internal method ID
+	 * 
+	 * @return the resolved {@link Method}
+	 * @throws XmxRuntimeException if the method cannot be resolved
+	 */
+	Method getObjectMethodById(Object obj, int methodId) throws XmxRuntimeException; 
 	
 	// TBC...
 }

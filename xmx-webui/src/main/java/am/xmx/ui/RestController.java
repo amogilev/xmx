@@ -2,6 +2,7 @@ package am.xmx.ui;
 
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
+import am.xmx.dto.XmxRuntimeException;
 import am.xmx.service.IXmxService;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -12,11 +13,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Controller
 @RequestMapping("/")
@@ -87,11 +90,51 @@ public class RestController {
 			@RequestParam(required = true) Integer methodId) {
 		// TODO: support missing objects
 		model.addAttribute("objectId", objectId);
-		// TODO support args
+		// TODO obtain args from request
+		String[] args = new String[0];
+		
 		// TODO support exceptions
-		String result = xmxService.invokeObjectMethod(objectId, methodId);
-		model.addAttribute("result", result);
+		
+		Object obj = xmxService.getObjectById(objectId);
+		if (obj != null) {
+			Method m = xmxService.getObjectMethodById(obj, methodId);
+			Object result = xmxService.invokeObjectMethod(obj, m, translateArgs(args, m));
+			model.addAttribute("result", Objects.toString(result));
+		} else {
+			model.addAttribute("result", "<<Object not found, probably it is GC'ed>>");
+		}
+		
 		return "methodResult";
+	}
+
+	/**
+	 * Converts arguments from Strings to Objects. Formal types of the arguments are taken
+	 * from the method's reflection info.
+	 * 
+	 * @param args the arguments as Strings
+	 * @param m the method to be invoked with the arguments
+	 * 
+	 * @return the array of objects which may be used to invoke the method
+	 */
+	private Object[] translateArgs(String[] args, Method m) {
+		
+		Class<?>[] parameterTypes = m.getParameterTypes();
+		// less or equal number of args are supported
+		if (parameterTypes.length < args.length) {
+			throw new XmxRuntimeException("Too many arguments for the method " + m);
+		}
+		Object[] methodArgs = new Object[parameterTypes.length]; 
+		for (int i = 0; i < args.length; i++) {
+			Class<?> type = parameterTypes[i];
+			if (!type.equals(String.class)) {
+				// TODO: support json
+				throw new XmxRuntimeException("NOT IMPLEMENTED: Only String's args are supported now for invokeObjectMethod()");
+			} else {
+				methodArgs[i] = args[i];
+			}
+		}
+		
+		return methodArgs;
 	}
 
 }

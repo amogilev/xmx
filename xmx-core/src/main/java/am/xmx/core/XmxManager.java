@@ -35,6 +35,7 @@ import am.specr.SpeculativeProcessorFactory;
 import am.xmx.cfg.IXmxConfig;
 import am.xmx.cfg.Properties;
 import am.xmx.cfg.impl.XmxIniConfig;
+import am.xmx.core.jmx.JmxSupport;
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
 import am.xmx.dto.XmxObjectDetails.FieldInfo;
@@ -425,55 +426,32 @@ public class XmxManager implements IXmxServiceEx {
 		return getObjectDetails(objectId);
 	}
 	
-	/**
-	 * Invokes the specified method of the object, and returns the returned value as JSON string.
-	 * 
-	 * @param objectId the ID of the object, obtained from {@link XmxObjectInfo#getObjectId()}
-	 * @param methodId the ID of the method to invoke, obtained from {@link XmxObjectDetails.MethodInfo#getId()}
-	 * @param args string representation of the arguments to pass, if any
-	 *  
-	 * @return the method's returned value serialized to JSON
-	 *  
-	 * @throws XmxRuntimeException if failed to invoke the method, or the method throws exception
-	 */
 	@Override
-	public String invokeObjectMethod(int objectId, 
-			int methodId, String...args) {
-		
-		Object obj = getObjectById(objectId);
-		if (obj == null) {
-			return null;
-		}
+	public Method getObjectMethodById(Object obj, int methodId)
+			throws XmxRuntimeException {
 		
 		Class<?> clazz = obj.getClass();
 		Method m = getMethodById(clazz, methodId);
 		if (m == null) {
 			throw new XmxRuntimeException("Method not found in " + clazz.getName() + " by ID=" + methodId);
 		}
+		return m;
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Object invokeObjectMethod(Object obj, Method m, Object... args) throws XmxRuntimeException {
+		Class<?> clazz = obj.getClass();
 		try {
 			m.setAccessible(true);
-			Class<?>[] parameterTypes = m.getParameterTypes();
-			Object[] methodArgs = new Object[parameterTypes.length];
-			if (parameterTypes.length < args.length) {
-				throw new XmxRuntimeException("Too many arguments for the method " + clazz.getName() + "#" + m);
-			}
-			// less or equal number of args is supported
-			for (int i = 0; i < args.length; i++) {
-				Class<?> type = parameterTypes[i];
-				if (!type.equals(String.class)) {
-					// TODO: support json
-					throw new XmxRuntimeException("NOT IMPLEMENTED: Only String's args are supported now for invokeObjectMethod()");
-				} else {
-					// TODO support JSON
-					methodArgs[i] = args[i];
-				}
-			}
 
 			// set context class loader to enable functionality which depends on it, like JNDI
 			ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
 			Thread.currentThread().setContextClassLoader(clazz.getClassLoader());
 			try {
-				Object returnValue = m.invoke(obj, methodArgs);
+				Object returnValue = m.invoke(obj, args);
 				if (returnValue == null) {
 					return "null";
 				} else {
@@ -488,11 +466,13 @@ public class XmxManager implements IXmxServiceEx {
 		}
 	}
 	
-	synchronized private static Object getObjectById(int objectId) {
+	@Override
+	synchronized public Object getObjectById(int objectId) {
 		WeakReference<Object> ref = objectsStorage.get(objectId);
 		return ref == null ? null : ref.get(); 
 	}
-	
+
+
 	private static void fillDetails(Object obj, Class<?> clazz,
 			List<String> classNames,
 			Map<String, List<FieldInfo>> fieldsByClass,

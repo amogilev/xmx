@@ -1,4 +1,4 @@
-package am.xmx.core;
+package am.xmx.core.jmx;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -16,8 +16,6 @@ import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.ModelMBeanNotificationInfo;
 import javax.management.modelmbean.ModelMBeanOperationInfo;
 import javax.management.modelmbean.RequiredModelMBean;
-
-import org.eclipse.jetty.util.StringUtil;
 
 import am.xmx.cfg.IXmxPropertiesSource;
 import am.xmx.dto.XmxClassInfo;
