@@ -1,6 +1,9 @@
 package am.xmx.dto;
 
-import javax.management.modelmbean.ModelMBeanInfo;
+import java.lang.reflect.Method;
+import java.util.List;
+
+import javax.management.modelmbean.ModelMBeanInfoSupport;
 
 public class XmxClassInfo {
 	
@@ -15,10 +18,16 @@ public class XmxClassInfo {
 	private String className;
 	
 	/**
+	 * List of managed methods. Index in the list is
+	 * equal to the internal method ID. 
+	 */
+	private List<Method> managedMethods;
+	
+	/**
 	 * JMX model for managed class instances, or {@code null}
 	 * if they need not to be published to JMX.
 	 */
-	ModelMBeanInfo jmxClassModel;
+	ModelMBeanInfoSupport jmxClassModel;
 	
 	/**
 	 * Part of JMX ObjectName (without object ID) used for managed 
@@ -27,9 +36,11 @@ public class XmxClassInfo {
 	 */
 	String jmxObjectNamePart;
 	
-	public XmxClassInfo(int id, String className, ModelMBeanInfo jmxClassModel, String jmxObjectNamePart) {
+	public XmxClassInfo(int id, String className, List<Method> managedMethods, 
+			ModelMBeanInfoSupport jmxClassModel, String jmxObjectNamePart) {
 		this.id = id;
 		this.className = className;
+		this.managedMethods = managedMethods;
 		this.jmxClassModel = jmxClassModel;
 		this.jmxObjectNamePart = jmxObjectNamePart;
 	}
@@ -43,14 +54,24 @@ public class XmxClassInfo {
 	}
 	
 	
-	public ModelMBeanInfo getJmxClassModel() {
+	public ModelMBeanInfoSupport getJmxClassModel() {
 		return jmxClassModel;
 	}
 	
 	public String getJmxObjectNamePart() {
 		return jmxObjectNamePart;
 	}
+	
+	public List<Method> getManagedMethods() {
+		return managedMethods;
+	}
 
+	public Method getMethodById(int methodId) {
+		if (methodId < 0 || methodId >= managedMethods.size()) {
+			throw new XmxRuntimeException("Method not found in " + className + " by ID=" + methodId);
+		}
+		return managedMethods.get(methodId);
+	}
 
 	// NOTE: no ID and JMX info in hashCode & equals!
 

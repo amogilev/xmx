@@ -4,7 +4,7 @@ import am.xmx.dto.XmxClassInfo;
 
 public class AdvancedXmxClassInfo extends XmxClassInfo {
 	public AdvancedXmxClassInfo(int id, String className) {
-		super(id, className, null, null);
+		super(id, className, null, null, null);
 	}
 
 	/**

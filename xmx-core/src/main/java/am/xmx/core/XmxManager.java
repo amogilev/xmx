@@ -17,7 +17,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
@@ -25,7 +24,7 @@ import java.util.regex.Pattern;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-import javax.management.modelmbean.ModelMBeanInfo;
+import javax.management.modelmbean.ModelMBeanInfoSupport;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -44,7 +43,6 @@ import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
 import am.xmx.server.IXmxServerLauncher;
 import am.xmx.service.IXmxService;
-import am.xmx.service.IXmxServiceEx;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -52,7 +50,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-public class XmxManager implements IXmxServiceEx {
+public class XmxManager implements IXmxCoreService {
 
 	public static IXmxConfig config = XmxIniConfig.getDefault();
 	
@@ -94,16 +92,23 @@ public class XmxManager implements IXmxServiceEx {
 	 */
 	private static AtomicInteger managedObjectsCounter = new AtomicInteger();
 	
+	// TODO: currently no support for same classes in one app loaded by different class loaders
+	// need to change appName in maps to IDXs of class loaders
+	
 	/**
 	 * Storage of classes info for managed objects
 	 */
 	private static Map<Integer, XmxClassInfo> classesInfoById = new HashMap<>(32*1024);
 	
-	// TODO: currently no support for same classes in one app loaded by different class loaders
-	// need to change appName in maps to IDXs of class loaders
+	/**
+	 * All class IDs by class object.
+	 */
+	private static Map<Class<?>, Integer> classIdsByClass = new HashMap<>(32*1024);
 	
-	// appName -> {className -> classInfoIdx}
-	private static Map<String, Map<String, Integer>> classIdsByAppAndName = new HashMap<>();
+	/**
+	 * Maps appName -> {classInfoIdx}, i.e. provides all class IDs for each app
+	 */
+	private static Map<String, List<Integer>> classIdsByApp = new HashMap<>();
 	
 	// classInfoIdx -> [objectInfoIdx]
 	private static Map<Integer, Set<Integer>> objectIdsByClassIds = new HashMap<>();
@@ -139,6 +144,7 @@ public class XmxManager implements IXmxServiceEx {
 			}
 		};
 		cleanerThread.setDaemon(true);
+		cleanerThread.start();
 	}
 	
 	private static MBeanServer jmxServer = null;
@@ -155,7 +161,7 @@ public class XmxManager implements IXmxServiceEx {
 	
 	// Non-public static API, used through reflection 
 	
-	public static IXmxServiceEx getService() {
+	public static IXmxCoreService getService() {
 		return instance;
 	}
 	
@@ -169,24 +175,25 @@ public class XmxManager implements IXmxServiceEx {
 	@Override
 	synchronized public void registerObject(Object obj) {
 		Class<?> objClass = obj.getClass();
-		String className = objClass.getName();
 		String appName = obtainAppName(obj);
 		
-		Map<String, Integer> classIdsByName = classIdsByAppAndName.get(appName);
-		if (classIdsByName == null) {
-			classIdsByName = new HashMap<>();
-			classIdsByAppAndName.put(appName, classIdsByName);
-		}
-		
+		Integer classId = classIdsByClass.get(objClass);
 		XmxClassInfo classInfo;
-		Integer classId = classIdsByName.get(className);
 		if (classId == null) {
+			// first occurrence of the class
 			// TODO: use classLoader in class ID
 			classInfo = makeNewClassInfo(objClass, appName);
-			
 			classId = classInfo.getId();
-			classIdsByName.put(className, classId);
+			
 			classesInfoById.put(classId, classInfo);
+			classIdsByClass.put(objClass, classId);
+			
+			List<Integer> appClassIds = classIdsByApp.get(appName);
+			if (appClassIds == null) {
+				appClassIds = new ArrayList<>(1024);
+				classIdsByApp.put(appName, appClassIds);
+			}
+			appClassIds.add(classId);
 		} else {
 			classInfo = classesInfoById.get(classId);
 			assert classInfo != null;
@@ -226,18 +233,19 @@ public class XmxManager implements IXmxServiceEx {
 	private XmxClassInfo makeNewClassInfo(Class<?> objClass, String appName) {
 		int classId = managedClassesCounter.getAndIncrement();
 		String className = objClass.getName();
+		List<Method> managedMethods = getManagedMethods(objClass);
 		
-		ModelMBeanInfo jmxClassModel = null;
+		ModelMBeanInfoSupport jmxClassModel = null;
 		String jmxObjectNamePart = null;
 		if (jmxServer != null) {
-			jmxClassModel = JmxSupport.createModelForClass(objClass, appName, config);
+			jmxClassModel = JmxSupport.createModelForClass(objClass, appName, managedMethods, config);
 			if (jmxClassModel != null) {
 				jmxObjectNamePart = JmxSupport.createClassObjectNamePart(objClass, appName);
 				assert jmxObjectNamePart != null; 
 			}
 		}
 		
-		return new XmxClassInfo(classId, className, jmxClassModel, jmxObjectNamePart);
+		return new XmxClassInfo(classId, className, managedMethods, jmxClassModel, jmxObjectNamePart);
 	}
 
 
@@ -306,7 +314,7 @@ public class XmxManager implements IXmxServiceEx {
 	 */
 	@Override
 	synchronized public List<String> getApplicationNames() {
-		return new ArrayList<>(classIdsByAppAndName.keySet());
+		return new ArrayList<>(classIdsByApp.keySet());
 	}
 	
 	/**
@@ -323,11 +331,11 @@ public class XmxManager implements IXmxServiceEx {
 		List<XmxClassInfo> result = new ArrayList<>();
 		Pattern classNamePattern = classNamePatternOrNull == null ? null : Pattern.compile(classNamePatternOrNull);
 		if (appNameOrNull != null) {
-			Map<String, Integer> classIdsByName = classIdsByAppAndName.get(appNameOrNull);
-			fillXmxClassInfo(result, classIdsByName, classNamePattern);
+			List<Integer> classIds = classIdsByApp.get(appNameOrNull);
+			fillXmxClassInfo(result, classIds, classNamePattern);
 		} else {
-			for (Map<String, Integer> classIdsByName : classIdsByAppAndName.values()) {
-				fillXmxClassInfo(result, classIdsByName, classNamePattern);
+			for (List<Integer> classIds : classIdsByApp.values()) {
+				fillXmxClassInfo(result, classIds, classNamePattern);
 			}
 		}
 		
@@ -375,7 +383,25 @@ public class XmxManager implements IXmxServiceEx {
 		
 		
 		Class<?> clazz = obj.getClass();
-		fillDetails(obj, clazz, classNames, fieldsByClass, methodsByClass, 0, 0);
+		fillDetails(obj, clazz, classNames, fieldsByClass, 0);
+		
+		// fill methods
+		XmxClassInfo classInfo = getManagedClassInfo(clazz);
+		List<Method> managedMethods = classInfo.getManagedMethods();
+		Class<?> lastMethodClass = clazz;
+		List<MethodInfo> methodsInfo = new ArrayList<>();
+		for (int methodId = 0; methodId < managedMethods.size(); methodId++) {
+			// TODO: check order
+			Method m = managedMethods.get(methodId);
+			MethodInfo mi = new MethodInfo(methodId, m.getName(), m.toString());
+			if (!lastMethodClass.equals(m.getDeclaringClass())) {
+				methodsByClass.put(lastMethodClass.getName(), methodsInfo);
+				methodsInfo = new ArrayList<>();
+				lastMethodClass = m.getDeclaringClass();
+			}
+			methodsInfo.add(mi);
+		}
+		methodsByClass.put(lastMethodClass.getName(), methodsInfo);
 		
 		XmxObjectDetails details = new XmxObjectDetails(classNames, fieldsByClass, methodsByClass);
 		return details;
@@ -430,12 +456,20 @@ public class XmxManager implements IXmxServiceEx {
 	public Method getObjectMethodById(Object obj, int methodId)
 			throws XmxRuntimeException {
 		
-		Class<?> clazz = obj.getClass();
-		Method m = getMethodById(clazz, methodId);
-		if (m == null) {
-			throw new XmxRuntimeException("Method not found in " + clazz.getName() + " by ID=" + methodId);
+		XmxClassInfo classInfo = getManagedClassInfo(obj.getClass());
+		return classInfo.getMethodById(methodId);
+	}
+	
+	@Override
+	public XmxClassInfo getManagedClassInfo(Class<?> clazz) {
+		Integer classId = classIdsByClass.get(clazz);
+		if (classId == null) {
+			throw new XmxRuntimeException("Class is not managed: " + clazz); 
 		}
-		return m;
+		
+		XmxClassInfo classInfo = classesInfoById.get(classId);
+		assert classInfo != null;
+		return classInfo;
 	}
 	
 	/**
@@ -471,12 +505,25 @@ public class XmxManager implements IXmxServiceEx {
 		WeakReference<Object> ref = objectsStorage.get(objectId);
 		return ref == null ? null : ref.get(); 
 	}
+	
+	private static List<Method> getManagedMethods(Class<?> clazz) {
+		List<Method> methods = new ArrayList<>(20);
+		while (clazz != null) {
+			Method[] declaredMethods = clazz.getDeclaredMethods();
+			for (Method m : declaredMethods) {
+				// TODO: check if managed (e.g. by level or pattern)
+				// TODO: skip overridden methods
+				methods.add(m);
+			}
+			clazz = clazz.getSuperclass();
+		}
+		return methods;
+	}
 
 
 	private static void fillDetails(Object obj, Class<?> clazz,
 			List<String> classNames,
-			Map<String, List<FieldInfo>> fieldsByClass,
-			Map<String, List<MethodInfo>> methodsByClass, int fieldsCount, int methodsCount) {
+			Map<String, List<FieldInfo>> fieldsByClass, int fieldsCount) {
 		
 		String className = clazz.getName();
 		classNames.add(className);
@@ -497,19 +544,10 @@ public class XmxManager implements IXmxServiceEx {
 		}
 		fieldsByClass.put(className, fieldsInfo);
 		
-		Method[] methods = clazz.getDeclaredMethods();
-		List<MethodInfo> methodsInfo = new ArrayList<>(methods.length);
-		for (Method m : methods) {
-			String name = m.getName();
-			String signature = m.toString();
-			methodsInfo.add(new MethodInfo(methodsCount++, name, signature));
-		}
-		methodsByClass.put(className, methodsInfo);
-		
 		Class<?> superclass = clazz.getSuperclass();
 		if (superclass != null) {
 			// call fillDetails recursively for superclass
-			fillDetails(obj, superclass, classNames, fieldsByClass, methodsByClass, fieldsCount, methodsCount);
+			fillDetails(obj, superclass, classNames, fieldsByClass, fieldsCount);
 		}
 	}
 
@@ -526,22 +564,6 @@ public class XmxManager implements IXmxServiceEx {
 		
 		return getFieldById(superclass, fieldId - fields.length);
 	}
-	
-	private static Method getMethodById(Class<?> clazz, int methodId) {
-		Method[] methods = clazz.getDeclaredMethods();
-		if (methodId < methods.length) {
-			return methods[methodId];
-		}
-		
-		Class<?> superclass = clazz.getSuperclass();
-		if (superclass == null) {
-			return null;
-		}
-		
-		return getMethodById(superclass, methodId - methods.length);
-	}
-
-	
 	
 	private static void fillLiveObjects(List<XmxObjectInfo> result, Integer classId) {
 		XmxClassInfo xmxClassInfo = classesInfoById.get(classId);
@@ -574,13 +596,16 @@ public class XmxManager implements IXmxServiceEx {
 	}
 
 	private static void fillXmxClassInfo(List<XmxClassInfo> result,
-			Map<String, Integer> classIdsByName, Pattern classNamePattern) {
-		for (Entry<String, Integer> e : classIdsByName.entrySet()) {
-			String className = e.getKey();
-			Integer classId = e.getValue();
-			if (classNamePattern == null || classNamePattern.matcher(className).matches()) {
-				result.add(classesInfoById.get(classId));
+			List<Integer> classIds, Pattern classNamePattern) {
+		for (Integer classId : classIds) {
+			if (classNamePattern != null) {
+				XmxClassInfo classInfo = classesInfoById.get(classId);
+				String className = classInfo.getClassName();
+				if (!classNamePattern.matcher(className).matches()) {
+					continue;
+				}
 			}
+			result.add(classesInfoById.get(classId));
 		}
 	}
 	

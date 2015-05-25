@@ -9,7 +9,7 @@ import javax.management.ObjectName;
  * Weak reference for managed object, which additionally contains 
  * object data. 
  */
-class ManagedObjectWeakRef extends WeakReference<Object> {
+public class ManagedObjectWeakRef extends WeakReference<Object> {
 	
 	int objectId;
 	int classId;
