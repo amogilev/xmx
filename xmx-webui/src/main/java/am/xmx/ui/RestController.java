@@ -1,9 +1,14 @@
 package am.xmx.ui;
 
-import am.xmx.dto.XmxClassInfo;
-import am.xmx.dto.XmxObjectDetails;
-import am.xmx.dto.XmxRuntimeException;
-import am.xmx.service.IXmxService;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,13 +18,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import am.xmx.dto.XmxClassInfo;
+import am.xmx.dto.XmxObjectDetails;
+import am.xmx.dto.XmxRuntimeException;
+import am.xmx.service.IXmxService;
 
 @Controller
 @RequestMapping("/")
@@ -36,6 +38,12 @@ public class RestController {
 		if (CollectionUtils.isNotEmpty(applicationNames)) {
 			for (String applicationName : applicationNames) {
 				List<XmxClassInfo> managedClassInfos = xmxService.findManagedClassInfos(applicationName, null);
+				Collections.sort(managedClassInfos, new Comparator<XmxClassInfo>() {
+					@Override
+					public int compare(XmxClassInfo o1, XmxClassInfo o2) {
+						return o1.getClassName().compareTo(o2.getClassName());
+					}
+				});
 				if (CollectionUtils.isNotEmpty(managedClassInfos)) {
 					List<AdvancedXmxClassInfo> advancedXmxClassInfos = new ArrayList<>(managedClassInfos.size());
 					for (XmxClassInfo managedClassInfo : managedClassInfos) {
