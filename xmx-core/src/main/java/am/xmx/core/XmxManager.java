@@ -234,18 +234,19 @@ public class XmxManager implements IXmxCoreService {
 		int classId = managedClassesCounter.getAndIncrement();
 		String className = objClass.getName();
 		List<Method> managedMethods = getManagedMethods(objClass);
+		List<Field> managedFields = getManagedFields(objClass);
 		
 		ModelMBeanInfoSupport jmxClassModel = null;
 		String jmxObjectNamePart = null;
 		if (jmxServer != null) {
-			jmxClassModel = JmxSupport.createModelForClass(objClass, appName, managedMethods, config);
+			jmxClassModel = JmxSupport.createModelForClass(objClass, appName, managedMethods, managedFields, config);
 			if (jmxClassModel != null) {
 				jmxObjectNamePart = JmxSupport.createClassObjectNamePart(objClass, appName);
 				assert jmxObjectNamePart != null; 
 			}
 		}
 		
-		return new XmxClassInfo(classId, className, managedMethods, jmxClassModel, jmxObjectNamePart);
+		return new XmxClassInfo(classId, className, managedMethods, managedFields, jmxClassModel, jmxObjectNamePart);
 	}
 
 
@@ -383,25 +384,51 @@ public class XmxManager implements IXmxCoreService {
 		
 		
 		Class<?> clazz = obj.getClass();
-		fillDetails(obj, clazz, classNames, fieldsByClass, 0);
+		XmxClassInfo classInfo = getManagedClassInfo(clazz);
+
+		// fill fields
+		List<Field> managedFields = classInfo.getManagedFields();
+		for (int fieldId = 0; fieldId < managedFields.size(); fieldId++) {
+			Field f = managedFields.get(fieldId);
+			String declaringClassName = f.getDeclaringClass().getName();
+			
+			List<FieldInfo> classFieldsInfo = fieldsByClass.get(declaringClassName);
+			if (classFieldsInfo == null) {
+				classFieldsInfo = new ArrayList<>();
+				fieldsByClass.put(declaringClassName, classFieldsInfo);
+			}
+			
+			String strValue = null;
+			try {
+				Object val = f.get(obj);
+				strValue = val.toString();
+			} catch (Exception e) {
+				strValue = e.toString();
+			}
+			
+			FieldInfo fi = new FieldInfo(fieldId, f.getName(), strValue); 
+			classFieldsInfo.add(fi);
+		}
 		
 		// fill methods
-		XmxClassInfo classInfo = getManagedClassInfo(clazz);
 		List<Method> managedMethods = classInfo.getManagedMethods();
-		Class<?> lastMethodClass = clazz;
-		List<MethodInfo> methodsInfo = new ArrayList<>();
 		for (int methodId = 0; methodId < managedMethods.size(); methodId++) {
-			// TODO: check order
 			Method m = managedMethods.get(methodId);
-			MethodInfo mi = new MethodInfo(methodId, m.getName(), m.toString());
-			if (!lastMethodClass.equals(m.getDeclaringClass())) {
-				methodsByClass.put(lastMethodClass.getName(), methodsInfo);
-				methodsInfo = new ArrayList<>();
-				lastMethodClass = m.getDeclaringClass();
+			String declaringClassName = m.getDeclaringClass().getName();
+			
+			List<MethodInfo> classMethodsInfo = methodsByClass.get(declaringClassName);
+			if (classMethodsInfo == null) {
+				classMethodsInfo = new ArrayList<>();
+				methodsByClass.put(declaringClassName, classMethodsInfo);
 			}
-			methodsInfo.add(mi);
+			MethodInfo mi = new MethodInfo(methodId, m.getName(), m.toString());
+			classMethodsInfo.add(mi);
 		}
-		methodsByClass.put(lastMethodClass.getName(), methodsInfo);
+		
+		while (clazz != null) {
+			classNames.add(clazz.getName());
+			clazz = clazz.getSuperclass();
+		}
 		
 		XmxObjectDetails details = new XmxObjectDetails(classNames, fieldsByClass, methodsByClass);
 		return details;
@@ -427,10 +454,9 @@ public class XmxManager implements IXmxCoreService {
 			return null;
 		}
 		
-		Class<?> clazz = obj.getClass();
-		Field f = getFieldById(clazz, fieldId);
+		Field f = getObjectFieldById(obj, fieldId);
 		if (f == null) {
-			throw new XmxRuntimeException("Field not found in " + clazz.getName() + " by ID=" + fieldId);
+			throw new XmxRuntimeException("Field not found in " + obj.getClass().getName() + " by ID=" + fieldId);
 		}
 		Object deserializedValue = null;
 		if (f.getType().equals(String.class)) {
@@ -458,6 +484,12 @@ public class XmxManager implements IXmxCoreService {
 		
 		XmxClassInfo classInfo = getManagedClassInfo(obj.getClass());
 		return classInfo.getMethodById(methodId);
+	}
+	
+	@Override
+	public Field getObjectFieldById(Object obj, int fieldId) {
+		XmxClassInfo classInfo = getManagedClassInfo(obj.getClass());
+		return classInfo.getFieldById(fieldId);
 	}
 	
 	@Override
@@ -519,52 +551,22 @@ public class XmxManager implements IXmxCoreService {
 		}
 		return methods;
 	}
-
-
-	private static void fillDetails(Object obj, Class<?> clazz,
-			List<String> classNames,
-			Map<String, List<FieldInfo>> fieldsByClass, int fieldsCount) {
-		
-		String className = clazz.getName();
-		classNames.add(className);
-		
-		Field[] fields = clazz.getDeclaredFields();
-		List<FieldInfo> fieldsInfo = new ArrayList<>(fields.length);
-		for (Field f : fields) {
-			f.setAccessible(true);
-			String name = f.getName();
-			String strValue = null;
-			try {
-				Object val = f.get(obj);
-				strValue = val.toString();
-			} catch (Exception e) {
-				strValue = e.toString();
-			}
-			fieldsInfo.add(new FieldInfo(fieldsCount++, name, strValue));
-		}
-		fieldsByClass.put(className, fieldsInfo);
-		
-		Class<?> superclass = clazz.getSuperclass();
-		if (superclass != null) {
-			// call fillDetails recursively for superclass
-			fillDetails(obj, superclass, classNames, fieldsByClass, fieldsCount);
-		}
-	}
-
-	private static Field getFieldById(Class<?> clazz, int fieldId) {
-		Field[] fields = clazz.getDeclaredFields();
-		if (fieldId < fields.length) {
-			return fields[fieldId];
-		}
-		
-		Class<?> superclass = clazz.getSuperclass();
-		if (superclass == null) {
-			return null;
-		}
-		
-		return getFieldById(superclass, fieldId - fields.length);
-	}
 	
+	private static List<Field> getManagedFields(Class<?> clazz) {
+		List<Field> fields = new ArrayList<>(20);
+		while (clazz != null) {
+			Field[] declaredFields = clazz.getDeclaredFields();
+			for (Field f : declaredFields) {
+				// TODO: check if managed (e.g. by level or pattern)
+				// TODO: skip overridden methods
+				f.setAccessible(true);
+				fields.add(f);
+			}
+			clazz = clazz.getSuperclass();
+		}
+		return fields;
+	}
+
 	private static void fillLiveObjects(List<XmxObjectInfo> result, Integer classId) {
 		XmxClassInfo xmxClassInfo = classesInfoById.get(classId);
 		Set<Integer> objectIds = objectIdsByClassIds.get(classId);

@@ -1,5 +1,6 @@
 package am.xmx.service;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -99,7 +100,18 @@ public interface IXmxService {
 	 * @return the resolved {@link Method}
 	 * @throws XmxRuntimeException if the method cannot be resolved
 	 */
-	Method getObjectMethodById(Object obj, int methodId) throws XmxRuntimeException; 
+	Method getObjectMethodById(Object obj, int methodId) throws XmxRuntimeException;
+	
+	/**
+	 * Resolves and returns actual Field by internal field ID. 
+	 * 
+	 * @param obj the object to which the method belongs
+	 * @param fieldId the internal field ID
+	 * 
+	 * @return the resolved {@link Field}
+	 * @throws XmxRuntimeException if the field cannot be resolved
+	 */
+	Field getObjectFieldById(Object obj, int fieldId) throws XmxRuntimeException;
 	
 	// TBC...
 }

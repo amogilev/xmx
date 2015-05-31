@@ -1,5 +1,6 @@
 package am.xmx.dto;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -24,6 +25,12 @@ public class XmxClassInfo {
 	private List<Method> managedMethods;
 	
 	/**
+	 * List of managed fields. Index in the list is
+	 * equal to the internal field ID. 
+	 */
+	private List<Field> managedFields;
+	
+	/**
 	 * JMX model for managed class instances, or {@code null}
 	 * if they need not to be published to JMX.
 	 */
@@ -35,12 +42,14 @@ public class XmxClassInfo {
 	 * published to JMX.
 	 */
 	String jmxObjectNamePart;
-	
-	public XmxClassInfo(int id, String className, List<Method> managedMethods, 
+
+	public XmxClassInfo(int id, String className, 
+			List<Method> managedMethods, List<Field> managedFields, 
 			ModelMBeanInfoSupport jmxClassModel, String jmxObjectNamePart) {
 		this.id = id;
 		this.className = className;
 		this.managedMethods = managedMethods;
+		this.managedFields = managedFields;
 		this.jmxClassModel = jmxClassModel;
 		this.jmxObjectNamePart = jmxObjectNamePart;
 	}
@@ -66,11 +75,22 @@ public class XmxClassInfo {
 		return managedMethods;
 	}
 
+	public List<Field> getManagedFields() {
+		return managedFields;
+	}
+
 	public Method getMethodById(int methodId) {
 		if (methodId < 0 || methodId >= managedMethods.size()) {
 			throw new XmxRuntimeException("Method not found in " + className + " by ID=" + methodId);
 		}
 		return managedMethods.get(methodId);
+	}
+	
+	public Field getFieldById(int fieldId) {
+		if (fieldId < 0 || fieldId >= managedFields.size()) {
+			throw new XmxRuntimeException("Field not found in " + className + " by ID=" + fieldId);
+		}
+		return managedFields.get(fieldId);
 	}
 
 	// NOTE: no ID and JMX info in hashCode & equals!
