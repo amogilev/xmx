@@ -14,6 +14,7 @@ public final class Properties {
 	public static final String GLOBAL_EMB_SERVER_IMPL = "EmbeddedWebServer.Impl";
 	public static final String GLOBAL_EMB_SERVER_PORT = "EmbeddedWebServer.Port";
 	public static final String GLOBAL_JMX_ENABLED = "JMX.Bridge.Enabled";
+	public static final String GLOBAL_SORT_FIELDS = "Sort.Fields";
 	
 	//
 	// known application-level properties

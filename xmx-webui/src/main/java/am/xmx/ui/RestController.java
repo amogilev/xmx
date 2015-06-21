@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.IteratorUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
+import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
 import am.xmx.service.IXmxService;
 
@@ -66,8 +68,16 @@ public class RestController {
 
 	@RequestMapping(value = "getClassObjects", method = RequestMethod.GET)
 	public String getClassObjects(ModelMap model, @RequestParam(required = true) Integer classId, @RequestParam(required = true) String className) {
+		List<XmxObjectInfo> managedObjects = xmxService.getManagedObjects(classId);
+		if (managedObjects.size() == 1) {
+			// fast path for singletons
+			return getObjectDetails(model, managedObjects.get(0).getObjectId());
+			
+			// alternative way to change URL 
+			// return "redirect:/getObjectDetails?objectId=" + managedObjects.get(0).getObjectId();
+		}
 		model.addAttribute("className", className);
-		model.addAttribute("objects", xmxService.getManagedObjects(classId));
+		model.addAttribute("objects", managedObjects);
 		return "classObjects";
 	}
 

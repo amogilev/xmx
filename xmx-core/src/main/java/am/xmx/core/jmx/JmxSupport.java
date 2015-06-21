@@ -11,6 +11,7 @@ import javax.management.MBeanOperationInfo;
 import javax.management.MBeanParameterInfo;
 import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.modelmbean.DescriptorSupport;
 import javax.management.modelmbean.ModelMBeanAttributeInfo;
@@ -154,25 +155,34 @@ public class JmxSupport {
 	}
 
 	public static ObjectName registerBean(MBeanServer jmxServer, int objectId,
-			Object obj, XmxClassInfo classInfo) {
+			XmxClassInfo classInfo, boolean singleton) {
 
 		if (classInfo.getJmxClassModel() == null || classInfo.getJmxObjectNamePart() == null) {
 			return null;
 		}
 
 		try {
-			// TODO: maybe skip id for singletons
-			ObjectName objectName = new ObjectName(classInfo.getJmxObjectNamePart() + ",id=" + objectId);
+			ObjectName objectName = makeObjectName(objectId, classInfo, singleton);
 
-			// TODO: use custom ModelMBean to (1) set context CL and (2) support WeakRefs
-			//			RequiredModelMBean bean = new RequiredModelMBean(classInfo.getJmxClassModel());
-			//			bean.setManagedResource(obj, "ObjectReference");
 			JmxBridgeModelBean bean = new JmxBridgeModelBean(objectId, classInfo.getJmxClassModel());
-
 			jmxServer.registerMBean(bean, objectName);
+			
 			return objectName;
 		} catch (Exception e) {
-			System.err.println("Failed to register object as JMX bean; class=" + obj.getClass().getName());
+			System.err.println("Failed to register object as JMX bean; class=" + classInfo.getClassName());
+			e.printStackTrace(System.err);
+			return null;
+		}
+	}
+
+	public static ObjectName makeObjectName(int objectId, XmxClassInfo classInfo, boolean singleton) {
+		try {
+			// add id for non-singletons
+			ObjectName objectName = new ObjectName(classInfo.getJmxObjectNamePart() + 
+					(singleton ?  "" : ",id=" + objectId));
+			return objectName;
+		} catch (MalformedObjectNameException e) {
+			System.err.println("Unexpected: Failed to create ObjectName; part=" + classInfo.getJmxObjectNamePart());
 			e.printStackTrace(System.err);
 			return null;
 		}

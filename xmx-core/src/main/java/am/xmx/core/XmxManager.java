@@ -12,6 +12,8 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -217,13 +219,30 @@ public class XmxManager implements IXmxCoreService {
 				}
 			}
 		}
+		int otherInstancesCount = objectIds.size(); 
 		
-		// not registered yet, store
+		// not registered yet, store internally and optionally register as JMX bean
 		int objectId = managedObjectsCounter.getAndIncrement();
 		ObjectName jmxObjectName = null;
 		if (jmxServer != null && classInfo.getJmxClassModel() != null) {
-			jmxObjectName = JmxSupport.registerBean(jmxServer, objectId, obj, classInfo);
+			// register as JMX bean
+			jmxObjectName = JmxSupport.registerBean(jmxServer, objectId, classInfo, otherInstancesCount == 0);
+			
+			if (otherInstancesCount == 1) {
+				// check if another instance is registered in JMX as singleton. If so,
+				// re-register it with id
+				int anotherObjectId = objectIds.iterator().next();
+				ManagedObjectWeakRef anotherObject = objectsStorage.get(anotherObjectId);
+				ObjectName anotherObjectName = anotherObject.jmxObjectName; 
+				if (anotherObjectName.getKeyProperty("id") == null) {
+					// re-register as non-singleton
+					JmxSupport.unregisterBean(jmxServer, anotherObjectName);
+					anotherObject.jmxObjectName = JmxSupport.registerBean(jmxServer, anotherObjectId, classInfo, false); 
+				}
+			}
 		}
+		
+		// store internally
 		objectsStorage.put(objectId, new ManagedObjectWeakRef(obj, managedObjectsRefQueue, 
 				objectId, classId, jmxObjectName));
 		objectIds.add(objectId);
@@ -542,6 +561,10 @@ public class XmxManager implements IXmxCoreService {
 		List<Method> methods = new ArrayList<>(20);
 		while (clazz != null) {
 			Method[] declaredMethods = clazz.getDeclaredMethods();
+			
+			// sort methods declared in one class
+			Arrays.sort(declaredMethods, ReflectionUtils.METHOD_COMPARATOR);
+			
 			for (Method m : declaredMethods) {
 				// TODO: check if managed (e.g. by level or pattern)
 				// TODO: skip overridden methods
@@ -556,6 +579,11 @@ public class XmxManager implements IXmxCoreService {
 		List<Field> fields = new ArrayList<>(20);
 		while (clazz != null) {
 			Field[] declaredFields = clazz.getDeclaredFields();
+			if (config.getSystemProperty(Properties.GLOBAL_SORT_FIELDS).asBool()) {
+				// optionally sort fields declared in one class
+				Arrays.sort(declaredFields, ReflectionUtils.FIELD_COMPARATOR);
+			}
+			
 			for (Field f : declaredFields) {
 				// TODO: check if managed (e.g. by level or pattern)
 				// TODO: skip overridden methods
