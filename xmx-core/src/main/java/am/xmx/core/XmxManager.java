@@ -33,6 +33,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 
 import am.specr.SpeculativeProcessorFactory;
+import am.xmx.cfg.IAppPropertiesSource;
 import am.xmx.cfg.IXmxConfig;
 import am.xmx.cfg.Properties;
 import am.xmx.cfg.impl.XmxIniConfig;
@@ -321,8 +322,11 @@ public class XmxManager implements IXmxCoreService {
 	private static boolean isClassManaged(ClassLoader classLoader,
 			String className) {
 		String appName = obtainAppNameByLoader(classLoader);
+		IAppPropertiesSource appConfig = config.getAppConfig(appName);
 		
-		boolean managed = config.getAppConfig(appName).getClassProperty(className, Properties.SP_MANAGED).asBool();
+		
+		boolean managed = appConfig.getAppProperty(Properties.APP_ENABLED).asBool() &&
+				config.getAppConfig(appName).getClassProperty(className, Properties.SP_MANAGED).asBool();
 		return managed;
 	}
 	
