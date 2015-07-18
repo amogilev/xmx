@@ -23,8 +23,7 @@ public interface IXmxServiceEx extends IXmxService {
 	
 	/**
 	 * Registers a newly created object, so that it becomes managed by XMX.
-	 * 
 	 */
-	void registerObject(Object obj);	
+	void registerObject(Object obj, int classId);	
 
 }

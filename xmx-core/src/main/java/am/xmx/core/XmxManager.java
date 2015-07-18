@@ -11,15 +11,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
@@ -106,12 +99,12 @@ public class XmxManager implements IXmxCoreService {
 	/**
 	 * All class IDs by class object.
 	 */
-	private static Map<Class<?>, Integer> classIdsByClass = new HashMap<>(32*1024);
+	private static Map<Class<?>, Integer> classIdsByClass = new ConcurrentHashMap<>(32*1024);
 	
 	/**
 	 * Maps appName -> {classInfoIdx}, i.e. provides all class IDs for each app
 	 */
-	private static Map<String, List<Integer>> classIdsByApp = new HashMap<>();
+	private static Map<String, List<Integer>> classIdsByApp = new ConcurrentHashMap<>();
 	
 	// classInfoIdx -> [objectInfoIdx]
 	private static Map<Integer, Set<Integer>> objectIdsByClassIds = new HashMap<>();
@@ -176,97 +169,98 @@ public class XmxManager implements IXmxCoreService {
 	 * A new unique ID is generated for an object, and a weak reference to the object is saved into the storage.
 	 */
 	@Override
-	synchronized public void registerObject(Object obj) {
+	public void registerObject(Object obj, int classId) {
 		Class<?> objClass = obj.getClass();
-		String appName = obtainAppName(obj);
 		
-		Integer classId = classIdsByClass.get(objClass);
-		XmxClassInfo classInfo;
-		if (classId == null) {
-			// first occurrence of the class
-			// TODO: use classLoader in class ID
-			classInfo = makeNewClassInfo(objClass, appName);
-			classId = classInfo.getId();
-			
-			classesInfoById.put(classId, classInfo);
-			classIdsByClass.put(objClass, classId);
-			
-			List<Integer> appClassIds = classIdsByApp.get(appName);
-			if (appClassIds == null) {
-				appClassIds = new ArrayList<>(1024);
-				classIdsByApp.put(appName, appClassIds);
+		XmxClassInfo classInfo = classesInfoById.get(classId);
+		if (classInfo == null) {
+			// not managed anymore
+			return;
+		}
+		if (!classInfo.getClassName().equals(objClass.getName())) {
+			// invoked from a constructor of some superclass
+			// wait until invoked from actual class (or not invoked if it is not managed)
+			// TODO check if classIdsByClass.get(objClass); is faster than String comparison
+			return;
+		} 
+		// ok, class id corresponds to the actual class
+		if (!classInfo.isInitialized()) {
+			String appName = obtainAppName(obj);
+			initClassInfo(objClass, appName, classInfo);
+		}
+		
+		// TODO: support limits 
+		
+		// TODO: think about synchronization
+		synchronized(this) {
+			Set<Integer> objectIds = objectIdsByClassIds.get(classId);
+			if (objectIds == null) {
+				objectIds = new HashSet<>(2);
+				objectIdsByClassIds.put(classId, objectIds);
 			}
-			appClassIds.add(classId);
-		} else {
-			classInfo = classesInfoById.get(classId);
-			assert classInfo != null;
-		}
-		
-		Set<Integer> objectIds = objectIdsByClassIds.get(classId);
-		if (objectIds == null) {
-			objectIds = new HashSet<>(2);
-			objectIdsByClassIds.put(classId, objectIds);
-		}
-		
-		// check if object is already registered, e.g. from superclass
-		for (Integer id : objectIds) {
-			// check all registered objects of this class
-			ManagedObjectWeakRef ref = objectsStorage.get(id);
-			if (ref != null) {
-				Object existingObj = ref.get();
-				if (existingObj == obj) {
-					// already registered, skip
-					return;
+			
+			// check if object is already registered, e.g. from superclass
+			for (Integer id : objectIds) {
+				// check all registered objects of this class
+				ManagedObjectWeakRef ref = objectsStorage.get(id);
+				if (ref != null) {
+					Object existingObj = ref.get();
+					if (existingObj == obj) {
+						// already registered, skip
+						return;
+					}
 				}
 			}
-		}
-		int otherInstancesCount = objectIds.size(); 
-		
-		// not registered yet, store internally and optionally register as JMX bean
-		int objectId = managedObjectsCounter.getAndIncrement();
-		ObjectName jmxObjectName = null;
-		if (jmxServer != null && classInfo.getJmxClassModel() != null) {
-			// register as JMX bean
-			jmxObjectName = JmxSupport.registerBean(jmxServer, objectId, classInfo, otherInstancesCount == 0);
+			int otherInstancesCount = objectIds.size(); 
 			
-			if (otherInstancesCount == 1) {
-				// check if another instance is registered in JMX as singleton. If so,
-				// re-register it with id
-				int anotherObjectId = objectIds.iterator().next();
-				ManagedObjectWeakRef anotherObject = objectsStorage.get(anotherObjectId);
-				ObjectName anotherObjectName = anotherObject.jmxObjectName; 
-				if (anotherObjectName.getKeyProperty("id") == null) {
-					// re-register as non-singleton
-					JmxSupport.unregisterBean(jmxServer, anotherObjectName);
-					anotherObject.jmxObjectName = JmxSupport.registerBean(jmxServer, anotherObjectId, classInfo, false); 
+			// not registered yet, store internally and optionally register as JMX bean
+			int objectId = managedObjectsCounter.getAndIncrement();
+			ObjectName jmxObjectName = null;
+			if (jmxServer != null && classInfo.getJmxClassModel() != null) {
+				// register as JMX bean
+				jmxObjectName = JmxSupport.registerBean(jmxServer, objectId, classInfo, otherInstancesCount == 0);
+				
+				if (otherInstancesCount == 1) {
+					// check if another instance is registered in JMX as singleton. If so,
+					// re-register it with id
+					int anotherObjectId = objectIds.iterator().next();
+					ManagedObjectWeakRef anotherObject = objectsStorage.get(anotherObjectId);
+					ObjectName anotherObjectName = anotherObject.jmxObjectName; 
+					if (anotherObjectName.getKeyProperty("id") == null) {
+						// re-register as non-singleton
+						JmxSupport.unregisterBean(jmxServer, anotherObjectName);
+						anotherObject.jmxObjectName = JmxSupport.registerBean(jmxServer, anotherObjectId, classInfo, false); 
+					}
 				}
 			}
+			
+			// store internally
+			objectsStorage.put(objectId, new ManagedObjectWeakRef(obj, managedObjectsRefQueue, 
+					objectId, classId, jmxObjectName));
+			objectIds.add(objectId);
 		}
-		
-		// store internally
-		objectsStorage.put(objectId, new ManagedObjectWeakRef(obj, managedObjectsRefQueue, 
-				objectId, classId, jmxObjectName));
-		objectIds.add(objectId);
-		
 	}
 
-	private XmxClassInfo makeNewClassInfo(Class<?> objClass, String appName) {
-		int classId = managedClassesCounter.getAndIncrement();
-		String className = objClass.getName();
-		List<Method> managedMethods = getManagedMethods(objClass);
-		List<Field> managedFields = getManagedFields(objClass);
-		
-		ModelMBeanInfoSupport jmxClassModel = null;
-		String jmxObjectNamePart = null;
-		if (jmxServer != null) {
-			jmxClassModel = JmxSupport.createModelForClass(objClass, appName, managedMethods, managedFields, config);
-			if (jmxClassModel != null) {
-				jmxObjectNamePart = JmxSupport.createClassObjectNamePart(objClass, appName);
-				assert jmxObjectNamePart != null; 
+	private void initClassInfo(Class<?> objClass, String appName, XmxClassInfo info) {
+		synchronized(info) {
+			if (!info.isInitialized()) {
+				List<Method> managedMethods = getManagedMethods(objClass);
+				List<Field> managedFields = getManagedFields(objClass);
+				
+				ModelMBeanInfoSupport jmxClassModel = null;
+				String jmxObjectNamePart = null;
+				if (jmxServer != null) {
+					jmxClassModel = JmxSupport.createModelForClass(objClass, appName, managedMethods, managedFields, config);
+					if (jmxClassModel != null) {
+						jmxObjectNamePart = JmxSupport.createClassObjectNamePart(objClass, appName);
+						assert jmxObjectNamePart != null; 
+					}
+				}
+				
+				info.init(managedMethods, managedFields, jmxClassModel, jmxObjectNamePart);
+				classIdsByClass.put(objClass, info.getId());
 			}
 		}
-		
-		return new XmxClassInfo(classId, className, managedMethods, managedFields, jmxClassModel, jmxObjectNamePart);
 	}
 
 
@@ -289,45 +283,57 @@ public class XmxManager implements IXmxCoreService {
 		return "";
 	}
 	
-
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public byte[] transformClassIfInterested(ClassLoader classLoader, String className, byte[] classBuffer) {
-		if (!isClassManaged(classLoader, className)) {
+		// TODO: assign class id!
+		String appName = obtainAppNameByLoader(classLoader);
+		IAppPropertiesSource appConfig = config.getAppConfig(appName);
+		
+		// convert names obtained from Agent to internal format (corresponding to Class.getName())
+		// TODO: check $
+		className = className.replace('/', '.');
+		
+		boolean isManaged = appConfig.getAppProperty(Properties.APP_ENABLED).asBool() &&
+				config.getAppConfig(appName).getClassProperty(className, Properties.SP_MANAGED).asBool();
+		
+		if (!isManaged) {
 			return classBuffer;
 		}
+		
+		// initialize known properties of managed class, e.g. class ID and name
+		// other properties may require Class itself, and will be initialized later
+		int classId = managedClassesCounter.getAndIncrement();
+		XmxClassInfo classInfo = new XmxClassInfo(classId, className);
+		
+		classesInfoById.put(classId, classInfo);
+		
+		List<Integer> appClassIds = classIdsByApp.get(appName);
+		if (appClassIds == null) {
+			appClassIds = new ArrayList<>(1024);
+			classIdsByApp.put(appName, appClassIds);
+		}
+		appClassIds.add(classId);
 		
 		System.err.println("transformClass: " + className);
 		
 		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 
-		XmxInstructionsAdder xMXInstructionsAdder = new XmxInstructionsAdder(cw);
+		XmxInstructionsAdder xmxInstructionsAdder = new XmxInstructionsAdder(cw, classId);
 
 		ClassReader cr = new ClassReader(classBuffer);
 		
-		// TODO: decide whether to instrument abstract classes, or only "leafs"
 		int access = cr.getAccess();
-		if ((access & (Opcodes.ACC_ENUM | Opcodes.ACC_INTERFACE)) > 0) {
-			// do not instrument enums and interfaces
+		if ((access & (Opcodes.ACC_ENUM | Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT)) > 0) {
+			// only instrument non-abstract classes
 			return classBuffer;
 		}
 		
 		
-		cr.accept(xMXInstructionsAdder, 0);
+		cr.accept(xmxInstructionsAdder, 0);
 		return cw.toByteArray();
-	}
-	
-	private static boolean isClassManaged(ClassLoader classLoader,
-			String className) {
-		String appName = obtainAppNameByLoader(classLoader);
-		IAppPropertiesSource appConfig = config.getAppConfig(appName);
-		
-		
-		boolean managed = appConfig.getAppProperty(Properties.APP_ENABLED).asBool() &&
-				config.getAppConfig(appName).getClassProperty(className, Properties.SP_MANAGED).asBool();
-		return managed;
 	}
 	
 	
@@ -601,6 +607,10 @@ public class XmxManager implements IXmxCoreService {
 
 	private static void fillLiveObjects(List<XmxObjectInfo> result, Integer classId) {
 		XmxClassInfo xmxClassInfo = classesInfoById.get(classId);
+		if (xmxClassInfo == null || !xmxClassInfo.isInitialized()) {
+			// no objects registered yet
+			return;
+		}
 		Set<Integer> objectIds = objectIdsByClassIds.get(classId);
 		for (Integer id : objectIds) {
 			ManagedObjectWeakRef ref = objectsStorage.get(id);
@@ -632,14 +642,18 @@ public class XmxManager implements IXmxCoreService {
 	private static void fillXmxClassInfo(List<XmxClassInfo> result,
 			List<Integer> classIds, Pattern classNamePattern) {
 		for (Integer classId : classIds) {
-			if (classNamePattern != null) {
-				XmxClassInfo classInfo = classesInfoById.get(classId);
-				String className = classInfo.getClassName();
-				if (!classNamePattern.matcher(className).matches()) {
-					continue;
+			XmxClassInfo classInfo = classesInfoById.get(classId);
+			if (classInfo.isInitialized()) {
+				if (classNamePattern != null) {
+					if (classInfo.isInitialized()) {
+						String className = classInfo.getClassName();
+						if (!classNamePattern.matcher(className).matches()) {
+							continue;
+						}
+					}
 				}
+				result.add(classesInfoById.get(classId));
 			}
-			result.add(classesInfoById.get(classId));
 		}
 	}
 	

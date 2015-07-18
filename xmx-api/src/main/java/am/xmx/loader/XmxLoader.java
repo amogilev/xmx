@@ -85,9 +85,9 @@ public class XmxLoader {
 		}
 	}
 	
-	public static void registerObject(Object obj) {
+	public static void registerObject(Object obj, int classId) {
 		if (xmxService != null) {
-			xmxService.registerObject(obj);
+			xmxService.registerObject(obj, classId);
 		}
 	}
 	

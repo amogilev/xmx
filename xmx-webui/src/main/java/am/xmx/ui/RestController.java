@@ -6,12 +6,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.IteratorUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -35,8 +35,9 @@ public class RestController {
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String getAppsAndClasses(ModelMap model) {
-		Map<String, Collection<AdvancedXmxClassInfo>> appsClassesMap = new HashMap<>();
+		Map<String, Collection<AdvancedXmxClassInfo>> appsClassesMap = new LinkedHashMap<>();
 		List<String> applicationNames = xmxService.getApplicationNames();
+		Collections.sort(applicationNames);
 		if (CollectionUtils.isNotEmpty(applicationNames)) {
 			for (String applicationName : applicationNames) {
 				List<XmxClassInfo> managedClassInfos = xmxService.findManagedClassInfos(applicationName, null);

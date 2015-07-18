@@ -18,6 +18,8 @@ public class XmxClassInfo {
 	 */
 	private String className;
 	
+	// other fields are initiated when first object of the class is registered
+	
 	/**
 	 * List of managed methods. Index in the list is
 	 * equal to the internal method ID. 
@@ -42,16 +44,22 @@ public class XmxClassInfo {
 	 * published to JMX.
 	 */
 	String jmxObjectNamePart;
-
-	public XmxClassInfo(int id, String className, 
-			List<Method> managedMethods, List<Field> managedFields, 
-			ModelMBeanInfoSupport jmxClassModel, String jmxObjectNamePart) {
+	
+	public XmxClassInfo(int id, String className) {
 		this.id = id;
 		this.className = className;
+	}
+
+	public void init(List<Method> managedMethods, List<Field> managedFields, 
+			ModelMBeanInfoSupport jmxClassModel, String jmxObjectNamePart) {
 		this.managedMethods = managedMethods;
 		this.managedFields = managedFields;
 		this.jmxClassModel = jmxClassModel;
 		this.jmxObjectNamePart = jmxObjectNamePart;
+	}
+	
+	public boolean isInitialized() {
+		return managedMethods != null;
 	}
 	
 	public int getId() {
