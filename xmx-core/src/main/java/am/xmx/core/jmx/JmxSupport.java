@@ -22,7 +22,7 @@ import javax.management.modelmbean.ModelMBeanOperationInfo;
 import javax.management.openmbean.CompositeDataSupport;
 
 import am.xmx.cfg.IXmxPropertiesSource;
-import am.xmx.dto.XmxClassInfo;
+import am.xmx.core.ManagedClassInfo;
 
 public class JmxSupport {
 
@@ -155,7 +155,7 @@ public class JmxSupport {
 	}
 
 	public static ObjectName registerBean(MBeanServer jmxServer, int objectId,
-			XmxClassInfo classInfo, boolean singleton) {
+			ManagedClassInfo classInfo, boolean singleton) {
 
 		if (classInfo.getJmxClassModel() == null || classInfo.getJmxObjectNamePart() == null) {
 			return null;
@@ -175,7 +175,7 @@ public class JmxSupport {
 		}
 	}
 
-	public static ObjectName makeObjectName(int objectId, XmxClassInfo classInfo, boolean singleton) {
+	public static ObjectName makeObjectName(int objectId, ManagedClassInfo classInfo, boolean singleton) {
 		try {
 			// add id for non-singletons
 			ObjectName objectName = new ObjectName(classInfo.getJmxObjectNamePart() + 

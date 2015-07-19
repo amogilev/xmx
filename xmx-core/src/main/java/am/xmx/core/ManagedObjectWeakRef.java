@@ -12,14 +12,14 @@ import javax.management.ObjectName;
 public class ManagedObjectWeakRef extends WeakReference<Object> {
 	
 	int objectId;
-	int classId;
+	ManagedClassInfo classInfo;
 	ObjectName jmxObjectName;
 	
 	public ManagedObjectWeakRef(Object referent, ReferenceQueue<Object> q, 
-			int objectId, int classId, ObjectName jmxObjectName) {
+			int objectId, ManagedClassInfo classInfo, ObjectName jmxObjectName) {
 		super(referent, q);
 		this.objectId = objectId;
-		this.classId = classId;
+		this.classInfo = classInfo;
 		this.jmxObjectName = jmxObjectName;
 	}
 }
