@@ -123,7 +123,8 @@ public class XmxManager implements IXmxCoreService {
 					try {
 						ManagedObjectWeakRef objRef = (ManagedObjectWeakRef) managedObjectsRefQueue.remove();
 						synchronized(instance) {
-							Set<Integer> objectIds = objRef.classInfo.getObjectIds();
+							ManagedClassInfo classInfo = objRef.classInfo;
+							Set<Integer> objectIds = classInfo.getObjectIds();
 							if (objectIds != null) {
 								objectIds.remove(objRef.objectId);
 							}
@@ -131,6 +132,9 @@ public class XmxManager implements IXmxCoreService {
 							
 							if (objRef.jmxObjectName != null) {
 								JmxSupport.unregisterBean(jmxServer, objRef.jmxObjectName);
+							}
+							if (classInfo.isDisabledByMaxInstances() && objectIds.size() < classInfo.getMaxInstances()) {
+								classInfo.setDisabledByMaxInstances(false);
 							}
 						}
 					} catch (InterruptedException e) {
@@ -180,13 +184,15 @@ public class XmxManager implements IXmxCoreService {
 			// invoked from a constructor of some superclass
 			// wait until invoked from actual class (or not invoked if it is not managed)
 			return;
-		} 
+		}
+		if (classInfo.isDisabled()) {
+			// management temporarily disabled
+			return;
+		}
 		// ok, class id corresponds to the actual class
 		if (!classInfo.isInitialized()) {
 			initClassInfo(objClass, classInfo);
 		}
-		
-		// TODO: support limits 
 		
 		// TODO: think about synchronization - maybe use by-class for part of the code
 		synchronized(this) {
@@ -205,8 +211,11 @@ public class XmxManager implements IXmxCoreService {
 				}
 			}
 			int otherInstancesCount = objectIds.size();
-			
-			// TODO: check exceed limits, disable?
+			if (otherInstancesCount >= classInfo.getMaxInstances()) {
+				// limit exceeded
+				classInfo.setDisabledByMaxInstances(true);
+				return;
+			}
 			
 			// not registered yet, store internally and optionally register as JMX bean
 			int objectId = managedObjectsCounter.getAndIncrement();
@@ -275,6 +284,14 @@ public class XmxManager implements IXmxCoreService {
 		return "";
 	}
 	
+	private static int getMaxInstances(IAppPropertiesSource appConfig, String className) {
+		int maxInstances = appConfig.getClassProperty(className, Properties.CLASS_MAX_INSTANCES).asInt();
+		if (maxInstances < 0) {
+			maxInstances = Integer.MAX_VALUE;
+		}
+		return maxInstances;
+	}
+	
 	/**
 	 * {@inheritDoc}
 	 */
@@ -298,7 +315,8 @@ public class XmxManager implements IXmxCoreService {
 		// initialize known properties of managed class, e.g. class ID and name
 		// other properties may require Class itself, and will be initialized later
 		int classId = managedClassesCounter.getAndIncrement();
-		ManagedClassInfo classInfo = new ManagedClassInfo(classId, className, appInfo);
+		int maxInstances = getMaxInstances(appConfig, className);
+		ManagedClassInfo classInfo = new ManagedClassInfo(classId, className, appInfo, maxInstances);
 		
 		classesInfoById.put(classId, classInfo);
 		appInfo.addManagedClassId(classId);

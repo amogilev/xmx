@@ -22,15 +22,20 @@ public final class Properties {
 	public static final String APP_ENABLED = "ManagementEnabled";
 	
 	//
+	// known class-level properties
+	//
+	public static final String CLASS_MAX_INSTANCES = "MaxInstances";
+	
+	//
 	// properties available on several levels
 	//
 	public static final String PROP_SECURITY_CLASS = "SecurityClass";
+	
 	
 	//
 	// "special" class-level properties
 	//
 	public static final String SP_MANAGED = "Managed";
-	
 	
 	private static final String SPECIAL_CLASSES_SUFFIX = "Classes";
 	

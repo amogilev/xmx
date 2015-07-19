@@ -27,6 +27,11 @@ public class ManagedClassInfo {
 	 */
 	private final ManagedAppInfo appInfo;
 	
+	/**
+	 * Max managed instances allowed.
+	 */
+	private final int maxInstances;
+	
 	// other fields are initiated when first object of the class is registered
 	
 	/**
@@ -61,10 +66,13 @@ public class ManagedClassInfo {
 	 */
 	private Set<Integer> objectIds;	
 	
-	public ManagedClassInfo(int id, String className, ManagedAppInfo appInfo) {
+	private boolean disabledByMaxInstances; // TODO maybe extend to custom flags 
+	
+	public ManagedClassInfo(int id, String className, ManagedAppInfo appInfo, int maxInstances) {
 		this.id = id;
 		this.className = className;
 		this.appInfo = appInfo;
+		this.maxInstances = maxInstances;
 	}
 
 	public void init(List<Method> managedMethods, List<Field> managedFields, 
@@ -122,10 +130,25 @@ public class ManagedClassInfo {
 		return managedFields.get(fieldId);
 	}
 	
+	public boolean isDisabled() {
+		return disabledByMaxInstances;
+	}
+
+	public boolean isDisabledByMaxInstances() {
+		return disabledByMaxInstances;
+	}
+
+	public void setDisabledByMaxInstances(boolean disabledByMaxInstances) {
+		this.disabledByMaxInstances = disabledByMaxInstances;
+	}
+
 	public Set<Integer> getObjectIds() {
 		return objectIds;
 	}
-
+	
+	public int getMaxInstances() {
+		return maxInstances;
+	}
 
 	// NOTE: no ID and JMX info in hashCode & equals!
 

@@ -131,6 +131,8 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		checkProperty(allApps, Properties.specialClassesForm(Properties.SP_MANAGED), 
 				"^.*(Service|(?<![rR]eference)Manager|Engine|DataSource)\\d*(Impl\\d*)?$", 
 				"Determines instances of which classes and interfaces will be managed by XMX");
+		checkProperty(allApps, Properties.CLASS_MAX_INSTANCES, 10, 
+				"Max number of managed instances by class");
 	}
 
 	private static void checkProperty(Section section, String propName, Object defaultValue) {
