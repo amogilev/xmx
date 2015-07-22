@@ -19,9 +19,14 @@ public class XmxClassTransformer implements ClassFileTransformer {
 			return null;
 		}
 		
-		if (loader.getParent() == null) {
-			// skip bootstrap classes, as XmxLoader is not defined there
+		if (loader == null || loader.getParent() == null) {
+			// skip system and bootstrap classes, as XmxLoader is not defined there
 			// TODO think if it need to be there 
+			return null;
+		}
+		
+		if (className == null) {
+			// skip anonymous (lambda) classes
 			return null;
 		}
 		
