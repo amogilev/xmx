@@ -1,6 +1,7 @@
 package am.xmx.core.jmx;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
@@ -132,7 +133,7 @@ class JmxBridgeModelBean implements DynamicMBean {
 		try {
 			Object result = xmxService.invokeObjectMethod(obj, m, params);
 			return result;
-		} catch (XmxRuntimeException e) {
+		} catch (XmxRuntimeException | InvocationTargetException e) {
 			// convert to standard exception
 			if (e.getCause() instanceof RuntimeException) {
 				throw (RuntimeException)e.getCause();

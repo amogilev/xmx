@@ -8,6 +8,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -565,7 +566,7 @@ public class XmxManager implements IXmxCoreService {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public Object invokeObjectMethod(Object obj, Method m, Object... args) throws XmxRuntimeException {
+	public Object invokeObjectMethod(Object obj, Method m, Object... args) throws XmxRuntimeException, InvocationTargetException {
 		Class<?> clazz = obj.getClass();
 		try {
 			m.setAccessible(true);
@@ -584,6 +585,8 @@ public class XmxManager implements IXmxCoreService {
 			} finally {
 				Thread.currentThread().setContextClassLoader(prevClassLoader);
 			}
+		} catch (InvocationTargetException e) {
+			throw e;
 		} catch (Exception e) {
 			throw new XmxRuntimeException("Failed to invoke method", e);
 		}

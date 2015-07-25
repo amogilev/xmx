@@ -1,6 +1,7 @@
 package am.xmx.service;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -75,9 +76,10 @@ public interface IXmxService {
 	 *  
 	 * @return the method's returned value
 	 *  
-	 * @throws XmxRuntimeException if failed to invoke the method, or the method throws exception
+	 * @throws XmxRuntimeException if failed to invoke the method
+	 * @throws InvocationTargetException if invoked method thrown exception
 	 */
-	Object invokeObjectMethod(Object obj, Method m, Object...args) throws XmxRuntimeException;
+	Object invokeObjectMethod(Object obj, Method m, Object...args) throws XmxRuntimeException, InvocationTargetException;
 
 	/**
 	 * Returns the managed object with the specified ID, or {@code null} if no

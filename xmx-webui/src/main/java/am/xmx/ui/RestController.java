@@ -1,5 +1,6 @@
 package am.xmx.ui;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -83,9 +84,12 @@ public class RestController {
 
 	@RequestMapping(value = "getObjectDetails", method = RequestMethod.GET)
 	public String getObjectDetails(ModelMap model, @RequestParam(required = true) Integer objectId) {
-		// TODO: support missing objects
 		model.addAttribute("objectId", objectId);
 		XmxObjectDetails details = xmxService.getObjectDetails(objectId);
+		if (details == null) {
+			return "missingObject";
+		} 
+		
 		String className = details.getClassesNames().get(0);
 		model.addAttribute("className", className);
 		model.addAttribute("details", details);
@@ -96,30 +100,37 @@ public class RestController {
 	@RequestMapping(value = "setObjectField", method = RequestMethod.GET)
 	public String setObjectField(ModelMap model, @RequestParam(required = true) Integer objectId, 
 			@RequestParam(required = true) Integer fieldId, @RequestParam(required = true) String value) {
-		// TODO: support missing objects
 		model.addAttribute("objectId", objectId);
 		XmxObjectDetails updatedDetails = xmxService.setObjectField(objectId, fieldId, value);
+		if (updatedDetails == null) {
+			return "missingObject";
+		} 
 		model.addAttribute("details", updatedDetails);
 		return "objectDetails";
 	}
 	
 	@RequestMapping(value = "invokeMethod", method = RequestMethod.GET)
 	public String invokeObjectMethod(ModelMap model, @RequestParam(required = true) Integer objectId, 
-			@RequestParam(required = true) Integer methodId) {
-		// TODO: support missing objects
+			@RequestParam(required = true) Integer methodId) throws Throwable {
+		
 		model.addAttribute("objectId", objectId);
 		// TODO obtain args from request
 		String[] args = new String[0];
 		
-		// TODO support exceptions
-		
 		Object obj = xmxService.getObjectById(objectId);
-		if (obj != null) {
-			Method m = xmxService.getObjectMethodById(obj, methodId);
-			Object result = xmxService.invokeObjectMethod(obj, m, translateArgs(args, m));
+		if (obj == null) {
+			return "missingObject";
+		}
+		
+		Method m = xmxService.getObjectMethodById(obj, methodId);
+		Object result;
+		try {
+			result = xmxService.invokeObjectMethod(obj, m, translateArgs(args, m));
 			model.addAttribute("result", Objects.toString(result));
-		} else {
-			model.addAttribute("result", "<<Object not found, probably it is GC'ed>>");
+		} catch (InvocationTargetException e) {
+			// re-throw cause
+			// alternatively, a special page may be created for exception result, but it seems unnecessary now
+			throw e.getCause();
 		}
 		
 		return "methodResult";
