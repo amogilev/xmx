@@ -196,9 +196,10 @@ public class XmxManager implements IXmxCoreService {
 		
 		// TODO: think about synchronization - maybe use by-class for part of the code
 		synchronized(this) {
-			// check if object is already registered, e.g. from another constructor
-			// TODO: optimize this!
 			Set<Integer> objectIds = classInfo.getObjectIds();
+			
+			/* - not required anymore, as potential sources if duplicate registration are eliminated;  
+			// check if object is already registered, e.g. from another constructor
 			for (Integer id : objectIds) {
 				// check all registered objects of this class
 				ManagedObjectWeakRef ref = objectsStorage.get(id);
@@ -209,7 +210,8 @@ public class XmxManager implements IXmxCoreService {
 						return;
 					}
 				}
-			}
+			}*/
+			
 			int otherInstancesCount = objectIds.size();
 			if (otherInstancesCount >= classInfo.getMaxInstances()) {
 				// limit exceeded
@@ -296,12 +298,12 @@ public class XmxManager implements IXmxCoreService {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public byte[] transformClassIfInterested(ClassLoader classLoader, String className, byte[] classBuffer) {
+	public byte[] transformClassIfInterested(ClassLoader classLoader, String bcClassName, byte[] classBuffer) {
 		String appName = obtainAppNameByLoader(classLoader);
 		IAppPropertiesSource appConfig = config.getAppConfig(appName);
 		
-		// convert names obtained from Agent to internal format (corresponding to Class.getName())
-		className = className.replace('/', '.');
+		// convert names obtained from byte-code to Java format (one corresponding to Class.getName())
+		String className = bcClassName.replace('/', '.');
 		
 		boolean isManaged = appConfig.getAppProperty(Properties.APP_ENABLED).asBool() &&
 				config.getAppConfig(appName).getClassProperty(className, Properties.SP_MANAGED).asBool();
@@ -324,7 +326,7 @@ public class XmxManager implements IXmxCoreService {
 		System.err.println("transformClass: " + className);
 		
 		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-		XmxInstructionsAdder xmxInstructionsAdder = new XmxInstructionsAdder(cw, classId);
+		XmxInstructionsAdder xmxInstructionsAdder = new XmxInstructionsAdder(cw, classId, bcClassName);
 		ClassReader cr = new ClassReader(classBuffer);
 		
 		int access = cr.getAccess();
