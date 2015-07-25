@@ -61,11 +61,15 @@ public class XmxLoader {
 					Method getServiceMethod = xmxManagerClass.getDeclaredMethod("getService");
 					xmxService = (IXmxServiceEx) getServiceMethod.invoke(null);
 					
-					// start UI if needed (xmx-webui.war in Embedded Jetty or another server)
-					Method xmxManagerStartUIMethod = xmxManagerClass.getDeclaredMethod("startUI");
-					xmxManagerStartUIMethod.invoke(null);
-					
-					
+					if (!xmxService.isEnabled()) {
+						// disabled
+						xmxClassLoader = null;
+						xmxService = null;
+					} else {
+						// start UI if needed (xmx-webui.war in Embedded Jetty or another server)
+						Method xmxManagerStartUIMethod = xmxManagerClass.getDeclaredMethod("startUI");
+						xmxManagerStartUIMethod.invoke(null);
+					}
 				} catch (Exception e) {
 					logError("Failed to find or instantiate XmxManager, XMX functionality is disabled");
 					xmxClassLoader = null;

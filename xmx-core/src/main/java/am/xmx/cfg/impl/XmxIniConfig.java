@@ -108,9 +108,10 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		// TODO: ensure types of known properties? I.e. early report for incorrect ints etc.
 		
 		Section global = ensureSection(ini, SECTION_SYSTEM, null);
-		checkProperty(global, Properties.GLOBAL_EMB_SERVER_ENABLED, true);
+		checkProperty(global, Properties.GLOBAL_ENABLED, true, "Whether to enable XMX at all");
+		checkProperty(global, Properties.GLOBAL_EMB_SERVER_ENABLED, true, "Whether to enable the embedded web server");
 		checkProperty(global, Properties.GLOBAL_EMB_SERVER_IMPL, "Jetty", "Only Jetty is supported now");
-		checkProperty(global, Properties.GLOBAL_EMB_SERVER_PORT, 8081);
+		checkProperty(global, Properties.GLOBAL_EMB_SERVER_PORT, 8081, "The port for the embedded web server");
 		checkProperty(global, Properties.GLOBAL_JMX_ENABLED, true, "Whether to publish managed objects to JMX");
 		checkProperty(global, Properties.GLOBAL_SORT_FIELDS, false, "Whether to sort shown class fields alphabetically");
 		
@@ -135,10 +136,10 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 				"Max number of managed instances by class");
 	}
 
-	private static void checkProperty(Section section, String propName, Object defaultValue) {
-		checkProperty(section, propName, defaultValue, null);
-	}
-	
+//	private static void checkProperty(Section section, String propName, Object defaultValue) {
+//		checkProperty(section, propName, defaultValue, null);
+//	}
+//	
 	private static void checkProperty(Section section, String propName, Object defaultValue, String defaultComment) {
 		if (!section.containsKey(propName)) {
 			section.add(propName, defaultValue);

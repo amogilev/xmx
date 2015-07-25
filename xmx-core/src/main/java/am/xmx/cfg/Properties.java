@@ -10,6 +10,7 @@ public final class Properties {
 	//
 	// known global properties
 	//
+	public static final String GLOBAL_ENABLED = "Enabled";
 	public static final String GLOBAL_EMB_SERVER_ENABLED = "EmbeddedWebServer.Enabled";
 	public static final String GLOBAL_EMB_SERVER_IMPL = "EmbeddedWebServer.Impl";
 	public static final String GLOBAL_EMB_SERVER_PORT = "EmbeddedWebServer.Port";

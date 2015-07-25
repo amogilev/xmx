@@ -168,6 +168,11 @@ public class XmxManager implements IXmxCoreService {
 	
 	// Inner Implementation of XmxServiceEx API
 	
+	@Override
+	public boolean isEnabled() {
+		return config.getSystemProperty(Properties.GLOBAL_ENABLED).asBool();
+	}
+
 	/**
 	 * Registers a managed object into XMX system.
 	 * A new unique ID is generated for an object, and a weak reference to the object is saved into the storage.
