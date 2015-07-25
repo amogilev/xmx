@@ -1,5 +1,9 @@
 package am.xmx.cfg;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Collection of names of known properties.
  * 
@@ -16,6 +20,9 @@ public final class Properties {
 	public static final String GLOBAL_EMB_SERVER_PORT = "EmbeddedWebServer.Port";
 	public static final String GLOBAL_JMX_ENABLED = "JMX.Bridge.Enabled";
 	public static final String GLOBAL_SORT_FIELDS = "Sort.Fields";
+	
+	private static final String[] ALL_GLOBAL_PROPERTIES = {GLOBAL_ENABLED, GLOBAL_EMB_SERVER_ENABLED, 
+		GLOBAL_EMB_SERVER_IMPL, GLOBAL_EMB_SERVER_PORT, GLOBAL_JMX_ENABLED, GLOBAL_SORT_FIELDS};
 	
 	//
 	// known application-level properties
@@ -60,4 +67,12 @@ public final class Properties {
 		assert isSpecial(specialPropertySimpleName);
 		return specialPropertySimpleName + SPECIAL_CLASSES_SUFFIX;
 	}
+	
+	/**
+	 * Returns unmodifiable list of known system properties.
+	 */
+	public static List<String> getKnownSystemProperties() {
+		return Collections.unmodifiableList(Arrays.asList(ALL_GLOBAL_PROPERTIES));
+	}
+	
 }

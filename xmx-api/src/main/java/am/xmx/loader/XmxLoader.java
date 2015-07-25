@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Locale;
+import java.util.Map;
 
 import am.xmx.service.IXmxService;
 import am.xmx.service.IXmxServiceEx;
@@ -15,8 +16,22 @@ public class XmxLoader {
 	private static ClassLoader xmxClassLoader;
 	private static Class<?> xmxManagerClass;
 	private static IXmxServiceEx xmxService;
+	private static boolean initialized = false;
 
-	static {
+	/**
+	 * Initializes XMX with optional override of system (XMX global) properties.
+	 * 
+	 * @param overrideProperties properties to override, case-insensitive
+	 * 
+	 * @return whether XMX is initialized successfully and is enabled 
+	 */
+	synchronized
+	public static boolean initialize(Map<String, String> overrideProperties) {
+		if (initialized) {
+			logError("XMX is already initialized!");
+			return xmxService != null;
+		}
+		
 		String homeDir = System.getProperty(IXmxService.XMX_HOME_PROP);
 		if (homeDir == null) {
 			// not proper "agent" start... but still try to determine by this jar location
@@ -61,10 +76,14 @@ public class XmxLoader {
 					Method getServiceMethod = xmxManagerClass.getDeclaredMethod("getService");
 					xmxService = (IXmxServiceEx) getServiceMethod.invoke(null);
 					
+					// agent may override important system properties, so do the override ASAP
+					xmxService.overrideSystemProperties(overrideProperties);
+					
 					if (!xmxService.isEnabled()) {
 						// disabled
 						xmxClassLoader = null;
 						xmxService = null;
+						logError("XMX functionality is disabled by configuration");
 					} else {
 						// start UI if needed (xmx-webui.war in Embedded Jetty or another server)
 						Method xmxManagerStartUIMethod = xmxManagerClass.getDeclaredMethod("startUI");
@@ -78,6 +97,8 @@ public class XmxLoader {
 				}
 			}
 		}
+		
+		return xmxService != null;
 	}
 	
 	public static byte[] transformClass(ClassLoader classLoader, String className, 

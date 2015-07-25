@@ -49,7 +49,7 @@ import com.google.gson.stream.JsonWriter;
 
 public class XmxManager implements IXmxCoreService {
 
-	public static IXmxConfig config = XmxIniConfig.getDefault();
+	public static final IXmxConfig config = XmxIniConfig.getDefault();
 	
 	private static Gson gson;
 	static {
@@ -167,6 +167,12 @@ public class XmxManager implements IXmxCoreService {
 	
 	
 	// Inner Implementation of XmxServiceEx API
+	
+	
+	@Override
+	public void overrideSystemProperties(Map<String, String> properties) {
+		config.overrideSystemProperties(properties);
+	}
 	
 	@Override
 	public boolean isEnabled() {

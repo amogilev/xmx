@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.ini4j.Ini;
@@ -202,6 +204,25 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 			return cfg;
 		}
 	}
+
+	@Override
+	public void overrideSystemProperties(Map<String, String> properties) {
+		if (properties.isEmpty()) {
+			return;
+		}
+		
+		List<String> knownSystemProperties = Properties.getKnownSystemProperties();
+		for (Entry<String, String> e : properties.entrySet()) {
+			String name = e.getKey();
+			for (String canonicName : knownSystemProperties) {
+				if (canonicName.equalsIgnoreCase(name)) {
+					systemSection.put(canonicName, e.getValue());
+					break;
+				}
+			}
+		}
+	}
+
 	
 	//
 	// Implementation of IConfigManager is not implemented yet

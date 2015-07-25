@@ -15,10 +15,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
+import am.xmx.loader.XmxLoader;
 
 public class XmxAgent {
 	
@@ -26,8 +31,21 @@ public class XmxAgent {
 	private static final String XMX_TEMP_HOME_NAME = "xmx_temp_home";
 	private static final String XMX_DISTR_RES = "xmx-distribution.zip";
 
+	// use: -javaagent:path\xmx-agent.jar[=override_props]
+	// override_props::=override_prop[,override_prop]*
+	// override_prop::=name=val
+	// no spaces in override_props, names are case-insensitive.
+	// Examples:
+	// -javaagent:path\xmx-agent.jar=enabled=false
+	// -javaagent:path\xmx-agent.jar=enabled=true,EmbeddedWebServer.enabled=false
+	// -javaagent:path\xmx-agent.jar=enabled=true,embeddedwebserver.enabled=true,EmbeddedWebServer.Port=8082
+	
 	public static void premain(String agentArgs, Instrumentation instr) {
-		System.err.println("XmxAgent premain");
+		Map<String,String> agentProperties = parseArguments(agentArgs);
+		if ("false".equalsIgnoreCase(agentProperties.get("enabled"))) {
+			// fast path of disabling XMX
+			return;
+		}
 		
 		// TODO: support pre-set XMX_HOME dir
 		
@@ -78,12 +96,43 @@ public class XmxAgent {
 			
 			System.setProperty(XMX_HOME_PROP, agentHomeDir.getAbsolutePath());
 			instr.appendToBootstrapClassLoaderSearch(new JarFile(xmxApiFiles[0]));
-			instr.addTransformer(new XmxClassTransformer());
 			
+			// from this moment we can use xmx-api classes
+			boolean success = initializeLoader(agentProperties);
+			if (success) {
+				// initialize transformer
+				instr.addTransformer(new XmxClassTransformer());
+				System.err.println("XmxAgent is enabled");
+			} else {
+				// disabled or failed 
+				return;
+			}
 		} catch (Exception e) {
 			System.err.println("Failed to start XmxAgent");
 			e.printStackTrace();
 		}
+	}
+
+	private static boolean initializeLoader(Map<String, String> agentProperties) {
+		// no additional errors required if failed or disabled - all printed by XmxLoader
+		return XmxLoader.initialize(agentProperties);
+	}
+
+	private static Map<String, String> parseArguments(String agentArgs) {
+		
+		if (agentArgs == null || agentArgs.isEmpty()) {
+			return Collections.emptyMap();
+		}
+		
+		Map<String, String> result = new HashMap<>();
+		for (String agentArg : agentArgs.split(",")) {
+			int i = agentArg.indexOf('=');
+			String key = (i < 0 ? agentArg : agentArg.substring(0, i)).trim().toLowerCase(Locale.ENGLISH);
+			String val = i < 0 ? "" : agentArg.substring(i + 1).trim();
+			result.put(key, val);
+		}
+		
+		return result;
 	}
 
 	private static boolean deleteRecursively(File dir) throws IOException {

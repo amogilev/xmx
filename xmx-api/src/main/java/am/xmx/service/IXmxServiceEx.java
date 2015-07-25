@@ -1,5 +1,7 @@
 package am.xmx.service;
 
+import java.util.Map;
+
 /**
  * Extends base {@link IXmxService} interface with the method used
  * for class transformation and registering of beans.
@@ -25,6 +27,16 @@ public interface IXmxServiceEx extends IXmxService {
 	 * Registers a newly created object, so that it becomes managed by XMX.
 	 */
 	void registerObject(Object obj, int classId);
+	
+	/**
+	 * Overrides known global (XMX [System]) configuration properties
+	 * <p/>
+	 * Property names are compared case-insensitively, so any case of override
+	 * properties is accepted.
+	 * 
+	 * @param properties properties to override
+	 */
+	void overrideSystemProperties(Map<String, String> properties);
 	
 	/**
 	 * Returns whether XMX is globally enabled in the configuration. 
