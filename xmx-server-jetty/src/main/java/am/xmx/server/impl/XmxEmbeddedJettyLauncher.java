@@ -34,7 +34,7 @@ public class XmxEmbeddedJettyLauncher implements IXmxServerLauncher {
 	        WebAppContext webapp = new WebAppContext();
 	        webapp.setWar(warFile.getAbsolutePath());
 	        
-	        File jspTempDir = new File(new File(System.getProperty("java.io.tmpdir")), "embedded-jetty-jsp");
+	        File jspTempDir = new File(new File(System.getProperty("java.io.tmpdir")), "embedded-jetty-jsp-" + port);
 	        if (!jspTempDir.exists()) {
 	        	jspTempDir.mkdir();
 	        }
