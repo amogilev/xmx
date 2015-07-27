@@ -6,7 +6,13 @@ import java.util.Arrays;
 import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
 import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
 import org.eclipse.jetty.plus.annotation.ContainerInitializer;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
+import org.eclipse.jetty.util.thread.Scheduler;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import am.xmx.dto.XmxRuntimeException;
@@ -29,7 +35,20 @@ public class XmxEmbeddedJettyLauncher implements IXmxServerLauncher {
 		try {
 			Thread.currentThread().setContextClassLoader(XmxEmbeddedJettyLauncher.class.getClassLoader());
 			
-			Server server = new Server(port);
+			// TODO: check port for JVM_Bind, allow auto-select ranges
+			
+			// make all Jetty threads daemon so that they do not prevent apps shutdown
+			QueuedThreadPool threadPool = new QueuedThreadPool(8, 2);
+			threadPool.setName("XMX-Jetty-qtp");
+			
+			threadPool.setDaemon(true);
+			
+			Server server = new Server(threadPool);
+			Scheduler scheduler = new ScheduledExecutorScheduler("XMX-Jetty-Scheduler", true);			
+	        ServerConnector connector = new ServerConnector(server, null, scheduler, null, -1, -1, new HttpConnectionFactory()); 
+	        
+	        connector.setPort(port);
+	        server.setConnectors(new Connector[]{connector});
 			
 	        WebAppContext webapp = new WebAppContext();
 	        webapp.setWar(warFile.getAbsolutePath());

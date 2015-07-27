@@ -116,6 +116,9 @@ public class XmxManager implements IXmxCoreService {
 	
 	private static ReferenceQueue<Object> managedObjectsRefQueue = new ReferenceQueue<>();
 	
+	// how many milliseconds to wait before starting embedded web UI
+	private static final int UI_START_DELAY = 10000;
+
 	static {
 		Thread cleanerThread = new Thread("XMX-Cleaner-Thread") {
 			@Override
@@ -757,13 +760,20 @@ public class XmxManager implements IXmxCoreService {
 		}
 	
 		// start asynchronously so that main initialization is less affected
-		new Thread(new Runnable() {
+		Thread startupThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
+				// wait a bit before starting UI to let short-living apps exit fast
+				try {
+					Thread.sleep(UI_START_DELAY);
+				} catch (InterruptedException e) {
+				}
 				int port = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT).asInt();
 				launcher.launchServer(uiWarFile, port);
 			}
-		}, "XMX Embedded Server Startup Thread").start();
+		}, "XMX Embedded Server Startup Thread");
+		startupThread.setDaemon(true);
+		startupThread.start();
 	}
 	
 }
