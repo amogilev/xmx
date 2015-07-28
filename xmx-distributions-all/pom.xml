@@ -18,16 +18,6 @@
     archives with all other required files integrated
   </description>
 
-  <dependencies>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>xmx-distribution</artifactId>
-      <version>${project.version}</version>
-      <classifier>bin</classifier>
-      <type>zip</type>
-    </dependency>
-  </dependencies>
-
   <profiles>
 
     <!-- Profile to assemble release artifacts -->
@@ -36,6 +26,15 @@
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
+      <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>xmx-distribution</artifactId>
+          <version>${project.version}</version>
+          <classifier>bin</classifier>
+          <type>zip</type>
+        </dependency>
+      </dependencies>
       <build>
         <plugins>
           <plugin>
@@ -102,6 +101,11 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+
+    <!-- Disabled in dev profile -->
+    <profile>
+      <id>dev</id>
     </profile>
   </profiles>
 
