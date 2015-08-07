@@ -313,7 +313,8 @@ public class XmxManager implements IXmxCoreService {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public byte[] transformClassIfInterested(ClassLoader classLoader, String bcClassName, byte[] classBuffer) {
+	public byte[] transformClassIfInterested(ClassLoader classLoader, String bcClassName, 
+			byte[] classBuffer, Class<?> classBeingRedefined) {
 		String appName = obtainAppNameByLoader(classLoader);
 		IAppPropertiesSource appConfig = config.getAppConfig(appName);
 		
@@ -329,17 +330,31 @@ public class XmxManager implements IXmxCoreService {
 		
 		ManagedAppInfo appInfo = getOrInitAppInfo(appName);
 		
-		// initialize known properties of managed class, e.g. class ID and name
-		// other properties may require Class itself, and will be initialized later
-		int classId = managedClassesCounter.getAndIncrement();
-		int maxInstances = getMaxInstances(appConfig, className);
-		ManagedClassInfo classInfo = new ManagedClassInfo(classId, className, appInfo, maxInstances);
+		int classId;
+		if (classBeingRedefined != null) {
+			// currently the hot code replacement cannot add, remove or change signature of fields and methods
+			// so, we can continue using existing ManagedClassInfo
+			// May require re-visiting in Java 9 and further!
+			
+			ManagedClassInfo classInfo = getManagedClassInfo(classBeingRedefined);
+			assert classInfo != null : "Should have been transformed already: " + classBeingRedefined;
+			classId = classInfo.getId();
+			
+			System.err.println("re-transformClass: " + className);
+		} else {
+			// initialize known properties of managed class, e.g. class ID and name
+			// other properties may require Class itself, and will be initialized later
+			classId = managedClassesCounter.getAndIncrement();
+			int maxInstances = getMaxInstances(appConfig, className);
+			ManagedClassInfo classInfo = new ManagedClassInfo(classId, className, appInfo, maxInstances);
+			
+			classesInfoById.put(classId, classInfo);
+			appInfo.addManagedClassId(classId);
+			
+			System.err.println("transformClass: " + className);
+		}
 		
-		classesInfoById.put(classId, classInfo);
-		appInfo.addManagedClassId(classId);
-		
-		System.err.println("transformClass: " + className);
-		
+		// actually transform the class - add registerObject to constructors
 		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 		XmxInstructionsAdder xmxInstructionsAdder = new XmxInstructionsAdder(cw, classId, bcClassName);
 		ClassReader cr = new ClassReader(classBuffer);

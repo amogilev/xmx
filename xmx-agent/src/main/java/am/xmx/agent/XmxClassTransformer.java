@@ -31,7 +31,7 @@ public class XmxClassTransformer implements ClassFileTransformer {
 		}
 		
 		try {
-			byte[] transformClass = XmxLoader.transformClass(loader, className, classfileBuffer);
+			byte[] transformClass = XmxLoader.transformClass(loader, className, classfileBuffer, classBeingRedefined);
 			return transformClass;
 		} catch (Throwable e) {
 			e.printStackTrace();

@@ -102,9 +102,9 @@ public class XmxLoader {
 	}
 	
 	public static byte[] transformClass(ClassLoader classLoader, String className, 
-			byte[] classBuffer) {
+			byte[] classBuffer, Class<?> classBeingRedefined) {
 		if (xmxService != null) {
-			return xmxService.transformClassIfInterested(classLoader, className, classBuffer);
+			return xmxService.transformClassIfInterested(classLoader, className, classBuffer, classBeingRedefined);
 		} else {
 			return classBuffer;
 		}
