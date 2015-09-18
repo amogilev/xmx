@@ -1,8 +1,8 @@
 package am.xmx.cfg;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Collection of names of known properties.
@@ -21,24 +21,10 @@ public final class Properties {
 	public static final String GLOBAL_JMX_ENABLED = "JMX.Bridge.Enabled";
 	public static final String GLOBAL_SORT_FIELDS = "Sort.Fields";
 	
-	private static final String[] ALL_GLOBAL_PROPERTIES = {GLOBAL_ENABLED, GLOBAL_EMB_SERVER_ENABLED, 
-		GLOBAL_EMB_SERVER_IMPL, GLOBAL_EMB_SERVER_PORT, GLOBAL_JMX_ENABLED, GLOBAL_SORT_FIELDS};
-	
 	//
-	// known application-level properties
-	//
-	public static final String APP_ENABLED = "ManagementEnabled";
-	
-	//
-	// known class-level properties
+	// known class-level (and above) properties
 	//
 	public static final String CLASS_MAX_INSTANCES = "MaxInstances";
-	
-	//
-	// properties available on several levels
-	//
-	public static final String PROP_SECURITY_CLASS = "SecurityClass";
-	
 	
 	//
 	// "special" class-level properties
@@ -46,6 +32,28 @@ public final class Properties {
 	public static final String SP_MANAGED = "Managed";
 	
 	private static final String SPECIAL_CLASSES_SUFFIX = "Classes";
+	
+	//
+	// known application-level properties
+	//
+	public static final String APP_ENABLED = "AppManagementEnabled";
+	
+	// all known names of System-level properties
+	private static final Set<String> ALL_SYSTEM_PROPNAMES = new HashSet<>(Arrays.asList(
+			GLOBAL_ENABLED, GLOBAL_EMB_SERVER_ENABLED, GLOBAL_EMB_SERVER_IMPL, GLOBAL_EMB_SERVER_PORT, 
+			GLOBAL_JMX_ENABLED, GLOBAL_SORT_FIELDS));
+	
+	// all known names of Class-level properties
+	private static final Set<String> ALL_CLASS_PROPNAMES = new HashSet<>(Arrays.asList(
+			CLASS_MAX_INSTANCES, SP_MANAGED));
+	
+	// all known names of App-level properties - includes all class-level properties, theirs special '*Classes" form,
+	//  and App-only properies 
+	private static final Set<String> ALL_APP_PROPNAMES = new HashSet<>();
+	static {
+		ALL_APP_PROPNAMES.addAll(Arrays.asList(APP_ENABLED, specialClassesForm(SP_MANAGED)));
+		ALL_APP_PROPNAMES.addAll(ALL_CLASS_PROPNAMES);
+	}
 	
 	// no public constructor
 	private Properties() {
@@ -68,11 +76,20 @@ public final class Properties {
 		return specialPropertySimpleName + SPECIAL_CLASSES_SUFFIX;
 	}
 	
-	/**
-	 * Returns unmodifiable list of known system properties.
-	 */
-	public static List<String> getKnownSystemProperties() {
-		return Collections.unmodifiableList(Arrays.asList(ALL_GLOBAL_PROPERTIES));
+	public static boolean isKnownProperty(CfgEntityLevel level, String name) {
+		switch(level) {
+		case SYSTEM:
+			return ALL_SYSTEM_PROPNAMES.contains(name);
+		case APP:
+			return ALL_APP_PROPNAMES.contains(name);
+		case CLASS:
+			return ALL_CLASS_PROPNAMES.contains(name);
+		case MEMBER:
+			// member level is not supported yet 
+			return false;
+		default:
+			assert false;
+			return false;
+		}
 	}
-	
 }

@@ -1,6 +1,6 @@
 package am.xmx.cfg.impl;
 
-import static am.xmx.cfg.impl.XmxIniParser.findUnquotedChar;
+import static am.xmx.cfg.impl.XmxCfgSectionNameParser.findUnquotedChar;
 import static org.junit.Assert.*;
 
 import org.junit.Before;
@@ -8,11 +8,11 @@ import org.junit.Test;
 
 public class TestXmxIniParser {
 	
-	XmxIniParser uut;
+	XmxCfgSectionNameParser uut;
 	
 	@Before
 	public void setup() {
-		uut = new XmxIniParser();
+		uut = new XmxCfgSectionNameParser();
 	}
 	
 	@Test

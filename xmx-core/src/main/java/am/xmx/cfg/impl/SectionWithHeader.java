@@ -1,28 +1,35 @@
 package am.xmx.cfg.impl;
 
-import org.ini4j.Profile.Section;
+import java.util.Map;
 
 class SectionWithHeader {
 	
 	private SectionHeader header;
-	private Section section;
+	private Map<String, String> optionsByName;
 	
-	public SectionWithHeader(SectionHeader header, Section section) {
+	public SectionWithHeader(SectionHeader header, Map<String, String> optionsByName) {
 		this.header = header;
-		this.section = section;
+		this.optionsByName = optionsByName;
 	}
 
 	public SectionHeader getHeader() {
 		return header;
 	}
+	
+	public Map<String, String> getOptionsByName() {
+		return optionsByName;
+	}
 
-	public Section getSection() {
-		return section;
+	public boolean containsKey(String key) {
+		return optionsByName.containsKey(key);
+	}
+	
+	public String get(String key) {
+		return optionsByName.get(key);
 	}
 
 	@Override
 	public String toString() {
 		return "SectionWithHeader" + header;
 	}
-
 }

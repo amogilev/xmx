@@ -6,15 +6,20 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
+
+import am.xmx.cfg.Properties;
 
 public class TestCustomXmxIniConfig {
 	
@@ -46,13 +51,28 @@ public class TestCustomXmxIniConfig {
 			"TestProp=val6",
 			"Managed=false"
 			);
+	
+	@BeforeClass
+	public static void setupTestProps() throws Exception {
+		Field[] propnamesFields = {
+				Properties.class.getDeclaredField("ALL_CLASS_PROPNAMES"),
+				Properties.class.getDeclaredField("ALL_APP_PROPNAMES")};
+		for (Field f : propnamesFields) {
+			f.setAccessible(true);
+			
+			@SuppressWarnings("unchecked")
+			Set<String> propnames = (Set<String>)f.get(null);
+			propnames.add("TestProp");
+		}
+	}
+	
 
 	@Before
-	public void setup() throws IOException {
+	public void setup() throws Exception {
 		tempIniFile = Files.createTempFile("testxmx", ".ini");
 		Files.write(tempIniFile, contents, Charset.defaultCharset());
 		
-		uut = XmxIniConfig.load(tempIniFile.toFile());
+		uut = XmxIniConfig.load(tempIniFile.toFile(), false);
 	}
 	
 	@After

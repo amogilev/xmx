@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 import am.xmx.cfg.CfgEntityLevel;
 
 /**
- * Parsed name for App-level, Class-level or Member-level configuration section. 
+ * Parsed name for System, App-level, Class-level or Member-level configuration section. 
  * 
  * @author Andrey Mogilev
  */
@@ -34,7 +34,11 @@ class SectionHeader {
 			throw new IllegalArgumentException("Illegal SectionHeader");
 		}
 		
-		level = CfgEntityLevel.levelFor(appPattern, classPattern, memberPattern);
+		initLevel();
+	}
+	
+	void initLevel() {
+		level = CfgEntityLevel.levelFor(appPattern, classPattern, memberPattern);	
 	}
 	
 	/**
@@ -92,7 +96,4 @@ class SectionHeader {
 		sb.append(']');
 		return sb.toString();
 	}
-	
-	
-
 }

@@ -28,12 +28,12 @@ public class TestIncompleteXmxIniConfig {
 
 	@Before
 	public void setup() throws IOException {
-		tempIniFile = Files.createTempFile("testxmx", "ini");
+		tempIniFile = Files.createTempFile("testxmx", ".ini");
 		Files.write(tempIniFile, 
 				Arrays.asList("[System]", "EmbeddedWebServer.Port = 8083"), 
 				Charset.defaultCharset());
 		
-		uut = XmxIniConfig.load(tempIniFile.toFile());
+		uut = XmxIniConfig.load(tempIniFile.toFile(), false);
 		tempIniFile.toFile().deleteOnExit();
 	}
 	

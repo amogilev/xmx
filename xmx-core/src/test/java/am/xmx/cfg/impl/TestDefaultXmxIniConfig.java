@@ -69,7 +69,7 @@ public class TestDefaultXmxIniConfig {
 		assertTrue(Files.size(iniFile) > 0);
 		
 		// check that file may be used for reading
-		XmxIniConfig loadedCfg = XmxIniConfig.load(iniFile.toFile());
+		XmxIniConfig loadedCfg = XmxIniConfig.load(iniFile.toFile(), false);
 		assertEquals(8081, loadedCfg.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT).asInt());
 		assertTrue(uut.getAppConfig("MyApp").getClassProperty("am.xmx.SomeServiceImpl", Properties.SP_MANAGED).asBool());
 	}

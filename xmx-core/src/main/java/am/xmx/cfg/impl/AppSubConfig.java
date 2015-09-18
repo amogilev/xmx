@@ -53,8 +53,8 @@ public class AppSubConfig implements IAppPropertiesSource {
 		}
 		
 		for (SectionWithHeader sh : matchingSectionsReversed) {
-			if (sh.getHeader().matchesAfterApp(className, memberName) && sh.getSection().containsKey(propName)) {
-				return PropertyValueImpl.of(sh.getSection().get(propName));
+			if (sh.getHeader().matchesAfterApp(className, memberName) && sh.containsKey(propName)) {
+				return PropertyValueImpl.of(sh.get(propName));
 			}
 		}
 		
@@ -69,10 +69,10 @@ public class AppSubConfig implements IAppPropertiesSource {
 		
 		for (SectionWithHeader sh : matchingSectionsReversed) {
 			if (sh.getHeader().matchesAfterApp(className, null)) {
-				if (sh.getSection().containsKey(propName)) {
-					return PropertyValueImpl.of(sh.getSection().get(propName)); 
-				} else if (sh.getHeader().classSpec == null && sh.getSection().containsKey(propClassForm)) {
-					String patternValue = sh.getSection().get(propClassForm);
+				if (sh.containsKey(propName)) {
+					return PropertyValueImpl.of(sh.get(propName)); 
+				} else if (sh.getHeader().classSpec == null && sh.containsKey(propClassForm)) {
+					String patternValue = sh.get(propClassForm);
 					boolean propValue = PatternsSupport.matches(patternValue, className);
 					return PropertyValueImpl.of(Boolean.toString(propValue));
 				}

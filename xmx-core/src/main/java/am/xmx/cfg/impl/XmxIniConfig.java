@@ -1,20 +1,23 @@
 package am.xmx.cfg.impl;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.ini4j.Ini;
-import org.ini4j.Profile.Section;
 
+import am.ucfg.IConfigInfoProvider;
+import am.ucfg.IUpdatingConfigLoader;
+import am.ucfg.IUpdatingConfigLoader.ConfigUpdateResult;
+import am.ucfg.impl.UpdatingIniConfigLoader;
 import am.xmx.cfg.IAppPropertiesSource;
 import am.xmx.cfg.IXmxConfig;
-import am.xmx.cfg.Properties;
 import am.xmx.cfg.PropertyValue;
 
 /**
@@ -29,7 +32,7 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 	@SuppressWarnings("unused")
 	private Ini ini;
 	
-	private Section systemSection;
+	private Map<String, String> systemOptions;
 	
 	/**
 	 * All sections listed in reverse order. 
@@ -42,32 +45,55 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 	
 	private ConcurrentHashMap<String, IAppPropertiesSource> appConfigs = new ConcurrentHashMap<>();
 	
-	XmxIniConfig(Ini ini, Section systemSection, List<SectionWithHeader> sectionsReversed) {
+	private static IConfigInfoProvider cfgInfoProvider = new ConfigDefaultsInfoProvider();
+	private static IUpdatingConfigLoader<Ini> cfgLoader = new UpdatingIniConfigLoader(cfgInfoProvider);
+
+	private XmxIniConfig(Ini ini, Map<String, String> systemOptions, List<SectionWithHeader> sectionsReversed) {
 		this.ini = ini;
-		this.systemSection = systemSection;
+		this.systemOptions = systemOptions;
 		this.sectionsReversed = sectionsReversed;
 	}
-
+	
 	/**
-	 * Loads xmx.ini file from non-default place.
+	 * Loads xmx.ini file from the specified place.
 	 * 
 	 * @param iniFile the configuration file to load
+	 * @param rewriteAllowed whether re-write of the file with new auto-comments is allowed
 	 * 
 	 * @return the loaded configuration
-	 * 
-	 * @throws IOException if the specified file is missing or corrupted 
 	 */
-	public static XmxIniConfig load(File iniFile) throws IOException {
-		Ini ini = makeIni();
-		ini.setFile(iniFile);
+	public static XmxIniConfig load(File iniFile, boolean rewriteAllowed) {
+		ConfigUpdateResult<Ini> result = cfgLoader.loadAndUpdate(iniFile, rewriteAllowed);
 		
-		try (FileInputStream in = new FileInputStream(iniFile)) {
-			ini.load(in);
+		// parse resulting merged .ini into internal format, and make non-overridden 
+		// defoptions available as regular properties
+		
+		XmxCfgSectionNameParser sectionParser = new XmxCfgSectionNameParser();
+		
+		ArrayList<SectionWithHeader> sections = new ArrayList<>();
+		
+		Map<String, String> systemOptions = null;
+		for (Entry<String, Map<String, String>> sectionEntry : result.getSectionsWithOptionsByName().entrySet()) {
+			String curSectionName = sectionEntry.getKey().trim();
+			Map<String, String> optionsByName = sectionEntry.getValue();
+			if (curSectionName.equals(SECTION_SYSTEM)) {
+				if (systemOptions != null) {
+					// unexpected - Ini4J should merge sections
+					throw new XmxIniParseException("Duplicate [System] section");
+				}
+				systemOptions = optionsByName;
+			} else {
+				SectionHeader header = sectionParser.parseSectionHeader(curSectionName); 
+				sections.add(new SectionWithHeader(header, optionsByName));
+			}
 		}
-		fillMissingDefaultValues(ini);
-	
-		return XmxIniParser.parse(ini);
+		
+		sections.trimToSize();
+		Collections.reverse(sections);
+		
+		return new XmxIniConfig(result.getRawConfig(), systemOptions, sections);
 	}
+	
 	
 	/**
 	 * Loads xmx.ini file from ${user.home} location, or creates
@@ -81,99 +107,13 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		File userHome = new File(System.getProperty("user.home"));
 		File iniFile = new File(userHome, XMX_INI);
 		
-		Ini ini = makeIni();
-		ini.setFile(iniFile);
-		
-		try {
-			if (iniFile.createNewFile()) {
-				// new file was created
-				fillMissingDefaultValues(ini);
-				ini.store();
-			} else {
-				// avoid using Ini4J's load(File), to have more reliable streams closing
-				try (FileInputStream in = new FileInputStream(iniFile)) {
-					ini.load(in);
-					fillMissingDefaultValues(ini);
-				}
-			}
-		} catch (IOException e) {
-			// report error but continue with default in-memory config
-			System.err.println("Failed to read xmx.ini: " + e);
-			fillMissingDefaultValues(ini);
-		}
-		
-		return XmxIniParser.parse(ini);
+		return load(iniFile, true);
 	}
 
-	private static void fillMissingDefaultValues(Ini ini) {
-		
-		// TODO: ensure types of known properties? I.e. early report for incorrect ints etc.
-		
-		Section global = ensureSection(ini, SECTION_SYSTEM, null);
-		checkProperty(global, Properties.GLOBAL_ENABLED, true, "Whether to enable XMX at all");
-		checkProperty(global, Properties.GLOBAL_EMB_SERVER_ENABLED, true, "Whether to enable the embedded web server");
-		checkProperty(global, Properties.GLOBAL_EMB_SERVER_IMPL, "Jetty", "Only Jetty is supported now");
-		checkProperty(global, Properties.GLOBAL_EMB_SERVER_PORT, 8081, "The port for the embedded web server");
-		checkProperty(global, Properties.GLOBAL_JMX_ENABLED, true, "Whether to publish managed objects to JMX");
-		checkProperty(global, Properties.GLOBAL_SORT_FIELDS, false, "Whether to sort shown class fields alphabetically");
-		
-		Section allApps = ensureSection(ini, "App=*", 
-				" Per-application settings sections follow, marked as [App=app_name_pattern],\n" +
-				" where app_name_pattern is Java RegEx pattern (or simple app name).\n" +
-				"\n" +
-				" Supported are: native application names (like 'tomcat7') and web application\n" +
-				" names running in supported servlet containers (started with '/', e.g. '/MyWebUI').\n" +
-				"\n" +
-				" As the application name may match several patterns, the settings override\n" +
-				" each other, and the latest matching setting wins.\n" +
-				"\n" +
-				" default settings for all applications\n");
-		
-		checkProperty(allApps, Properties.APP_ENABLED, true, 
-				"Whether management is enabled for an application");
-		checkProperty(allApps, Properties.specialClassesForm(Properties.SP_MANAGED), 
-				"^.*(Service|(?<![rR]eference)Manager|Engine|DataSource)\\d*(Impl\\d*)?$", 
-				"Determines instances of which classes and interfaces will be managed by XMX");
-		checkProperty(allApps, Properties.CLASS_MAX_INSTANCES, 10, 
-				"Max number of managed instances by class");
-	}
-
-//	private static void checkProperty(Section section, String propName, Object defaultValue) {
-//		checkProperty(section, propName, defaultValue, null);
-//	}
-//	
-	private static void checkProperty(Section section, String propName, Object defaultValue, String defaultComment) {
-		if (!section.containsKey(propName)) {
-			section.add(propName, defaultValue);
-			if (defaultComment != null) {
-				if (!defaultComment.startsWith(" ")) {
-					defaultComment = " " + defaultComment;
-				}
-				section.putComment(propName, defaultComment);
-			}
-		}
-	}
-
-	private static Section ensureSection(Ini ini, String sectionName, String defaultComment) {
-		Section s = ini.get(sectionName);	
-		if (s == null) {
-			s = ini.add(sectionName);
-			if (defaultComment != null) {
-				ini.putComment(sectionName, defaultComment);
-			}
-		}
-		return s;
-	}
-
-	private static Ini makeIni() {
-		Ini cfg = new Ini();
-		cfg.getConfig().setLineSeparator("\n");
-		return cfg;
-	}
 	
 	@Override
 	public PropertyValue getSystemProperty(String name) {
-		return PropertyValueImpl.of(systemSection.get(name));
+		return PropertyValueImpl.of(systemOptions.get(name));
 	}
 	
 	@Override
@@ -211,12 +151,13 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 			return;
 		}
 		
-		List<String> knownSystemProperties = Properties.getKnownSystemProperties();
+		Set<String> knownSystemProperties = ConfigDefaults.SECTION_SYSTEM_DESC.getOptionsByName().keySet();
 		for (Entry<String, String> e : properties.entrySet()) {
 			String name = e.getKey();
+			// NOTE: as case-insensitive comparison is used, iterate all known properties. OK as there are few of them...
 			for (String canonicName : knownSystemProperties) {
 				if (canonicName.equalsIgnoreCase(name)) {
-					systemSection.put(canonicName, e.getValue());
+					systemOptions.put(canonicName, e.getValue());
 					break;
 				}
 			}

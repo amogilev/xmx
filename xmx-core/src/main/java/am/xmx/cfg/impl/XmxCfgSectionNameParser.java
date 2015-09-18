@@ -1,53 +1,26 @@
 package am.xmx.cfg.impl;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
-import org.ini4j.Ini;
-import org.ini4j.Profile.Section;
-
-public class XmxIniParser implements SectionsNamespace {
+public class XmxCfgSectionNameParser implements SectionsNamespace {
 	
 	// shared map for parsed parts of section names
 	Map<String, String> sectionNameParts = new HashMap<>(4);
 	
-	static XmxIniConfig parse(Ini ini) {
-		return new XmxIniParser().parseSections(ini);
-	}
-
-	private XmxIniConfig parseSections(Ini ini) {
-		Section systemSection = null;
-		
-		ArrayList<SectionWithHeader> sections = new ArrayList<>();
-		
-		for (Section section : ini.values()) {
-			String curSectionName = section.getName().trim();
-			if (curSectionName.equals(SECTION_SYSTEM)) {
-				if (systemSection != null) {
-					throw new XmxIniParseException("Duplicate [System] section");
-				}
-				systemSection = section;
-				continue;
-			}
-			
-			SectionHeader header = parseSectionHeader(curSectionName); 
-			sections.add(new SectionWithHeader(header, section));
-		}
-		
-		sections.trimToSize();
-		Collections.reverse(sections);
-		
-		return new XmxIniConfig(ini, systemSection, sections);
-	}
-	
-	SectionHeader parseSectionHeader(String curSectionName) {
+	public SectionHeader parseSectionHeader(String curSectionName) {
 		parseSectionNameParts(curSectionName);
+		if (sectionNameParts.containsKey(SECTION_SYSTEM)) {
+			if (sectionNameParts.size() > 1) {
+				throw new XmxIniParseException("Wrong section name - System part is not compatible with anything else: '" 
+						+ curSectionName + "'");
+			}
+			return new SectionHeader();
+		}
 		if (!sectionNameParts.containsKey(PART_APP)) {
-			throw new XmxIniParseException("Wrong section name - no App part: " + curSectionName);
+			throw new XmxIniParseException("Wrong section name - no App part: '" + curSectionName + "'");
 		}
 		
 		// parse patterns in header parts
@@ -73,6 +46,7 @@ public class XmxIniParser implements SectionsNamespace {
 						" in section name [" + curSectionName + "]"); 
 			}
 		}
+		header.initLevel();
 		return header;
 	}
 
