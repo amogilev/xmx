@@ -17,11 +17,11 @@ public class XmxClassTransformer implements ClassFileTransformer {
 		
 		if (disabled) {
 			return null;
+		
 		}
 		
-		if (loader == null || loader.getParent() == null) {
-			// skip system and bootstrap classes, as XmxLoader is not defined there
-			// TODO think if it need to be there 
+		if (loader == null) {
+			// skip bootstrap classes (performance reasons only, may be changed in future)
 			return null;
 		}
 		
