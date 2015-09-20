@@ -4,6 +4,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.Descriptor;
 import javax.management.InstanceNotFoundException;
@@ -119,10 +122,12 @@ public class JmxSupport {
 			return CompositeDataSupport.class.getName();
 		}
 	}
+	
+	private static ConcurrentMap<List<String>, AtomicInteger> versionByAppAndClassNames = new ConcurrentHashMap<>(); 
 
 	public static String createClassObjectNamePart(Class<?> objClass, String appName) {
 		String type = objClass.getSimpleName();
-		//		String packageName = getPackageName(objClass);
+		String packageName = getPackageName(objClass);
 
 		StringBuilder sb = new StringBuilder(64);
 		if (appName != null && !appName.isEmpty()) {
@@ -130,14 +135,28 @@ public class JmxSupport {
 		} else {
 			sb.append("XMX:");
 		}
-
+		
+		List<String> appAndClassNames = new ArrayList<>(2);
+		appAndClassNames.add(appName);
+		appAndClassNames.add(objClass.getName());
+		versionByAppAndClassNames.putIfAbsent(appAndClassNames, new AtomicInteger());
+		AtomicInteger versionCounter = versionByAppAndClassNames.get(appAndClassNames);
+		int version = versionCounter.incrementAndGet();
+		
+		// type includes simple name class (w/o package), then the package and optional version
+		// the version is added to prevent non-unique ObjectNames in case of web app reloads or
+		// loading of class with the same name by different class loaders
 		sb.append("type=").append(type);
-		//		sb.append(",package=").append(packageName);
+		sb.append(" (").append(packageName);
+		if (version > 1) {
+			sb.append(" | v").append(version);
+		}
+		sb.append(")");
+		
+		
 		return sb.toString();
 	}
 
-
-	@SuppressWarnings("unused")
 	private static String getPackageName(Class<?> objClass) {
 		Package p = objClass.getPackage();
 		if (p != null) {
