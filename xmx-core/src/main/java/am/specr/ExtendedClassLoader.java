@@ -2,6 +2,7 @@ package am.specr;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,7 +22,7 @@ import java.util.Map;
  */
 public class ExtendedClassLoader extends ClassLoader {
 	
-	private ClassLoader additionalClassLoader;
+	private WeakReference<ClassLoader> additionalClassLoaderRef;
 	private Map<String, Class<?>> knownClasses = null; // lazily initiated
 	private Class<?>[] predefinedClasses;
 	
@@ -29,7 +30,7 @@ public class ExtendedClassLoader extends ClassLoader {
 	public ExtendedClassLoader(ClassLoader parent, ClassLoader additionalClassLoader,
 			Class<?>...predefinedClasses) {
 		super(parent);
-		this.additionalClassLoader = additionalClassLoader;
+		this.additionalClassLoaderRef = new WeakReference<>(additionalClassLoader);
 		this.predefinedClasses = predefinedClasses;
 	}
 
@@ -70,6 +71,10 @@ public class ExtendedClassLoader extends ClassLoader {
 		// even if class is loaded in additional class path, only get it as URL and load
 		// by this class
 		String classFileName = name.replace('.', '/') + ".class";
+		ClassLoader additionalClassLoader = additionalClassLoaderRef.get();
+		if (additionalClassLoader == null) {
+			return null;
+		}
 		InputStream classStream = additionalClassLoader.getResourceAsStream(classFileName);
 		if (classStream == null) {
 			// not found

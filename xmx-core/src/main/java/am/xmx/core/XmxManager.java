@@ -14,6 +14,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
@@ -92,17 +93,19 @@ public class XmxManager implements IXmxCoreService {
 	/**
 	 * Storage of classes info for managed objects
 	 */
-	private static ConcurrentHashMap<Integer, ManagedClassInfo> classesInfoById = new ConcurrentHashMap<>(32*1024);
+	private static ConcurrentMap<Integer, ManagedClassInfo> classesInfoById = new ConcurrentHashMap<>(32*1024);
 	
 	/**
-	 * All class IDs by class object.
+	 * All class loaders
+	 * TODO: move to AppInfo???
 	 */
-	private static ConcurrentHashMap<Class<?>, Integer> classIdsByClass = new ConcurrentHashMap<>(32*1024);
+	private static ConcurrentMap<ManagedClassLoaderWeakRef, ManagedClassLoaderWeakRef> classLoaderInfos = 
+			new ConcurrentHashMap<>(32);
 	
 	/**
 	 * Maps appName -> appInfo for each app with managed classes
 	 */
-	private static ConcurrentHashMap<String, ManagedAppInfo> appInfosByName = new ConcurrentHashMap<>();
+	private static ConcurrentMap<String, ManagedAppInfo> appInfosByName = new ConcurrentHashMap<>();
 	
 	/**
 	 * Generator of unique IDs for classes of managed objects.
@@ -116,11 +119,14 @@ public class XmxManager implements IXmxCoreService {
 	
 	private static ReferenceQueue<Object> managedObjectsRefQueue = new ReferenceQueue<>();
 	
+	private static ReferenceQueue<ClassLoader> managedClassLoadersRefQueue = new ReferenceQueue<>();
+	
+	
 	// how many milliseconds to wait before starting embedded web UI
 	private static final int UI_START_DELAY = 10000;
 
 	static {
-		Thread cleanerThread = new Thread("XMX-Cleaner-Thread") {
+		Thread objCleanerThread = new Thread("XMX-ObjCleaner") {
 			@Override
 			public void run() {
 				while (true) {
@@ -146,8 +152,24 @@ public class XmxManager implements IXmxCoreService {
 				}
 			}
 		};
-		cleanerThread.setDaemon(true);
-		cleanerThread.start();
+		objCleanerThread.setDaemon(true);
+		objCleanerThread.start();
+		
+		Thread classCleanerThread = new Thread("XMX-ClassCleaner") {
+			@Override
+			public void run() {
+				while (true) {
+					try {
+						ManagedClassLoaderWeakRef loaderInfo = (ManagedClassLoaderWeakRef) managedClassLoadersRefQueue.remove();
+						// TODO: implement clean
+						System.err.println("Cleaning loader " + loaderInfo.hashCode()); 
+					} catch (InterruptedException e) {
+					}
+				}
+			}
+		};
+		classCleanerThread.setDaemon(true);
+		classCleanerThread.start();
 	}
 	
 	private static MBeanServer jmxServer = null;
@@ -181,7 +203,7 @@ public class XmxManager implements IXmxCoreService {
 	public boolean isEnabled() {
 		return config.getSystemProperty(Properties.GLOBAL_ENABLED).asBool();
 	}
-
+	
 	/**
 	 * Registers a managed object into XMX system.
 	 * A new unique ID is generated for an object, and a weak reference to the object is saved into the storage.
@@ -280,7 +302,6 @@ public class XmxManager implements IXmxCoreService {
 				}
 				
 				info.init(managedMethods, managedFields, jmxClassModel, jmxObjectNamePart);
-				classIdsByClass.put(objClass, info.getId());
 			}
 		}
 	}
@@ -309,6 +330,24 @@ public class XmxManager implements IXmxCoreService {
 		return maxInstances;
 	}
 	
+	private static ManagedClassLoaderWeakRef getOrInitManagedClassLoaderInfo(ClassLoader cl) {
+		// TODO: think about null (bootstrap) classLoader!
+		
+		// at first, try simple iteration to prevent extraneous creation of weak references
+		for (ManagedClassLoaderWeakRef ref : classLoaderInfos.keySet()) {
+			if (ref.get() == cl) {
+				return ref;
+			}
+		}
+		
+		// if iteration fails, putIfAbsent approach will do getOrInit atomically
+		ManagedClassLoaderWeakRef candidate = new ManagedClassLoaderWeakRef(cl, managedClassLoadersRefQueue);
+		ManagedClassLoaderWeakRef ref = classLoaderInfos.putIfAbsent(candidate, candidate);
+		
+		// null ref means that putIfAbsent actually put candidate, so it shall be used 
+		return ref == null ? candidate : ref;
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -328,7 +367,9 @@ public class XmxManager implements IXmxCoreService {
 			return classBuffer;
 		}
 		
+		
 		ManagedAppInfo appInfo = getOrInitAppInfo(appName);
+		ManagedClassLoaderWeakRef classLoaderInfo = getOrInitManagedClassLoaderInfo(classLoader);		
 		
 		int classId;
 		if (classBeingRedefined != null) {
@@ -336,7 +377,7 @@ public class XmxManager implements IXmxCoreService {
 			// so, we can continue using existing ManagedClassInfo
 			// May require re-visiting in Java 9 and further!
 			
-			ManagedClassInfo classInfo = getManagedClassInfo(classBeingRedefined);
+			ManagedClassInfo classInfo = getManagedClassInfo(classLoaderInfo, classBeingRedefined.getName());
 			assert classInfo != null : "Should have been transformed already: " + classBeingRedefined;
 			classId = classInfo.getId();
 			
@@ -346,9 +387,10 @@ public class XmxManager implements IXmxCoreService {
 			// other properties may require Class itself, and will be initialized later
 			classId = managedClassesCounter.getAndIncrement();
 			int maxInstances = getMaxInstances(appConfig, className);
-			ManagedClassInfo classInfo = new ManagedClassInfo(classId, className, appInfo, maxInstances);
+			ManagedClassInfo classInfo = new ManagedClassInfo(classId, className, classLoaderInfo, appInfo, maxInstances);
 			
 			classesInfoById.put(classId, classInfo);
+			classLoaderInfo.getClassIdsByName().put(className, classId);
 			appInfo.addManagedClassId(classId);
 			
 			System.err.println("transformClass: " + className);
@@ -579,16 +621,22 @@ public class XmxManager implements IXmxCoreService {
 		return classInfo.getFieldById(fieldId);
 	}
 	
-	@Override
-	public ManagedClassInfo getManagedClassInfo(Class<?> clazz) {
-		Integer classId = classIdsByClass.get(clazz);
+	public ManagedClassInfo getManagedClassInfo(ManagedClassLoaderWeakRef loaderInfo, String className) {
+		Integer classId = loaderInfo.getClassIdsByName().get(className);
+		
 		if (classId == null) {
-			throw new XmxRuntimeException("Class is not managed: " + clazz); 
+			throw new XmxRuntimeException("Class is not managed: " + className); 
 		}
 		
 		ManagedClassInfo classInfo = classesInfoById.get(classId);
 		assert classInfo != null;
 		return classInfo;
+	}
+	
+	@Override
+	public ManagedClassInfo getManagedClassInfo(Class<?> clazz) {
+		ManagedClassLoaderWeakRef loaderInfo = getOrInitManagedClassLoaderInfo(clazz.getClassLoader());
+		return getManagedClassInfo(loaderInfo, clazz.getName());
 	}
 	
 	/**

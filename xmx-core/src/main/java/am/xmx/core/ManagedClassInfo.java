@@ -23,6 +23,11 @@ public class ManagedClassInfo {
 	private final String className;
 	
 	/**
+	 * Corresponding class loader info.
+	 */
+	private final ManagedClassLoaderWeakRef loaderInfo;
+	
+	/**
 	 * Corresponding application.
 	 */
 	private final ManagedAppInfo appInfo;
@@ -68,9 +73,11 @@ public class ManagedClassInfo {
 	
 	private boolean disabledByMaxInstances; // TODO maybe extend to custom flags 
 	
-	public ManagedClassInfo(int id, String className, ManagedAppInfo appInfo, int maxInstances) {
+	public ManagedClassInfo(int id, String className, ManagedClassLoaderWeakRef loaderInfo, 
+			ManagedAppInfo appInfo, int maxInstances) {
 		this.id = id;
 		this.className = className;
+		this.loaderInfo = loaderInfo;
 		this.appInfo = appInfo;
 		this.maxInstances = maxInstances;
 	}
@@ -96,6 +103,10 @@ public class ManagedClassInfo {
 		return className;
 	}
 	
+	public ManagedClassLoaderWeakRef getLoaderInfo() {
+		return loaderInfo;
+	}
+
 	public ManagedAppInfo getAppInfo() {
 		return appInfo;
 	}
@@ -151,6 +162,7 @@ public class ManagedClassInfo {
 	}
 
 	// NOTE: no ID and JMX info in hashCode & equals!
+	// TODO: check why, and whether there is a problem with duplicate class names
 
 	@Override
 	public int hashCode() {
