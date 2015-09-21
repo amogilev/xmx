@@ -96,13 +96,6 @@ public class XmxManager implements IXmxCoreService {
 	private static ConcurrentMap<Integer, ManagedClassInfo> classesInfoById = new ConcurrentHashMap<>(32*1024);
 	
 	/**
-	 * All class loaders
-	 * TODO: move to AppInfo???
-	 */
-	private static ConcurrentMap<ManagedClassLoaderWeakRef, ManagedClassLoaderWeakRef> classLoaderInfos = 
-			new ConcurrentHashMap<>(32);
-	
-	/**
 	 * Maps appName -> appInfo for each app with managed classes
 	 */
 	private static ConcurrentMap<String, ManagedAppInfo> appInfosByName = new ConcurrentHashMap<>();
@@ -119,8 +112,7 @@ public class XmxManager implements IXmxCoreService {
 	
 	private static ReferenceQueue<Object> managedObjectsRefQueue = new ReferenceQueue<>();
 	
-	private static ReferenceQueue<ClassLoader> managedClassLoadersRefQueue = new ReferenceQueue<>();
-	
+	static ReferenceQueue<ClassLoader> managedClassLoadersRefQueue = new ReferenceQueue<>();
 	
 	// how many milliseconds to wait before starting embedded web UI
 	private static final int UI_START_DELAY = 10000;
@@ -146,6 +138,10 @@ public class XmxManager implements IXmxCoreService {
 							if (classInfo.isDisabledByMaxInstances() && objectIds.size() < classInfo.getMaxInstances()) {
 								classInfo.setDisabledByMaxInstances(false);
 							}
+							if (objectIds != null && objectIds.isEmpty()) {
+								// reset and init are synchronized on classInfo, so there is no race 
+								classInfo.reset();
+							}
 						}
 					} catch (InterruptedException e) {
 					}
@@ -161,8 +157,9 @@ public class XmxManager implements IXmxCoreService {
 				while (true) {
 					try {
 						ManagedClassLoaderWeakRef loaderInfo = (ManagedClassLoaderWeakRef) managedClassLoadersRefQueue.remove();
-						// TODO: implement clean
-						System.err.println("Cleaning loader " + loaderInfo.hashCode()); 
+						Collection<Integer> classIdsToRemove = loaderInfo.getClassIdsByName().values();
+						classesInfoById.keySet().removeAll(classIdsToRemove);
+						loaderInfo.getAppInfo().removeManagedClassIds(classIdsToRemove);
 					} catch (InterruptedException e) {
 					}
 				}
@@ -292,16 +289,11 @@ public class XmxManager implements IXmxCoreService {
 				List<Field> managedFields = getManagedFields(objClass);
 				
 				ModelMBeanInfoSupport jmxClassModel = null;
-				String jmxObjectNamePart = null;
 				if (jmxServer != null) {
 					jmxClassModel = JmxSupport.createModelForClass(objClass, appName, managedMethods, managedFields, config);
-					if (jmxClassModel != null) {
-						jmxObjectNamePart = JmxSupport.createClassObjectNamePart(objClass, appName);
-						assert jmxObjectNamePart != null; 
-					}
 				}
 				
-				info.init(managedMethods, managedFields, jmxClassModel, jmxObjectNamePart);
+				info.init(managedMethods, managedFields, jmxClassModel);
 			}
 		}
 	}
@@ -330,24 +322,6 @@ public class XmxManager implements IXmxCoreService {
 		return maxInstances;
 	}
 	
-	private static ManagedClassLoaderWeakRef getOrInitManagedClassLoaderInfo(ClassLoader cl) {
-		// TODO: think about null (bootstrap) classLoader!
-		
-		// at first, try simple iteration to prevent extraneous creation of weak references
-		for (ManagedClassLoaderWeakRef ref : classLoaderInfos.keySet()) {
-			if (ref.get() == cl) {
-				return ref;
-			}
-		}
-		
-		// if iteration fails, putIfAbsent approach will do getOrInit atomically
-		ManagedClassLoaderWeakRef candidate = new ManagedClassLoaderWeakRef(cl, managedClassLoadersRefQueue);
-		ManagedClassLoaderWeakRef ref = classLoaderInfos.putIfAbsent(candidate, candidate);
-		
-		// null ref means that putIfAbsent actually put candidate, so it shall be used 
-		return ref == null ? candidate : ref;
-	}
-
 	/**
 	 * {@inheritDoc}
 	 */
@@ -369,7 +343,7 @@ public class XmxManager implements IXmxCoreService {
 		
 		
 		ManagedAppInfo appInfo = getOrInitAppInfo(appName);
-		ManagedClassLoaderWeakRef classLoaderInfo = getOrInitManagedClassLoaderInfo(classLoader);		
+		ManagedClassLoaderWeakRef classLoaderInfo = appInfo.getOrInitManagedClassLoaderInfo(classLoader);		
 		
 		int classId;
 		if (classBeingRedefined != null) {
@@ -387,7 +361,13 @@ public class XmxManager implements IXmxCoreService {
 			// other properties may require Class itself, and will be initialized later
 			classId = managedClassesCounter.getAndIncrement();
 			int maxInstances = getMaxInstances(appConfig, className);
-			ManagedClassInfo classInfo = new ManagedClassInfo(classId, className, classLoaderInfo, appInfo, maxInstances);
+			String jmxObjectNamePart = null;
+			if (jmxServer != null) {
+				jmxObjectNamePart = JmxSupport.createClassObjectNamePart(className, appName);
+				assert jmxObjectNamePart != null; 
+			}
+			ManagedClassInfo classInfo = new ManagedClassInfo(classId, className, classLoaderInfo, 
+					appInfo, maxInstances, jmxObjectNamePart);
 			
 			classesInfoById.put(classId, classInfo);
 			classLoaderInfo.getClassIdsByName().put(className, classId);
@@ -635,7 +615,14 @@ public class XmxManager implements IXmxCoreService {
 	
 	@Override
 	public ManagedClassInfo getManagedClassInfo(Class<?> clazz) {
-		ManagedClassLoaderWeakRef loaderInfo = getOrInitManagedClassLoaderInfo(clazz.getClassLoader());
+		String appName = obtainAppNameByLoader(clazz.getClassLoader());
+		ManagedAppInfo appInfo = appInfosByName.get(appName);
+		if (appInfo == null) {
+			throw new XmxRuntimeException("App is not managed: " + appName); 
+		}
+		
+		
+		ManagedClassLoaderWeakRef loaderInfo = appInfo.getOrInitManagedClassLoaderInfo(clazz.getClassLoader());
 		return getManagedClassInfo(loaderInfo, clazz.getName());
 	}
 	

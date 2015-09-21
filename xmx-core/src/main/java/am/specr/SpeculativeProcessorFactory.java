@@ -1,5 +1,6 @@
 package am.specr;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -92,9 +93,12 @@ public class SpeculativeProcessorFactory<P> {
 	private Map<String, ProcessorInfo> registeredProcesors = new HashMap<>();
 	
 	/**
-	 * Cached processors for known class loaders. 
+	 * The short-living cache for processors created for known class loaders.
+	 * <p/>
+	 * The cache uses weak references for both keys and values, so may be invalidate
+	 * after any garbage collection. Otherwise, the cache would prevent class unloading.
 	 */
-	private WeakHashMap<ClassLoader, List<P>> processorsByClassLoaderCache = new WeakHashMap<>();
+	private WeakHashMap<ClassLoader, WeakReference<List<P>>> processorsByClassLoaderCache = new WeakHashMap<>();
 
 	/**
 	 * Creates the factory, which will manage the implementations of the
@@ -226,9 +230,12 @@ public class SpeculativeProcessorFactory<P> {
 			return Collections.emptyList();
 		}
 		
-		List<P> cachedList = processorsByClassLoaderCache.get(classLoader);
-		if (cachedList != null) {
-			return cachedList;
+		WeakReference<List<P>> cachedListRef = processorsByClassLoaderCache.get(classLoader);
+		if (cachedListRef != null) {
+			List<P> cachedList = cachedListRef.get();
+			if (cachedList != null) {
+				return cachedList;
+			}
 		}
 		
 		// new class loader, or after invalidation
@@ -250,7 +257,7 @@ public class SpeculativeProcessorFactory<P> {
 		
 		// always use initial class loader (of processed object) as a key, as targets may
 		// be different (if there are several processors)
-		processorsByClassLoaderCache.put(classLoader, Collections.unmodifiableList(processors));
+		processorsByClassLoaderCache.put(classLoader, new WeakReference<>(Collections.unmodifiableList(processors)));
 		
 		return processors;
 	}

@@ -125,9 +125,10 @@ public class JmxSupport {
 	
 	private static ConcurrentMap<List<String>, AtomicInteger> versionByAppAndClassNames = new ConcurrentHashMap<>(); 
 
-	public static String createClassObjectNamePart(Class<?> objClass, String appName) {
-		String type = objClass.getSimpleName();
-		String packageName = getPackageName(objClass);
+	public static String createClassObjectNamePart(String className, String appName) {
+		String[] packageAndSimpleName = getPackageAndSimpleName(className);
+		String packageName = packageAndSimpleName[0];
+		String type = packageAndSimpleName[1];
 
 		StringBuilder sb = new StringBuilder(64);
 		if (appName != null && !appName.isEmpty()) {
@@ -138,7 +139,7 @@ public class JmxSupport {
 		
 		List<String> appAndClassNames = new ArrayList<>(2);
 		appAndClassNames.add(appName);
-		appAndClassNames.add(objClass.getName());
+		appAndClassNames.add(className);
 		versionByAppAndClassNames.putIfAbsent(appAndClassNames, new AtomicInteger());
 		AtomicInteger versionCounter = versionByAppAndClassNames.get(appAndClassNames);
 		int version = versionCounter.incrementAndGet();
@@ -157,20 +158,19 @@ public class JmxSupport {
 		return sb.toString();
 	}
 
-	private static String getPackageName(Class<?> objClass) {
-		Package p = objClass.getPackage();
-		if (p != null) {
-			return p.getName();
+	private static String[] getPackageAndSimpleName(String className) {
+		String packageName, simpleName;
+		// not correct for arrays, but fine for our aims...
+		int lastDotIdx = className.lastIndexOf('.');
+		if (lastDotIdx > 0) {
+			packageName = className.substring(0, lastDotIdx);
+			simpleName = className.substring(lastDotIdx + 1);
 		} else {
-			// not correct for local classes or arrays, but fine for our aims...
-			String className = objClass.getName();
-			int lastDotIdx = className.lastIndexOf('.');
-			if (lastDotIdx > 0) {
-				return className.substring(0, lastDotIdx);
-			} else {
-				return "";
-			}
+			packageName = "";
+			simpleName = className;
 		}
+		
+		return new String[]{packageName, simpleName};
 	}
 
 	public static ObjectName registerBean(MBeanServer jmxServer, int objectId,

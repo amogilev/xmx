@@ -1,7 +1,10 @@
 package am.xmx.core;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -22,19 +25,26 @@ public class ManagedAppInfo {
 	/**
 	 * Internal ID of the application.
 	 */
-	private int id;
+	private final int id;
 	
 	/**
 	 * Application name.
 	 */
-	private String name;
+	private final String name;
 	
 	/**
 	 * List of managed class ids belonging to this app.
 	 */
-	private List<Integer> classIds = new ArrayList<>(1024);
+	private final List<Integer> classIds = new ArrayList<>(1024);
 	
-	private ReadWriteLock classListLock = new ReentrantReadWriteLock(); 
+	private final ReadWriteLock classListLock = new ReentrantReadWriteLock();
+	
+	/**
+	 * References and information about the class loaders which belong to the app and
+	 * contain managed classes.
+	 */
+	private final ConcurrentMap<ManagedClassLoaderWeakRef, ManagedClassLoaderWeakRef> classLoaderInfos = 
+			new ConcurrentHashMap<>(8);
 
 	public ManagedAppInfo(int id, String name) {
 		this.id = id;
@@ -49,12 +59,52 @@ public class ManagedAppInfo {
 		return name;
 	}
 	
+	public ConcurrentMap<ManagedClassLoaderWeakRef, ManagedClassLoaderWeakRef> getClassLoaderInfos() {
+		return classLoaderInfos;
+	}
+	
+	/**
+	 * Finds or initializes a reference and information for the given class loader, which shall
+	 * belong this app.
+	 */
+	public ManagedClassLoaderWeakRef getOrInitManagedClassLoaderInfo(ClassLoader cl) {
+		if (cl == null) {
+			// use special placeholder to represent bootstrap class loader 
+			cl = ManagedClassLoaderWeakRef.NULL_CL;
+		}
+		
+		// at first, try simple iteration to prevent extraneous creation of weak references
+		for (ManagedClassLoaderWeakRef ref : classLoaderInfos.keySet()) {
+			if (ref.get() == cl) {
+				return ref;
+			}
+		}
+		
+		// if iteration fails, putIfAbsent approach will do getOrInit atomically
+		ManagedClassLoaderWeakRef candidate = new ManagedClassLoaderWeakRef(cl, XmxManager.managedClassLoadersRefQueue, this);
+		ManagedClassLoaderWeakRef ref = classLoaderInfos.putIfAbsent(candidate, candidate);
+		
+		// null ref means that putIfAbsent actually put candidate, so it shall be used 
+		return ref == null ? candidate : ref;
+	}
+
 	public void addManagedClassId(int classId) {
 		classListLock.writeLock().lock();
 		try {
 			classIds.add(classId);
 		} finally {
 			classListLock.writeLock().unlock();
+		}
+	}
+	
+	public void removeManagedClassIds(Collection<Integer> classIds) {
+		if (classIds.size() > 0) {
+			classListLock.writeLock().lock();
+			try {
+				classIds.removeAll(classIds);
+			} finally {
+				classListLock.writeLock().unlock();
+			}
 		}
 	}
 	

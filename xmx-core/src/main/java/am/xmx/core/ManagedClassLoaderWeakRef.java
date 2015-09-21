@@ -13,28 +13,53 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 	
+	/**
+	 * Class and constant to represent bootstrap class loader, which is
+	 * {@code null} in the current Java implementation.
+	 */
+	static final class NullClassLoader extends ClassLoader {
+	}
+	
+	static final NullClassLoader NULL_CL = new NullClassLoader();
+	
+	/**
+	 * Hash code of the referent class loader, used as hash code of this
+	 * reference too.
+	 */
 	private final int hashCode;
+	
+	/**
+	 * The app to which this class loader belongs.
+	 */
+	private final ManagedAppInfo appInfo;
 	
 	/**
 	 * All IDs of managed classes loaded by the referent class loader, mapped by class name.
 	 */
 	private final ConcurrentMap<String, Integer> classIdsByName;
 	
+	
 	private ManagedClassLoaderWeakRef(ClassLoader referent, ReferenceQueue<? super ClassLoader> q, 
-			ConcurrentMap<String, Integer> classIdsByName) {
+			ManagedAppInfo appInfo, ConcurrentMap<String, Integer> classIdsByName) {
 		super(referent, q);
 		this.hashCode = referent.hashCode();
+		this.appInfo = appInfo;
 		this.classIdsByName = classIdsByName;
 	}
 	
-	public ManagedClassLoaderWeakRef(ClassLoader referent, ReferenceQueue<? super ClassLoader> q) {
-		this(referent, q, new ConcurrentHashMap<String, Integer>(1024));
+	public ManagedClassLoaderWeakRef(ClassLoader referent, ReferenceQueue<? super ClassLoader> q, 
+			ManagedAppInfo appInfo) {
+		this(referent, q, appInfo, new ConcurrentHashMap<String, Integer>(1024));
 	}
 	
 	public static ManagedClassLoaderWeakRef key(ClassLoader referent) {
-		return new ManagedClassLoaderWeakRef(referent, null, null);
+		return new ManagedClassLoaderWeakRef(referent, null, null, null);
 	}
 	
+	public ManagedAppInfo getAppInfo() {
+		return appInfo;
+	}
+
 	public ConcurrentMap<String, Integer> getClassIdsByName() {
 		return classIdsByName;
 	}

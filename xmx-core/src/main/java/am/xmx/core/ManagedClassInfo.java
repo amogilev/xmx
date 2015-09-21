@@ -37,6 +37,13 @@ public class ManagedClassInfo {
 	 */
 	private final int maxInstances;
 	
+	/**
+	 * Part of JMX ObjectName (without object ID) used for managed 
+	 * class instances, or {@code null} if they need not to be 
+	 * published to JMX.
+	 */
+	private final String jmxObjectNamePart;
+	
 	// other fields are initiated when first object of the class is registered
 	
 	/**
@@ -58,13 +65,6 @@ public class ManagedClassInfo {
 	private ModelMBeanInfoSupport jmxClassModel;
 	
 	/**
-	 * Part of JMX ObjectName (without object ID) used for managed 
-	 * class instances, or {@code null} if they need not to be 
-	 * published to JMX.
-	 */
-	private String jmxObjectNamePart;
-	
-	/**
 	 * Managed objects of this class, if any.
 	 * <strong>NOTE:</strong> This set is not thread-safe, require
 	 * external synchronization.
@@ -74,25 +74,41 @@ public class ManagedClassInfo {
 	private boolean disabledByMaxInstances; // TODO maybe extend to custom flags 
 	
 	public ManagedClassInfo(int id, String className, ManagedClassLoaderWeakRef loaderInfo, 
-			ManagedAppInfo appInfo, int maxInstances) {
+			ManagedAppInfo appInfo, int maxInstances, String jmxObjectNamePart) {
 		this.id = id;
 		this.className = className;
 		this.loaderInfo = loaderInfo;
 		this.appInfo = appInfo;
 		this.maxInstances = maxInstances;
+		this.jmxObjectNamePart = jmxObjectNamePart;
 	}
 
 	public void init(List<Method> managedMethods, List<Field> managedFields, 
-			ModelMBeanInfoSupport jmxClassModel, String jmxObjectNamePart) {
+			ModelMBeanInfoSupport jmxClassModel) {
 		this.managedMethods = managedMethods;
 		this.managedFields = managedFields;
 		this.jmxClassModel = jmxClassModel;
-		this.jmxObjectNamePart = jmxObjectNamePart;
 		this.objectIds = new HashSet<>(2);
 	}
 	
 	public boolean isInitialized() {
 		return managedMethods != null;
+	}
+	
+	/**
+	 * Resets the previous initialization, reverts to uninitialized form with only basic information about the 
+	 * class. This method may be invoked only when there are no alive isntances of the class left.
+	 */
+	public synchronized void reset() {
+		if (objectIds != null && objectIds.size() > 0) {
+			throw new IllegalStateException("Cannot reset ManagedClassInfo while some instances are still "
+					+ "alive; class=" + className);
+		}
+		
+		this.managedFields = null;
+		this.managedMethods = null;
+		this.jmxClassModel = null;
+		this.objectIds = null;
 	}
 	
 	public int getId() {
@@ -128,17 +144,25 @@ public class ManagedClassInfo {
 	}
 
 	public Method getMethodById(int methodId) {
-		if (methodId < 0 || methodId >= managedMethods.size()) {
+		List<Method> methods = managedMethods;
+		if (methods == null) {
+			throw new XmxRuntimeException("ClassInfo is not initialized for " + className);
+		}
+		if (methodId < 0 || methodId >= methods.size()) {
 			throw new XmxRuntimeException("Method not found in " + className + " by ID=" + methodId);
 		}
-		return managedMethods.get(methodId);
+		return methods.get(methodId);
 	}
 	
 	public Field getFieldById(int fieldId) {
-		if (fieldId < 0 || fieldId >= managedFields.size()) {
+		List<Field> fields = managedFields;
+		if (fields == null) {
+			throw new XmxRuntimeException("ClassInfo is not initialized for " + className);
+		}
+		if (fieldId < 0 || fieldId >= fields.size()) {
 			throw new XmxRuntimeException("Field not found in " + className + " by ID=" + fieldId);
 		}
-		return managedFields.get(fieldId);
+		return fields.get(fieldId);
 	}
 	
 	public boolean isDisabled() {
