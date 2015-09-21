@@ -47,13 +47,13 @@ public class TestUpdateXmxIniConfig {
 	
 	// tests that default config (created by test) is not updated at next run
 	@Test
-	public void testUpdateNotRequiredForDefaultConfig() throws IOException {
+	public void testUpdateNotRequiredForDefaultConfig() throws Exception {
 		List<String> lines = makeDefaultIniLines();
 		checkUpdateNotRequiredForLines(lines);
 	}
 	
 	@Test
-	public void testUpdateNotRequiredWithManualCommentsAndExtraSection() throws IOException {
+	public void testUpdateNotRequiredWithManualCommentsAndExtraSection() throws Exception {
 		List<String> lines = makeDefaultIniLines();
 		lines.add(0, "# Manual comment");
 		lines.add(4, "# Manual comment 2");
@@ -69,7 +69,7 @@ public class TestUpdateXmxIniConfig {
 	}
 	
 	@Test
-	public void testUpdateNotRequiredWithDuplicateManualSections() throws IOException {
+	public void testUpdateNotRequiredWithDuplicateManualSections() throws Exception {
 		List<String> initialLines = makeDefaultIniLines();
 		initialLines.add("");
 		initialLines.add("[App=My]");
@@ -85,7 +85,7 @@ public class TestUpdateXmxIniConfig {
 	}
 	
 	@Test
-	public void testUpdateNotRequiredWithOverrides() throws IOException {
+	public void testUpdateNotRequiredWithOverrides() throws Exception {
 		Map<String, List<String>> optionsOverrides = new HashMap<>();
 		optionsOverrides.put(Properties.APP_ENABLED, 
 				makeOptionLinesWithOverrideValue(SECTION_ALLAPPS_DESC, Properties.APP_ENABLED, "1", true));
@@ -103,7 +103,7 @@ public class TestUpdateXmxIniConfig {
 	}
 	
 	@Test
-	public void testUpdateNotRequiredWithChangedOrder() throws IOException {
+	public void testUpdateNotRequiredWithChangedOrder() throws Exception {
 		SectionDescription section = SECTION_ALLAPPS_DESC;
 		List<String> sectionLines = new ArrayList<>();
 		List<OptionDescription> reversedOptions = Arrays.asList(SECTION_ALLAPPS_DESC.getOptions());
@@ -124,7 +124,7 @@ public class TestUpdateXmxIniConfig {
 	
 	
 	@Test
-	public void testUpdateWithOptionOverrideByUncommenting() throws IOException {
+	public void testUpdateWithOptionOverrideByUncommenting() throws Exception {
 		Map<String, List<String>> optionsOverrides = new HashMap<>();
 		
 		String mngOptName = Properties.specialClassesForm(Properties.SP_MANAGED);
@@ -150,7 +150,7 @@ public class TestUpdateXmxIniConfig {
 	}
 	
 	@Test
-	public void testUpdateWithDuplicateManualSection() throws IOException {
+	public void testUpdateWithDuplicateManualSection() throws Exception {
 		List<String> initialLines = makeDefaultIniLines();
 		initialLines.set(0, "#!# Changed!"); // for triggering update
 		
@@ -173,12 +173,13 @@ public class TestUpdateXmxIniConfig {
 		checkUpdateRequiredForLines(initialLines, expectedLines);
 	}
 	
-	private void checkUpdateNotRequiredForLines(List<String> lines) throws IOException {
+	private void checkUpdateNotRequiredForLines(List<String> lines) throws Exception {
 		Path tempIniFile = Files.createTempFile("testxmx", ".ini");
 		Files.write(tempIniFile,
 				lines,
 				Charset.defaultCharset());
 		FileTime modifiedTime = Files.getLastModifiedTime(tempIniFile);
+		Thread.sleep(10); // prevents tests completion at the same time quant
 		
 		try {
 			XmxIniConfig.load(tempIniFile.toFile(), true);
@@ -196,18 +197,19 @@ public class TestUpdateXmxIniConfig {
 		}
 	}
 	
-	private void checkUpdateRequiredForLines(List<String> initialLines, List<String> expectedLines) throws IOException {
+	private void checkUpdateRequiredForLines(List<String> initialLines, List<String> expectedLines) throws Exception {
 		Path tempIniFile = Files.createTempFile("testxmx", ".ini");
 		Files.write(tempIniFile,
 				initialLines,
 				Charset.defaultCharset());
 		FileTime modifiedTime = Files.getLastModifiedTime(tempIniFile);
+		Thread.sleep(10); // prevents tests completion at the same time quant
 		
 		try {
 			XmxIniConfig.load(tempIniFile.toFile(), true);
 			
 			if (modifiedTime.equals(Files.getLastModifiedTime(tempIniFile))) {
-				fail("Expected no update for the test configuration file, but the update was detected");
+				fail("Expected an update for the test configuration file, but no update was detected");
 			}
 
 			List<String> lines2 = Files.readAllLines(tempIniFile, Charset.forName("UTF-8"));
