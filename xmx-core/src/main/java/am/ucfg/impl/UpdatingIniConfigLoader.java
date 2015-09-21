@@ -21,11 +21,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
-import org.ini4j.EnhancedIni;
+import org.ini4j.EnhancedIniBuilder;
 import org.ini4j.EnhancedIniCommentsSupport;
+import org.ini4j.EnhancedIniConfig;
+import org.ini4j.EnhancedIniFormatter;
 import org.ini4j.Ini;
 import org.ini4j.Profile;
 import org.ini4j.Profile.Section;
+import org.ini4j.spi.IniBuilder;
+import org.ini4j.spi.IniFormatter;
 
 import am.ucfg.IConfigInfoProvider;
 import am.ucfg.IUpdatingConfigLoader;
@@ -62,12 +66,16 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 		
 		boolean updated = false;
 		
+		// make "EnhancedIni*" classes available by context class loader, as they are loaded using Reflection 
+		ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
+		Thread.currentThread().setContextClassLoader(UpdatingIniConfigLoader.class.getClassLoader());
+		
 		try {
 			// create if missing
 			boolean created = iniFile.createNewFile();
 			
-			// avoid using Ini4J's load(File), to have more reliable streams closing
 			try (FileInputStream in = new FileInputStream(iniFile)) {
+				// avoid using Ini4J's load(File), to have more reliable streams closing
 				ini.load(in);
 				updated = updateConfig(ini);
 			}
@@ -81,6 +89,8 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 			cfgInfoProvider.logError("Failed to read configuration file: " + e);
 			updateConfig(ini);
 			updated = true;
+		} finally {
+			Thread.currentThread().setContextClassLoader(prevContextClassLoader);
 		}
 		
 		Map<String, Map<String, String>> sectionsWithOptionsByName = new LinkedHashMap<>(ini.size());
@@ -119,10 +129,17 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 		return options;
 	}
 	
+	static {
+		System.setProperty(IniBuilder.class.getName(), EnhancedIniBuilder.class.getName());
+		System.setProperty(IniFormatter.class.getName(), EnhancedIniFormatter.class.getName());
+	}
+	
 	private Ini makeIni() {
-		Ini ini = new EnhancedIni();
+		Ini ini = new Ini();
+		ini.setConfig(new EnhancedIniConfig(ini));
 		ini.getConfig().setLineSeparator(lineSeparator);
 		ini.getConfig().setEmptySection(true);
+		
 		return ini;
 	}
 	

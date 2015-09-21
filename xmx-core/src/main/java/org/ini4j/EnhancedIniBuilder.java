@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
+import org.ini4j.spi.IniBuilder;
 import org.ini4j.spi.IniHandler;
 
 /**
@@ -14,17 +15,21 @@ import org.ini4j.spi.IniHandler;
  *  
  * @author Andrey Mogilev
  */
-public class EnhancedIniBuilder implements IniHandler {
+public class EnhancedIniBuilder extends IniBuilder implements IniHandler {
 	
     private Ini ini;
 	private boolean isHeader;
 	private Section curSection, prevSection;
 	private List<String> pendingComments = new ArrayList<>();
 	
-	public EnhancedIniBuilder(Ini ini) {
+	public EnhancedIniBuilder() {}
+	
+	@Override
+	public void setIni(Ini ini) {
+		super.setIni(ini);
 		this.ini = ini;
-		
 	}
+
 	@Override
 	public void startIni() {
 		boolean isHeaderCommentAllowed = ini.getConfig().isHeaderComment();

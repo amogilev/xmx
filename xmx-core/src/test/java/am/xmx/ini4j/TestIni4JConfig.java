@@ -6,9 +6,16 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 
+import org.ini4j.EnhancedIniBuilder;
+import org.ini4j.EnhancedIniConfig;
+import org.ini4j.EnhancedIniFormatter;
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
+import org.ini4j.spi.IniBuilder;
+import org.ini4j.spi.IniFormatter;
 import org.junit.Test;
+
+import am.xmx.cfg.impl.ConfigDefaults;
 
 public class TestIni4JConfig {
 	
@@ -33,10 +40,24 @@ public class TestIni4JConfig {
 		"# determines instances of which classes and interfaces will be managed by XMX" + "\n" +
 		"ManagedBean.ClassNames = *Service|*Manager|*Engine|*DataSource" + "\n\n";
 	
+	static {
+		System.setProperty(IniBuilder.class.getName(), EnhancedIniBuilder.class.getName());
+		System.setProperty(IniFormatter.class.getName(), EnhancedIniFormatter.class.getName());
+	}
+	
+	private Ini makeIni() {
+		Ini ini = new Ini();
+		ini.setConfig(new EnhancedIniConfig(ini));
+		ini.getConfig().setLineSeparator(ConfigDefaults.LINE_SEPARATOR);
+		ini.getConfig().setEmptySection(true);
+		
+		return ini;
+	}
+	
+	
 	@Test
 	public void testIni4j() throws IOException {
-		Ini cfg = new Ini();
-		cfg.getConfig().setLineSeparator("\n");
+		Ini cfg = makeIni();
 		
 		Section global = cfg.add("Global");
 		global.put("EmbeddedWebServer.Enable", true);
@@ -72,8 +93,7 @@ public class TestIni4JConfig {
 	
 	@Test
 	public void testIni4jReadWrite() throws IOException {
-		Ini cfg = new Ini();
-		cfg.getConfig().setLineSeparator("\n");
+		Ini cfg = makeIni();
 		
 		cfg.load(new StringReader(defaultXmxIniContents));
 		StringWriter buf = new StringWriter();
@@ -84,8 +104,7 @@ public class TestIni4JConfig {
 	
 	@Test
 	public void testIni4jRead() throws IOException {
-		Ini cfg = new Ini();
-		cfg.getConfig().setLineSeparator("\n");
+		Ini cfg = makeIni();
 		
 		cfg.load(new StringReader(defaultXmxIniContents));
 		
