@@ -30,6 +30,17 @@ public class XmxClassTransformer implements ClassFileTransformer {
 			return null;
 		}
 		
+		if (className.startsWith("am/") && (className.startsWith("am/specr/") || className.startsWith("am/xmx/"))) {
+			// skip XMX classes from management to prevent circular class loading
+			return null;
+		}
+
+		String loaderClassName = loader.getClass().getName();
+		if (loaderClassName.equals("sun.reflect.DelegatingClassLoader")) {
+			// skip auxiliary classes loaded by sun/reflect/DelegatingClassLoader, helps reducing number of processed classloaders
+			return null;
+		}
+
 		try {
 			byte[] transformClass = XmxLoader.transformClass(loader, className, classfileBuffer, classBeingRedefined);
 			return transformClass;
