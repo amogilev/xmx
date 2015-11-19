@@ -10,7 +10,7 @@
 <script type="text/javascript">
 	function callSetField(fieldId) {
 		var value = document.getElementById("value_" + fieldId).value; 
-		parent.location = "${pageContext.request.contextPath}/setObjectField?objectId=${objectId}&fieldId=" + fieldId + "&value='" + value + "'"; 
+		parent.location = "${pageContext.request.contextPath}/setObjectField?objectId=${objectId}&fieldId=" + fieldId + "&value=" + encodeURIComponent(value); 
 	}
 </script>
 </head>
