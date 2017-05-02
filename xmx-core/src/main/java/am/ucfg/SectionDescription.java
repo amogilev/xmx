@@ -6,17 +6,15 @@ import java.util.Map;
 import am.xmx.cfg.CfgEntityLevel;
 
 public class SectionDescription {
-	private CfgEntityLevel level;
 	private String name;
 	private String[] sectionComments;
 	private OptionDescription[] options;
 	private Map<String, OptionDescription> optionsByName;
 	
-	public SectionDescription(String name, CfgEntityLevel level, String[] sectionComments,
+	public SectionDescription(String name, String[] sectionComments,
 			OptionDescription...options) {
 		super();
 		this.name = name;
-		this.level = level;
 		this.sectionComments = sectionComments;
 		this.options = options;
 		this.optionsByName = new HashMap<>(options.length);
@@ -25,10 +23,6 @@ public class SectionDescription {
 		}
 	}
 	
-	public CfgEntityLevel getLevel() {
-		return level;
-	}
-
 	public String getName() {
 		return name;
 	}

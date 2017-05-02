@@ -156,7 +156,7 @@ public class SpeculativeProcessorFactory<P> {
 	 * except by the factory.</strong> In particular, the processor class name needs to be passed 
 	 * as pure string literal, rather than as <code><strike>MyProcessor.class.getName()</strike></code>
 	 * <p/>
-	 * The processor class is supposed to be loaded by some class loader where all required classes,
+	 * The processor class is supposed to be loaded by some class loader where all required classes are available,
 	 * so only two cases are supported: 
 	 * <ul>
 	 *  <li> the processor class shall be available in the target class loader,
@@ -208,7 +208,7 @@ public class SpeculativeProcessorFactory<P> {
 	}
 	
 	/**
-	 * Same as {@link #getProcessorsFor()}, but returns only the first matched processor.
+	 * Same as {@link #getProcessorsFor(Object)}, but returns only the first matched processor.
 	 * 
 	 * @param processedObject the object to be processed
 	 * 

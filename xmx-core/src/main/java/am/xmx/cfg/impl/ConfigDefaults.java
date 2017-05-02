@@ -50,8 +50,7 @@ public interface ConfigDefaults {
 	};
 	
 	SectionDescription SECTION_SYSTEM_DESC = new SectionDescription(SectionsNamespace.SECTION_SYSTEM,
-			CfgEntityLevel.SYSTEM,
-			SECTION_SYSTEM_COMMENTS, 
+			SECTION_SYSTEM_COMMENTS,
 			new OptionDescription(Properties.GLOBAL_ENABLED, true, "Whether to enable XMX at all"),
 			new OptionDescription(Properties.GLOBAL_EMB_SERVER_ENABLED, true, "Whether to enable the embedded web server"),
 			new OptionDescription(Properties.GLOBAL_EMB_SERVER_IMPL, "Jetty", "The embedded web server implementation. Only Jetty is supported now"),
@@ -61,8 +60,7 @@ public interface ConfigDefaults {
 			);
 	
 	SectionDescription SECTION_ALLAPPS_DESC = new SectionDescription(SectionsNamespace.SECTION_ALLAPPS, 
-			CfgEntityLevel.APP,
-			SECTION_ALLAPPS_COMMENTS, 
+			SECTION_ALLAPPS_COMMENTS,
 			new OptionDescription(Properties.APP_ENABLED, true, "Whether the management is enabled for the application"),
 			new OptionDescription(Properties.specialClassesForm(Properties.SP_MANAGED), 
 					"^.*(Service|(?<![rR]eference)Manager|Engine|DataSource)\\d*(Impl\\d*)?$", 
@@ -72,11 +70,4 @@ public interface ConfigDefaults {
 	
 	List<SectionDescription> ALL_SECTIONS = Collections.unmodifiableList(Arrays.asList(
 			SECTION_SYSTEM_DESC, SECTION_ALLAPPS_DESC));
-	
-	@SuppressWarnings("serial")
-	Map<String, SectionDescription> ALL_SECTIONS_BY_NAME = Collections.unmodifiableMap(new HashMap<String, SectionDescription>() {{
-		for (SectionDescription sd : ALL_SECTIONS) {
-			put(sd.getName(), sd);
-		}
-	}});
 }

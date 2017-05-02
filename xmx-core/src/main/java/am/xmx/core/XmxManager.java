@@ -51,7 +51,8 @@ import com.google.gson.stream.JsonWriter;
 public class XmxManager implements IXmxCoreService {
 
 	public static final IXmxConfig config = XmxIniConfig.getDefault();
-	
+
+	// FIXME use YaGson instead
 	private static Gson gson;
 	static {
 		GsonBuilder builder = new GsonBuilder();
@@ -134,9 +135,6 @@ public class XmxManager implements IXmxCoreService {
 							
 							if (objRef.jmxObjectName != null) {
 								JmxSupport.unregisterBean(jmxServer, objRef.jmxObjectName);
-							}
-							if (classInfo.isDisabledByMaxInstances() && objectIds.size() < classInfo.getMaxInstances()) {
-								classInfo.setDisabledByMaxInstances(false);
 							}
 							if (objectIds != null && objectIds.isEmpty()) {
 								// reset and init are synchronized on classInfo, so there is no race 
@@ -283,8 +281,8 @@ public class XmxManager implements IXmxCoreService {
 
 	private void initClassInfo(Class<?> objClass, ManagedClassInfo info) {
 		synchronized(info) {
-			String appName = info.getAppInfo().getName();
 			if (!info.isInitialized()) {
+				String appName = info.getAppInfo().getName();
 				List<Method> managedMethods = getManagedMethods(objClass);
 				List<Field> managedFields = getManagedFields(objClass);
 				
@@ -336,12 +334,18 @@ public class XmxManager implements IXmxCoreService {
 		
 		boolean isManaged = appConfig.getAppProperty(Properties.APP_ENABLED).asBool() &&
 				config.getAppConfig(appName).getClassProperty(className, Properties.SP_MANAGED).asBool();
-		
+
 		if (!isManaged) {
 			return classBuffer;
 		}
-		
-		
+
+		ClassReader cr = new ClassReader(classBuffer);
+		int access = cr.getAccess();
+		if ((access & (Opcodes.ACC_ENUM | Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT)) > 0) {
+			// only instrument non-abstract classes
+			return classBuffer;
+		}
+
 		ManagedAppInfo appInfo = getOrInitAppInfo(appName);
 		ManagedClassLoaderWeakRef classLoaderInfo = appInfo.getOrInitManagedClassLoaderInfo(classLoader);		
 		
@@ -379,19 +383,11 @@ public class XmxManager implements IXmxCoreService {
 		// actually transform the class - add registerObject to constructors
 		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 		XmxInstructionsAdder xmxInstructionsAdder = new XmxInstructionsAdder(cw, classId, bcClassName);
-		ClassReader cr = new ClassReader(classBuffer);
-		
-		int access = cr.getAccess();
-		if ((access & (Opcodes.ACC_ENUM | Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT)) > 0) {
-			// only instrument non-abstract classes
-			return classBuffer;
-		}
-		
+
 		cr.accept(xmxInstructionsAdder, 0);
 		return cw.toByteArray();
 	}
-	
-	
+
 	// Inner Implementation of XmxService API
 	
 	private ManagedAppInfo getOrInitAppInfo(String appName) {
@@ -578,7 +574,7 @@ public class XmxManager implements IXmxCoreService {
 			}
 		}
 		try {
-			f.setAccessible(true);
+			// f.setAccessible(true); // all fields are already accessible
 			f.set(obj, deserializedValue);
 		} catch (Exception e) {
 			throw new XmxRuntimeException("Failed to set field", e);
@@ -809,7 +805,7 @@ public class XmxManager implements IXmxCoreService {
 			throw new XmxRuntimeException("Failed to instantiate XMX server launcher (" + launcherClassName + ")", e);
 		}
 	
-		// start asynchronously so that main initialization is less affected
+		// start asynchronously so main initialization is less affected
 		Thread startupThread = new Thread(new Runnable() {
 			@Override
 			public void run() {

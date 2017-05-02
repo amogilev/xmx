@@ -17,7 +17,7 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 	 * Class and constant to represent bootstrap class loader, which is
 	 * {@code null} in the current Java implementation.
 	 */
-	static final class NullClassLoader extends ClassLoader {
+	private static final class NullClassLoader extends ClassLoader {
 	}
 	
 	static final NullClassLoader NULL_CL = new NullClassLoader();

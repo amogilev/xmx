@@ -39,7 +39,7 @@ public class ManagedClassInfo {
 	
 	/**
 	 * Part of JMX ObjectName (without object ID) used for managed 
-	 * class instances, or {@code null} if they need not to be 
+	 * class instances, or {@code null} if they do not need to be
 	 * published to JMX.
 	 */
 	private final String jmxObjectNamePart;
@@ -97,9 +97,11 @@ public class ManagedClassInfo {
 	
 	/**
 	 * Resets the previous initialization, reverts to uninitialized form with only basic information about the 
-	 * class. This method may be invoked only when there are no alive isntances of the class left.
+	 * class. This method may be invoked only when there are no alive instances of the class left.
 	 */
-	public synchronized void reset() {
+	// synchronized // NOTE: actually, all uses are synchronized on XmxManager.instance, similar to all accesses to objectIds
+	public void reset() {
+
 		if (objectIds != null && objectIds.size() > 0) {
 			throw new IllegalStateException("Cannot reset ManagedClassInfo while some instances are still "
 					+ "alive; class=" + className);
@@ -109,6 +111,7 @@ public class ManagedClassInfo {
 		this.managedMethods = null;
 		this.jmxClassModel = null;
 		this.objectIds = null;
+		this.disabledByMaxInstances = false;
 	}
 	
 	public int getId() {
@@ -185,9 +188,7 @@ public class ManagedClassInfo {
 		return maxInstances;
 	}
 
-	// NOTE: no ID and JMX info in hashCode & equals!
-	// TODO: check why, and whether there is a problem with duplicate class names
-
+	// NOTE: no ID and JMX info in hashCode & equals! That's OK as it not used as Map keys
 	@Override
 	public int hashCode() {
 		final int prime = 31;

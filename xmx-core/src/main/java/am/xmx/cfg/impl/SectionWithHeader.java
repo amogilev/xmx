@@ -7,20 +7,16 @@ class SectionWithHeader {
 	private SectionHeader header;
 	private Map<String, String> optionsByName;
 	
-	public SectionWithHeader(SectionHeader header, Map<String, String> optionsByName) {
+	SectionWithHeader(SectionHeader header, Map<String, String> optionsByName) {
 		this.header = header;
 		this.optionsByName = optionsByName;
 	}
 
-	public SectionHeader getHeader() {
+	SectionHeader getHeader() {
 		return header;
 	}
 	
-	public Map<String, String> getOptionsByName() {
-		return optionsByName;
-	}
-
-	public boolean containsKey(String key) {
+	boolean containsKey(String key) {
 		return optionsByName.containsKey(key);
 	}
 	
