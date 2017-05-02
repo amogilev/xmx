@@ -73,8 +73,11 @@ public class XmxManager implements IXmxCoreService {
 			new SpeculativeProcessorFactory<>(IWebappNameExtractor.class);
 	static {
 		extractorsFactory.registerProcessor(
-				"am.xmx.core.CatalinaWebappNameExtractor", 
+				"am.xmx.core.Tomcat7WebappNameExtractor",
 				"org.apache.catalina.loader.WebappClassLoader");
+		extractorsFactory.registerProcessor(
+				"am.xmx.core.Tomcat8WebappNameExtractor",
+				"org.apache.catalina.loader.WebappClassLoaderBase");
 		extractorsFactory.registerProcessor(
 				true, // Jetty's WebAppClassLoader shadows all server classes, need to check its parent 
 				"am.xmx.core.JettyWebappNameExtractor", 

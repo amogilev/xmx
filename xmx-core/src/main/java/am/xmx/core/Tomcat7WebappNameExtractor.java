@@ -2,7 +2,7 @@ package am.xmx.core;
 
 import org.apache.catalina.loader.WebappClassLoader;
 
-public class CatalinaWebappNameExtractor implements IWebappNameExtractor {
+public class Tomcat7WebappNameExtractor implements IWebappNameExtractor {
 	
 	@Override
 	public String extract(ClassLoader cl) {
