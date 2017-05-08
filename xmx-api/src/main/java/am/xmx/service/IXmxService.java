@@ -1,14 +1,14 @@
 package am.xmx.service;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.List;
-
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
 import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.List;
 
 /**
  * Interface of XMX service provided for web apps.
@@ -18,8 +18,8 @@ public interface IXmxService {
 	/**
 	 * Property name for XMX home folder.
 	 */
-	String XMX_HOME_PROP = "xmx.home.dir";	
-	
+	String XMX_HOME_PROP = "xmx.home.dir";
+
 	/**
 	 * Returns names (contexts) of all recognized web applications.
 	 */

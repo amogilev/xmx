@@ -1,40 +1,22 @@
 package am.ucfg.impl;
 
-import static am.ucfg.impl.IniSettings.AUTO_COMMENT_PREFIX;
-import static am.ucfg.impl.IniSettings.AUTO_EMPTY_LINE;
-import static am.ucfg.impl.IniSettings.AUTO_PREFIX;
-import static java.util.Arrays.asList;
-import static org.ini4j.EnhancedIniCommentsSupport.ENDSECT_ANCHOR;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Map.Entry;
-
-import org.ini4j.EnhancedIniBuilder;
-import org.ini4j.EnhancedIniCommentsSupport;
-import org.ini4j.EnhancedIniConfig;
-import org.ini4j.EnhancedIniFormatter;
-import org.ini4j.Ini;
-import org.ini4j.Profile;
-import org.ini4j.Profile.Section;
-import org.ini4j.spi.IniBuilder;
-import org.ini4j.spi.IniFormatter;
-
 import am.ucfg.IConfigInfoProvider;
 import am.ucfg.IUpdatingConfigLoader;
 import am.ucfg.OptionDescription;
 import am.ucfg.SectionDescription;
+import am.xmx.util.Pair;
+import org.ini4j.*;
+import org.ini4j.Profile.Section;
+import org.ini4j.spi.IniBuilder;
+import org.ini4j.spi.IniFormatter;
+
+import java.io.*;
+import java.util.*;
+import java.util.Map.Entry;
+
+import static am.ucfg.impl.IniSettings.*;
+import static java.util.Arrays.asList;
+import static org.ini4j.EnhancedIniCommentsSupport.ENDSECT_ANCHOR;
 
 /**
  * Implementation of the updating config reader based on .ini files
@@ -46,17 +28,26 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 	
 	private final IConfigInfoProvider cfgInfoProvider;
 	private final Map<String, SectionDescription> defaultSectionsByName;
+	private final Map<String, SectionDescription> defaultHiddenSectionsByName;
 	private final String lineSeparator;
 	
 	public UpdatingIniConfigLoader(IConfigInfoProvider cfgInfoProvider) {
 		this.cfgInfoProvider = cfgInfoProvider;
 		this.lineSeparator = cfgInfoProvider.getLineSeparator();
 		
-		List<SectionDescription> defaultSections = cfgInfoProvider.getAllDefaultSectionsDescriptions();
-		this.defaultSectionsByName = new LinkedHashMap<>(defaultSections.size());
-		for (SectionDescription sd : defaultSections) {
-			defaultSectionsByName.put(sd.getName(), sd);
+		this.defaultSectionsByName = mapSectionsByName(cfgInfoProvider.getAllDefaultSectionsDescriptions());
+		this.defaultHiddenSectionsByName = mapSectionsByName(cfgInfoProvider.getAllDefaultHiddenSectionsDescriptions());
+	}
+
+	private static Map<String, SectionDescription> mapSectionsByName(List<SectionDescription> sections) {
+		if (sections == null) {
+			return Collections.emptyMap();
 		}
+		Map<String, SectionDescription> sectionsByName = new LinkedHashMap<>(sections.size());
+		for (SectionDescription sd : sections) {
+			sectionsByName.put(sd.getName(), sd);
+		}
+		return sectionsByName;
 	}
 
 	@Override
@@ -92,8 +83,8 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 		} finally {
 			Thread.currentThread().setContextClassLoader(prevContextClassLoader);
 		}
-		
-		Map<String, Map<String, String>> sectionsWithOptionsByName = new LinkedHashMap<>(ini.size());
+
+		List<Pair<String, Map<String, String>>> sectionsWithOptionsByName = new ArrayList<>(ini.size());
 		for (Section section : ini.values()) {
 			String sectionName = section.getName();
 			Map<String, String> optionsByName;
@@ -101,32 +92,37 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 			SectionDescription sectionDesc = defaultSectionsByName.get(sectionName);
 			if (sectionDesc != null) {
 				// this section may contain default options
-				optionsByName = extractOptionsAndApplyDefaults(section, sectionDesc);
+				optionsByName = new LinkedHashMap<>(section);
+				addMissingOptions(optionsByName, sectionDesc);
 			} else {
 				// no changes, use section itself
 				optionsByName = section;
 			}
 			
-			sectionsWithOptionsByName.put(sectionName, optionsByName);
+			sectionsWithOptionsByName.add(Pair.of(sectionName, optionsByName));
+		}
+		// add hidden sections at the end to override everything else
+		for (Entry<String, SectionDescription> sectionEntry : defaultHiddenSectionsByName.entrySet()) {
+			Map<String, String> optionsByName = new HashMap<>();
+			addMissingOptions(optionsByName, sectionEntry.getValue());
+			sectionsWithOptionsByName.add(Pair.of(sectionEntry.getKey(), optionsByName));
 		}
 		
 		return new ConfigUpdateResult<Ini>(updated, sectionsWithOptionsByName, ini);
 	}
 	
 	/**
-	 * Builds and returns a map which contains all options from the specified section, and, 
-	 * additionally, missing options with their default values specified in section description. 
+	 * Adds default option values from the section description to the current map of options, if that
+	 * option is missing.
 	 */
-	private Map<String, String> extractOptionsAndApplyDefaults(Section section, SectionDescription sectionDesc) {
+	private void addMissingOptions(Map<String, String> options, SectionDescription sectionDesc) {
 		// keep all current options, add only missing 
-		Map<String, String> options = new LinkedHashMap<>(section);
 		for (OptionDescription option : sectionDesc.getOptions()) {
 			String name = option.getName();
 			if (!options.containsKey(name)) {
 				options.put(name, option.getDefautValue());
 			}
 		}
-		return options;
 	}
 	
 	static {

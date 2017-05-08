@@ -1,11 +1,11 @@
 package am.xmx.cfg.impl;
 
-import java.util.List;
-
 import am.ucfg.IConfigInfoProvider;
 import am.ucfg.SectionDescription;
 import am.xmx.cfg.CfgEntityLevel;
 import am.xmx.cfg.Properties;
+
+import java.util.List;
 
 /**
  * Provides information about the default XMX configuration sections and
@@ -41,6 +41,11 @@ public class ConfigDefaultsInfoProvider implements IConfigInfoProvider {
 	@Override
 	public List<SectionDescription> getAllDefaultSectionsDescriptions() {
 		return ConfigDefaults.ALL_SECTIONS;
+	}
+
+	@Override
+	public List<SectionDescription> getAllDefaultHiddenSectionsDescriptions() {
+		return ConfigDefaults.HIDDEN_INTERNAL_SECTIONS;
 	}
 
 	@Override

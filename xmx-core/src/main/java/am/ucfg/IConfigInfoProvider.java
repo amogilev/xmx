@@ -12,9 +12,15 @@ import java.util.List;
 public interface IConfigInfoProvider {
 	
 	/**
-	 * Returns the list of all default sections and options.
+	 * Returns the list of all non-hidden default sections and options.
 	 */
 	List<SectionDescription> getAllDefaultSectionsDescriptions();
+
+	/**
+	 * Returns the list of all default hidden sections and options.
+	 * These options are not written into the config file, but override all other options
+	 */
+	List<SectionDescription> getAllDefaultHiddenSectionsDescriptions();
 
 	/**
 	 * Returns whether an option with the specified name is supported

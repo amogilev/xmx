@@ -1,15 +1,12 @@
 package am.xmx.cfg.impl;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import am.ucfg.OptionDescription;
 import am.ucfg.SectionDescription;
-import am.xmx.cfg.CfgEntityLevel;
 import am.xmx.cfg.Properties;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public interface ConfigDefaults {
 	
@@ -70,4 +67,14 @@ public interface ConfigDefaults {
 	
 	List<SectionDescription> ALL_SECTIONS = Collections.unmodifiableList(Arrays.asList(
 			SECTION_SYSTEM_DESC, SECTION_ALLAPPS_DESC));
+
+	//
+	// Hidden (internal) options
+	//
+
+	SectionDescription INTERNAL_SECTION_XMX_WEBAPP = new SectionDescription("App=\"XMX Console\"", null,
+			new OptionDescription(Properties.APP_ENABLED, false));
+
+	List<SectionDescription> HIDDEN_INTERNAL_SECTIONS = Collections.unmodifiableList(Arrays.asList(
+			INTERNAL_SECTION_XMX_WEBAPP));
 }

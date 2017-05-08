@@ -1,6 +1,9 @@
 package am.ucfg;
 
+import am.xmx.util.Pair;
+
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -25,10 +28,12 @@ public interface IUpdatingConfigLoader<T> {
 		private boolean isUpdated;
 		
 		/**
-		 * Ordered map of sections by name, which contain ordered
-		 * maps of options values by name.
+		 * Ordered list of section represented as the section name and all options of that section;
+		 * section options are maps of options values by name.
+		 * <p/>
+		 * The options and/or sections may override each other; in case of duplication, the latter one is used.
 		 */
-		private Map<String, Map<String, String>> sectionsWithOptionsByName;
+		private List<Pair<String, Map<String, String>>> sectionsWithOptionsByName;
 		
 		/**
 		 * Loaded configuration object, with updated comments but without 
@@ -37,8 +42,8 @@ public interface IUpdatingConfigLoader<T> {
 		private T rawConfig;
 		
 		public ConfigUpdateResult(boolean isUpdated,
-				Map<String, Map<String, String>> sectionsWithOptionsByName,
-				T rawConfig) {
+								  List<Pair<String, Map<String, String>>> sectionsWithOptionsByName,
+								  T rawConfig) {
 			this.isUpdated = isUpdated;
 			this.sectionsWithOptionsByName = sectionsWithOptionsByName;
 			this.rawConfig = rawConfig;
@@ -48,7 +53,7 @@ public interface IUpdatingConfigLoader<T> {
 			return isUpdated;
 		}
 
-		public Map<String, Map<String, String>> getSectionsWithOptionsByName() {
+		public List<Pair<String, Map<String, String>>> getSectionsWithOptionsByName() {
 			return sectionsWithOptionsByName;
 		}
 

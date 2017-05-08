@@ -1,17 +1,5 @@
 package am.xmx.cfg.impl;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.ini4j.Ini;
-
 import am.ucfg.IConfigInfoProvider;
 import am.ucfg.IUpdatingConfigLoader;
 import am.ucfg.IUpdatingConfigLoader.ConfigUpdateResult;
@@ -19,6 +7,14 @@ import am.ucfg.impl.UpdatingIniConfigLoader;
 import am.xmx.cfg.IAppPropertiesSource;
 import am.xmx.cfg.IXmxConfig;
 import am.xmx.cfg.PropertyValue;
+import am.xmx.util.Pair;
+import org.ini4j.Ini;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementation of XMX configuration based on single .ini file accessed with Ini4J.
@@ -73,9 +69,9 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		ArrayList<SectionWithHeader> sections = new ArrayList<>();
 		
 		Map<String, String> systemOptions = null;
-		for (Entry<String, Map<String, String>> sectionEntry : result.getSectionsWithOptionsByName().entrySet()) {
-			String curSectionName = sectionEntry.getKey().trim();
-			Map<String, String> optionsByName = sectionEntry.getValue();
+		for (Pair<String, Map<String, String>> sectionEntry : result.getSectionsWithOptionsByName()) {
+			String curSectionName = sectionEntry.getFirst().trim();
+			Map<String, String> optionsByName = sectionEntry.getSecond();
 			if (curSectionName.equals(SECTION_SYSTEM)) {
 				if (systemOptions != null) {
 					// unexpected - Ini4J should merge sections

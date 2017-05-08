@@ -3,8 +3,6 @@ package am.ucfg;
 import java.util.HashMap;
 import java.util.Map;
 
-import am.xmx.cfg.CfgEntityLevel;
-
 public class SectionDescription {
 	private String name;
 	private String[] sectionComments;
@@ -15,7 +13,7 @@ public class SectionDescription {
 			OptionDescription...options) {
 		super();
 		this.name = name;
-		this.sectionComments = sectionComments;
+		this.sectionComments = sectionComments == null ? new String[0] : sectionComments;
 		this.options = options;
 		this.optionsByName = new HashMap<>(options.length);
 		for (OptionDescription opt : options) {
