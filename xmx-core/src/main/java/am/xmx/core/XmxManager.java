@@ -1,6 +1,32 @@
 package am.xmx.core;
 
 
+import am.specr.SpeculativeProcessorFactory;
+import am.xmx.cfg.IAppPropertiesSource;
+import am.xmx.cfg.IXmxConfig;
+import am.xmx.cfg.Properties;
+import am.xmx.cfg.impl.XmxIniConfig;
+import am.xmx.core.jmx.JmxSupport;
+import am.xmx.dto.XmxClassInfo;
+import am.xmx.dto.XmxObjectDetails;
+import am.xmx.dto.XmxObjectDetails.FieldInfo;
+import am.xmx.dto.XmxObjectDetails.MethodInfo;
+import am.xmx.dto.XmxObjectInfo;
+import am.xmx.dto.XmxRuntimeException;
+import am.xmx.server.IXmxServerLauncher;
+import am.xmx.service.IXmxService;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import javax.management.modelmbean.ModelMBeanInfoSupport;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -18,35 +44,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
-
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-import javax.management.modelmbean.ModelMBeanInfoSupport;
-
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-
-import am.specr.SpeculativeProcessorFactory;
-import am.xmx.cfg.IAppPropertiesSource;
-import am.xmx.cfg.IXmxConfig;
-import am.xmx.cfg.Properties;
-import am.xmx.cfg.impl.XmxIniConfig;
-import am.xmx.core.jmx.JmxSupport;
-import am.xmx.dto.XmxClassInfo;
-import am.xmx.dto.XmxObjectDetails;
-import am.xmx.dto.XmxObjectDetails.FieldInfo;
-import am.xmx.dto.XmxObjectDetails.MethodInfo;
-import am.xmx.dto.XmxObjectInfo;
-import am.xmx.dto.XmxRuntimeException;
-import am.xmx.server.IXmxServerLauncher;
-import am.xmx.service.IXmxService;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.TypeAdapter;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
 
 public class XmxManager implements IXmxCoreService {
 
@@ -306,7 +303,7 @@ public class XmxManager implements IXmxCoreService {
 			for (IWebappNameExtractor extractor : extractors) {
 				String name = extractor.extract(loader);
 				if (name != null) {
-					return name;
+					return name.isEmpty() ? "ROOT" : name;
 				}
 			}
 		}

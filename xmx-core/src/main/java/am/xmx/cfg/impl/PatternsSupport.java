@@ -11,7 +11,7 @@ import java.util.regex.PatternSyntaxException;
  * The following cases are recognized and supported:
  * <ul>
  * <li>Simple string values, like in [App=MyApp]. Only letters or digits are allowed for simple values.
- * <li>Quoted string values, used when special characters are used, like in [App="My App"].
+ * <li>Quoted string values, used when special characters or whitespaces are used, like in [App="My App"].
  * <li>Java patterns, which must start with ^ and end with $, like in [App=^(my|our)app\d*$]
  * <li>Simple patterns (masks), which are |-separated lists of simple names with optional * symbol 
  * designating any sequence of characters, e.g. [App=*, Class=NewService|NewServiceImpl]
@@ -22,7 +22,7 @@ import java.util.regex.PatternSyntaxException;
 public class PatternsSupport {
 	
 //	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[\\w\\*\\|]*$");
-	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[\\*\\|\\.\\p{javaJavaIdentifierPart}]*$");
+	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[\\*\\|\\. \\p{javaJavaIdentifierPart}]*$");
 	
 	public static Pattern parse(String patternValue) throws XmxIniParseException {
 		patternValue = patternValue.trim();

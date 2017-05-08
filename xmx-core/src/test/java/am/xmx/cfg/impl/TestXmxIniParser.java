@@ -1,10 +1,11 @@
 package am.xmx.cfg.impl;
 
-import static am.xmx.cfg.impl.XmxCfgSectionNameParser.findUnquotedChar;
-import static org.junit.Assert.*;
-
 import org.junit.Before;
 import org.junit.Test;
+
+import static am.xmx.cfg.impl.XmxCfgSectionNameParser.findUnquotedChar;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestXmxIniParser {
 	
@@ -46,9 +47,9 @@ public class TestXmxIniParser {
 	}
 	
 	@Test
-	public void testParseSectionNamePartUnquote() {
+	public void testParseSectionNamePartNoUnquote() {
 		uut.parseSectionNamePart("\"App\"=\" foo \" ");
-		assertEquals(" foo ", uut.sectionNameParts.get("App"));
+		assertEquals("\" foo \"", uut.sectionNameParts.get("App"));
 	}
 	
 	@Test
@@ -79,7 +80,7 @@ public class TestXmxIniParser {
 		uut.parseSectionNameParts("Part1=a=b;Part2=\"a;b\"; Part3;;Part4");
 		assertEquals(4, uut.sectionNameParts.size());
 		assertEquals("a=b", uut.sectionNameParts.get("Part1"));
-		assertEquals("a;b", uut.sectionNameParts.get("Part2"));
+		assertEquals("\"a;b\"", uut.sectionNameParts.get("Part2"));
 		assertEquals("", uut.sectionNameParts.get("Part3"));
 		assertEquals("", uut.sectionNameParts.get("Part4"));
 		assertEquals(null, uut.sectionNameParts.get("Part5"));

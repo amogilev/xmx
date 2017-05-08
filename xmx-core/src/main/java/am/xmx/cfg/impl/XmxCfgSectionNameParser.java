@@ -76,7 +76,7 @@ public class XmxCfgSectionNameParser implements SectionsNamespace {
 			}
 		} else {
 			String key = unquote(part.substring(0, n).trim());
-			String value = unquote(part.substring(n + 1).trim());
+			String value = part.substring(n + 1).trim();
 			sectionNameParts.put(key, value);
 		}
 	}

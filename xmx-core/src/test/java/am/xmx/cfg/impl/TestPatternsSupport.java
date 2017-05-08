@@ -1,11 +1,9 @@
 package am.xmx.cfg.impl;
 
-import static am.xmx.cfg.impl.PatternsSupport.matches;
-import static am.xmx.cfg.impl.PatternsSupport.unquote;
-import static am.xmx.cfg.impl.PatternsSupport.parse;
-import static org.junit.Assert.*;
-
 import org.junit.Test;
+
+import static am.xmx.cfg.impl.PatternsSupport.*;
+import static org.junit.Assert.*;
 
 public class TestPatternsSupport {
 	
@@ -33,7 +31,14 @@ public class TestPatternsSupport {
 		assertFalse(matches("foo", "bar"));
 		assertFalse(matches("foo", "foo1"));
 	}
-	
+
+	@Test
+	public void testMatchesSimplePatternsWithSpace() {
+		assertTrue(matches("foo bar", "foo bar"));
+		assertTrue(matches("foo *", "foo bar"));
+		assertTrue(matches("f*", "foo bar"));
+	}
+
 	@Test
 	public void testMatchesQuotedLiteral() {
 		assertTrue(matches("\"foo\"", "foo"));
@@ -93,13 +98,7 @@ public class TestPatternsSupport {
 		assertFalse(matches(defaultPattern, "referenceManager"));
 		assertFalse(matches(defaultPattern, "someReferenceManager"));
 	}
-			
-			
-	@Test(expected=XmxIniParseException.class)
-	public void testParseIllegalSpace() {
-		parse("foo bar"); // spaces not supported in simple literals
-	}
-	
+
 	@Test(expected=XmxIniParseException.class)
 	public void testParseWrongPattern() {
 		parse("^foo(bar$"); // incorrect Java pattern
