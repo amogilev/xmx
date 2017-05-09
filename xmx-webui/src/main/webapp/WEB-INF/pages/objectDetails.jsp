@@ -1,6 +1,8 @@
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
     pageEncoding="ISO-8859-1"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
@@ -14,9 +16,19 @@
 	}
 </script>
 </head>
-<body>
 
 <h1>Details of object #${objectId} (${className})</h1>
+
+<table border="2">
+    <tr>
+        <td><b>toString()</b></td>
+        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="${fn:escapeXml(details.toStringValue)}"/></td>
+    </tr>
+    <tr>
+        <td><b>JSON</b></td>
+        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="${fn:escapeXml(details.jsonValue)}"/></td>
+    </tr>
+</table>
 
 <h2>Fields</h2>
 
@@ -36,7 +48,7 @@
   <c:forEach items="${entry.value}" var="fieldInfo">
     <tr>
         <td>${fieldInfo.name}</td>
-        <td><input type="text" id="value_${fieldInfo.id}" value="${fieldInfo.value}"/></td>
+        <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldInfo.value)}"/></td>
         <td><input type="button" onclick="callSetField(${fieldInfo.id});" value="Set"></td>
     </tr>
   </c:forEach>

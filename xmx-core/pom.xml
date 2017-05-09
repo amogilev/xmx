@@ -30,9 +30,9 @@
       <version>5.0.3</version>
     </dependency>
     <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
-      <version>2.3</version>
+      <groupId>com.gilecode.yagson</groupId>
+      <artifactId>yagson</artifactId>
+      <version>0.2</version>
     </dependency>
     <dependency>
       <groupId>org.ini4j</groupId>

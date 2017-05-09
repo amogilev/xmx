@@ -15,11 +15,7 @@ import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
 import am.xmx.server.IXmxServerLauncher;
 import am.xmx.service.IXmxService;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.TypeAdapter;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
+import com.gilecode.yagson.YaGson;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -49,23 +45,8 @@ public class XmxManager implements IXmxCoreService {
 
 	public static final IXmxConfig config = XmxIniConfig.getDefault();
 
-	// FIXME use YaGson instead
-	private static Gson gson;
-	static {
-		GsonBuilder builder = new GsonBuilder();
-		builder.registerTypeAdapter(Class.class, new TypeAdapter<Class<?>>() {
-			@Override
-			public void write(JsonWriter out, Class<?> value) throws IOException {
-				out.value(value.getName());
-			}
-			@Override
-			public Class<?> read(JsonReader in) throws IOException {
-				return null;
-			}
-		});
-		gson = builder.create();
-	}
-	
+	private static YaGson jsonMapper = new YaGson();
+
 	private static SpeculativeProcessorFactory<IWebappNameExtractor> extractorsFactory = 
 			new SpeculativeProcessorFactory<>(IWebappNameExtractor.class);
 	static {
@@ -503,15 +484,8 @@ public class XmxManager implements IXmxCoreService {
 				fieldsByClass.put(declaringClassName, classFieldsInfo);
 			}
 			
-			String strValue = null;
-			try {
-				Object val = f.get(obj);
-				strValue = val.toString();
-			} catch (Exception e) {
-				strValue = e.toString();
-			}
-			
-			FieldInfo fi = new FieldInfo(fieldId, f.getName(), strValue); 
+			String strValue = safeFieldToString(obj, f);
+			FieldInfo fi = new FieldInfo(fieldId, f.getName(), strValue);
 			classFieldsInfo.add(fi);
 		}
 		
@@ -535,10 +509,38 @@ public class XmxManager implements IXmxCoreService {
 			clazz = clazz.getSuperclass();
 		}
 		
-		XmxObjectDetails details = new XmxObjectDetails(classNames, fieldsByClass, methodsByClass);
+		XmxObjectDetails details = new XmxObjectDetails(
+				safeToString(obj),
+				safeToJson(obj),
+				classNames, fieldsByClass, methodsByClass);
 		return details;
 	}
-	
+
+	private static String safeFieldToString(Object obj, Field f) {
+		try {
+			Object val = f.get(obj);
+			return val.toString();
+		} catch (Exception e) {
+			return e.toString();
+		}
+	}
+
+	private static String safeToString(Object obj) {
+		try {
+			return obj.toString();
+		} catch (Exception e) {
+			return e.toString();
+		}
+	}
+
+	private static String safeToJson(Object obj) {
+		try {
+			return jsonMapper.toJson(obj, Object.class);
+		} catch (Exception e) {
+			return "";
+		}
+	}
+
 	/**
 	 * Sets new value of the specified object field.
 	 * 
@@ -568,7 +570,7 @@ public class XmxManager implements IXmxCoreService {
 			deserializedValue = newValue;
 		} else {
 			try {
-				deserializedValue = gson.fromJson(newValue, f.getType());
+				deserializedValue = jsonMapper.fromJson(newValue, f.getType());
 			} catch (Exception e) {
 				throw new XmxRuntimeException("Failed to deserialize the value; class=" + f.getType() +"; value=" + newValue, e);
 			}
@@ -718,7 +720,7 @@ public class XmxManager implements IXmxCoreService {
 		String json = "";
 /*
 		try {
-			json = gson.toJson(obj);
+			json = jsonMapper.toJson(obj);
 		} catch (Throwable e) {
 			json = "N/A: " + e;
 			

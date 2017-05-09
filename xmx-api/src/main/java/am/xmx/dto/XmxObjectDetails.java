@@ -89,6 +89,16 @@ public class XmxObjectDetails {
 			return signature;
 		}
 	}
+
+	/**
+	 * toString() value of the object
+	 */
+	final private String toStringValue;
+
+	/**
+	 * JSON representation of the object
+	 */
+	final private String jsonValue;
 	
 	
 	/**
@@ -99,25 +109,35 @@ public class XmxObjectDetails {
 	 * <p/>
 	 * These names are used as keys to other Maps.
 	 */
-	private List<String> classesNames;
+	final private List<String> classesNames;
 	
 	/**
 	 * Lists of fields for object and its parents, mapped by the class name.
 	 */
-	private Map<String, List<FieldInfo>> fieldsByClass;
+	final private Map<String, List<FieldInfo>> fieldsByClass;
 	
 	/**
 	 * Lists of methods for object and its parents.
 	 */
-	private Map<String, List<MethodInfo>> methodsByClass;
+	final private Map<String, List<MethodInfo>> methodsByClass;
 
-	public XmxObjectDetails(List<String> classesNames,
-			Map<String, List<FieldInfo>> fieldsByClass,
-			Map<String, List<MethodInfo>> methodsByClass) {
+	public XmxObjectDetails(String toStringValue, String jsonValue, List<String> classesNames,
+							Map<String, List<FieldInfo>> fieldsByClass,
+							Map<String, List<MethodInfo>> methodsByClass) {
 		super();
+		this.toStringValue = toStringValue;
+		this.jsonValue = jsonValue;
 		this.classesNames = classesNames;
 		this.fieldsByClass = fieldsByClass;
 		this.methodsByClass = methodsByClass;
+	}
+
+	public String getToStringValue() {
+		return toStringValue;
+	}
+
+	public String getJsonValue() {
+		return jsonValue;
 	}
 
 	public List<String> getClassesNames() {
