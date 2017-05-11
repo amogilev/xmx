@@ -526,7 +526,7 @@ public class XmxManager implements IXmxCoreService {
 			if (val == null) {
 				return "null";
 			}
-			if (hasDeclaredToString1(val.getClass())) {
+			if (hasDeclaredToString(val.getClass())) {
 				return val.toString();
 			} else {
 				return safeToJson(val);
@@ -536,30 +536,12 @@ public class XmxManager implements IXmxCoreService {
 		}
 	}
 
-	private static boolean hasDeclaredToString1(Class<?> c) {
-		try {
-			c.getDeclaredMethod("toString");
-			return true;
-		} catch (NoSuchMethodException e) {
-			return false;
-		}
-	}
-
-	private static boolean hasDeclaredToString2(Class<?> c) {
+	private static boolean hasDeclaredToString(Class<?> c) {
 		try {
 			return c == c.getMethod("toString").getDeclaringClass();
 		} catch (NoSuchMethodException e) {
 			return false;
 		}
-	}
-
-	private static boolean hasDeclaredToString3(Class<?> c) {
-		for (Method declaredMethod : c.getDeclaredMethods()) {
-			if (declaredMethod.getName().equals("toString") && declaredMethod.getParameterTypes().length == 0) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	private static String safeToString(Object obj) {
@@ -606,7 +588,8 @@ public class XmxManager implements IXmxCoreService {
 		final ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
 		try {
 			ClassLoader clToUse = obj.getClass().getClassLoader();
-			// TODO: maybe use webapp class loader? Think!
+			// TODO: if setting through refschain will be implemented, then we'll probably need to use the classloader of
+			//       the first object. Or maybe multiple class loaders... (svc -> Object[] -> SpecialObj)
 			Thread.currentThread().setContextClassLoader(clToUse);
 			deserializedValue = jsonMapper.fromJson(newValue, f.getType());
 		} catch (Exception e) {
