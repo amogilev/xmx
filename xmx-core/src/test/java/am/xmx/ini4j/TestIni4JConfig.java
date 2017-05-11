@@ -1,11 +1,6 @@
 package am.xmx.ini4j;
 
-import static org.junit.Assert.*;
-
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
-
+import am.xmx.cfg.impl.ConfigDefaults;
 import org.ini4j.EnhancedIniBuilder;
 import org.ini4j.EnhancedIniConfig;
 import org.ini4j.EnhancedIniFormatter;
@@ -15,7 +10,12 @@ import org.ini4j.spi.IniBuilder;
 import org.ini4j.spi.IniFormatter;
 import org.junit.Test;
 
-import am.xmx.cfg.impl.ConfigDefaults;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestIni4JConfig {
 	
@@ -30,7 +30,7 @@ public class TestIni4JConfig {
 		"# where app_name_pattern is Java RegEx pattern (or simple app name)." + "\n" +
 		"#"  + "\n" +
 		"# Supported are: native application names (like 'tomcat7') and web application" + "\n" +
-		"# names running in supported servlet containers (started with '/', e.g. '/MyWebUI')." + "\n" +
+		"# names running in supported servlet containers (e.g. 'MyWebUI')." + "\n" +
 		"#" + "\n" +
 		"# As the application name may match several patterns, the settings override" + "\n" + 
 		"# each other, and the latest matching setting wins." + "\n" +
@@ -72,7 +72,7 @@ public class TestIni4JConfig {
 				" where app_name_pattern is Java RegEx pattern (or simple app name).\n" +
 				"\n" +
 				" Supported are: native application names (like 'tomcat7') and web application\n" +
-				" names running in supported servlet containers (started with '/', e.g. '/MyWebUI').\n" +
+				" names running in supported servlet containers (e.g. 'MyWebUI').\n" +
 				"\n" +
 				" As the application name may match several patterns, the settings override\n" +
 				" each other, and the latest matching setting wins.\n" +
