@@ -484,7 +484,7 @@ public class XmxManager implements IXmxCoreService {
 				fieldsByClass.put(declaringClassName, classFieldsInfo);
 			}
 			
-			String strValue = safeFieldToString(obj, f);
+			String strValue = safeFieldValue(obj, f);
 			FieldInfo fi = new FieldInfo(fieldId, f.getName(), strValue);
 			classFieldsInfo.add(fi);
 		}
@@ -516,18 +516,55 @@ public class XmxManager implements IXmxCoreService {
 		return details;
 	}
 
-	private static String safeFieldToString(Object obj, Field f) {
+	/**
+	 * Returns "smart" string representation of the value, which is toString() if declared
+	 * in the actual run-time type of the objct, and JSON otherwise.
+	 */
+	private static String safeFieldValue(Object obj, Field f) {
 		try {
 			Object val = f.get(obj);
-			return val.toString();
+			if (val == null) {
+				return "null";
+			}
+			if (hasDeclaredToString1(val.getClass())) {
+				return val.toString();
+			} else {
+				return safeToJson(val);
+			}
 		} catch (Exception e) {
 			return e.toString();
 		}
 	}
 
+	private static boolean hasDeclaredToString1(Class<?> c) {
+		try {
+			c.getDeclaredMethod("toString");
+			return true;
+		} catch (NoSuchMethodException e) {
+			return false;
+		}
+	}
+
+	private static boolean hasDeclaredToString2(Class<?> c) {
+		try {
+			return c == c.getMethod("toString").getDeclaringClass();
+		} catch (NoSuchMethodException e) {
+			return false;
+		}
+	}
+
+	private static boolean hasDeclaredToString3(Class<?> c) {
+		for (Method declaredMethod : c.getDeclaredMethods()) {
+			if (declaredMethod.getName().equals("toString") && declaredMethod.getParameterTypes().length == 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private static String safeToString(Object obj) {
 		try {
-			return obj.toString();
+			return obj == null ? "null" : obj.toString();
 		} catch (Exception e) {
 			return e.toString();
 		}
@@ -555,7 +592,7 @@ public class XmxManager implements IXmxCoreService {
 	@Override
 	synchronized public XmxObjectDetails setObjectField(int objectId, 
 			int fieldId, String newValue) {
-		
+
 		Object obj = getObjectById(objectId);
 		if (obj == null) {
 			return null;
@@ -565,15 +602,17 @@ public class XmxManager implements IXmxCoreService {
 		if (f == null) {
 			throw new XmxRuntimeException("Field not found in " + obj.getClass().getName() + " by ID=" + fieldId);
 		}
-		Object deserializedValue = null;
-		if (f.getType().equals(String.class)) {
-			deserializedValue = newValue;
-		} else {
-			try {
-				deserializedValue = jsonMapper.fromJson(newValue, f.getType());
-			} catch (Exception e) {
-				throw new XmxRuntimeException("Failed to deserialize the value; class=" + f.getType() +"; value=" + newValue, e);
-			}
+		Object deserializedValue;
+		final ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
+		try {
+			ClassLoader clToUse = obj.getClass().getClassLoader();
+			// TODO: maybe use webapp class loader? Think!
+			Thread.currentThread().setContextClassLoader(clToUse);
+			deserializedValue = jsonMapper.fromJson(newValue, f.getType());
+		} catch (Exception e) {
+			throw new XmxRuntimeException("Failed to deserialize the value; class=" + f.getType() +"; value=" + newValue, e);
+		} finally {
+			Thread.currentThread().setContextClassLoader(prevContextClassLoader);
 		}
 		try {
 			// f.setAccessible(true); // all fields are already accessible
@@ -659,7 +698,7 @@ public class XmxManager implements IXmxCoreService {
 		WeakReference<Object> ref = objectsStorage.get(objectId);
 		return ref == null ? null : ref.get(); 
 	}
-	
+
 	private static List<Method> getManagedMethods(Class<?> clazz) {
 		List<Method> methods = new ArrayList<>(20);
 		while (clazz != null) {
