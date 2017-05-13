@@ -7,6 +7,8 @@ import am.xmx.cfg.IXmxConfig;
 import am.xmx.cfg.Properties;
 import am.xmx.cfg.impl.XmxIniConfig;
 import am.xmx.core.jmx.JmxSupport;
+import am.xmx.core.type.IMethodInfoService;
+import am.xmx.core.type.MethodInfoServiceImpl;
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
 import am.xmx.dto.XmxObjectDetails.FieldInfo;
@@ -30,7 +32,6 @@ import java.lang.management.ManagementFactory;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -40,6 +41,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
+
+import static am.xmx.service.XmxUtils.safeToString;
 
 public class XmxManager implements IXmxCoreService {
 
@@ -61,6 +64,8 @@ public class XmxManager implements IXmxCoreService {
 				"am.xmx.core.JettyWebappNameExtractor", 
 				"org.eclipse.jetty.webapp.WebAppClassLoader");
 	}
+
+	private static IMethodInfoService methodInfoService = new MethodInfoServiceImpl();
 	
 	/**
 	 * Storage of weak references to each managed objects, mapped by object ID
@@ -500,7 +505,9 @@ public class XmxManager implements IXmxCoreService {
 				classMethodsInfo = new ArrayList<>();
 				methodsByClass.put(declaringClassName, classMethodsInfo);
 			}
-			MethodInfo mi = new MethodInfo(methodId, m.getName(), m.toString());
+			String methodNameTypeSignature = methodInfoService.getMethodNameTypeSignature(m);
+			MethodInfo mi = new MethodInfo(methodId, m.getName(), methodNameTypeSignature,
+					methodInfoService.getMethodParameters(m));
 			classMethodsInfo.add(mi);
 		}
 		
@@ -544,14 +551,6 @@ public class XmxManager implements IXmxCoreService {
 		}
 	}
 
-	private static String safeToString(Object obj) {
-		try {
-			return obj == null ? "null" : obj.toString();
-		} catch (Exception e) {
-			return e.toString();
-		}
-	}
-
 	private static String safeToJson(Object obj) {
 		try {
 			return jsonMapper.toJson(obj, Object.class);
@@ -560,53 +559,6 @@ public class XmxManager implements IXmxCoreService {
 		}
 	}
 
-	/**
-	 * Sets new value of the specified object field.
-	 * 
-	 * @param objectId the ID of the object, obtained from {@link XmxObjectInfo#getObjectId()}
-	 * @param fieldId the ID of the field to set, obtained from {@link XmxObjectDetails.FieldInfo#getId()}
-	 * @param newValue the string representation of the value to assign to the new field
-	 *  
-	 * @return the new state of the object, after the field is set, or {@code null} if object is GC'ed
-	 *  
-	 * @throws XmxRuntimeException if failed to assign field
-	 */
-	@Override
-	synchronized public XmxObjectDetails setObjectField(int objectId, 
-			int fieldId, String newValue) {
-
-		Object obj = getObjectById(objectId);
-		if (obj == null) {
-			return null;
-		}
-		
-		Field f = getObjectFieldById(obj, fieldId);
-		if (f == null) {
-			throw new XmxRuntimeException("Field not found in " + obj.getClass().getName() + " by ID=" + fieldId);
-		}
-		Object deserializedValue;
-		final ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
-		try {
-			ClassLoader clToUse = obj.getClass().getClassLoader();
-			// TODO: if setting through refschain will be implemented, then we'll probably need to use the classloader of
-			//       the first object. Or maybe multiple class loaders... (svc -> Object[] -> SpecialObj)
-			Thread.currentThread().setContextClassLoader(clToUse);
-			deserializedValue = jsonMapper.fromJson(newValue, f.getType());
-		} catch (Exception e) {
-			throw new XmxRuntimeException("Failed to deserialize the value; class=" + f.getType() +"; value=" + newValue, e);
-		} finally {
-			Thread.currentThread().setContextClassLoader(prevContextClassLoader);
-		}
-		try {
-			// f.setAccessible(true); // all fields are already accessible
-			f.set(obj, deserializedValue);
-		} catch (Exception e) {
-			throw new XmxRuntimeException("Failed to set field", e);
-		}
-		
-		return getObjectDetails(objectId);
-	}
-	
 	@Override
 	public Method getObjectMethodById(Object obj, int methodId)
 			throws XmxRuntimeException {
@@ -644,36 +596,6 @@ public class XmxManager implements IXmxCoreService {
 		
 		ManagedClassLoaderWeakRef loaderInfo = appInfo.getOrInitManagedClassLoaderInfo(clazz.getClassLoader());
 		return getManagedClassInfo(loaderInfo, clazz.getName());
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public Object invokeObjectMethod(Object obj, Method m, Object... args) throws XmxRuntimeException, InvocationTargetException {
-		Class<?> clazz = obj.getClass();
-		try {
-			m.setAccessible(true);
-
-			// set context class loader to enable functionality which depends on it, like JNDI
-			ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
-			Thread.currentThread().setContextClassLoader(clazz.getClassLoader());
-			try {
-				Object returnValue = m.invoke(obj, args);
-				if (returnValue == null) {
-					return "null";
-				} else {
-					// TODO support JSON
-					return returnValue.toString();
-				}
-			} finally {
-				Thread.currentThread().setContextClassLoader(prevClassLoader);
-			}
-		} catch (InvocationTargetException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new XmxRuntimeException("Failed to invoke method", e);
-		}
 	}
 	
 	@Override

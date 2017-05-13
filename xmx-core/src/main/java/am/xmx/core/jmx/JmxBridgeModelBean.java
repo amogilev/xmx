@@ -1,27 +1,17 @@
 package am.xmx.core.jmx;
 
+import am.xmx.core.XmxManager;
+import am.xmx.dto.XmxRuntimeException;
+import am.xmx.service.IXmxService;
+
+import javax.management.*;
+import javax.management.modelmbean.ModelMBeanAttributeInfo;
+import javax.management.modelmbean.ModelMBeanInfoSupport;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-
-import javax.management.Attribute;
-import javax.management.AttributeList;
-import javax.management.AttributeNotFoundException;
-import javax.management.Descriptor;
-import javax.management.DynamicMBean;
-import javax.management.MBeanException;
-import javax.management.MBeanInfo;
-import javax.management.MBeanOperationInfo;
-import javax.management.MBeanParameterInfo;
-import javax.management.ReflectionException;
-import javax.management.RuntimeOperationsException;
-import javax.management.modelmbean.ModelMBeanAttributeInfo;
-import javax.management.modelmbean.ModelMBeanInfoSupport;
-
-import am.xmx.core.XmxManager;
-import am.xmx.dto.XmxRuntimeException;
-import am.xmx.service.IXmxService;
+import java.util.Objects;
 
 /**
  * JMX Bean which translates all requests to a managed XMX object
@@ -129,17 +119,22 @@ class JmxBridgeModelBean implements DynamicMBean {
 		}
 		int methodId = (Integer)methodIdField;
 		Method m = xmxService.getObjectMethodById(obj, methodId);
-		
+
+		// set context class loader to enable functionality which depends on it, like JNDI
+		ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
+		Thread.currentThread().setContextClassLoader(obj.getClass().getClassLoader());
 		try {
-			Object result = xmxService.invokeObjectMethod(obj, m, params);
-			return result;
-		} catch (XmxRuntimeException | InvocationTargetException e) {
+			Object result = m.invoke(obj, params);
+			return Objects.toString(result);
+		} catch (XmxRuntimeException | InvocationTargetException | IllegalAccessException e) {
 			// convert to standard exception
 			if (e.getCause() instanceof RuntimeException) {
 				throw (RuntimeException)e.getCause();
 			} else {
 				throw new RuntimeException(e.getCause());
 			}
+		} finally {
+			Thread.currentThread().setContextClassLoader(prevClassLoader);
 		}
 	}
 

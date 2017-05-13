@@ -8,7 +8,7 @@ import java.util.Map;
  * (with values) and all methods of the managed object, including 
  * inherited ones.
  */
-public class XmxObjectDetails {
+public class XmxObjectDetails extends XmxObjectTextRepresentation {
 	
 	/**
 	 * Information about a single field.
@@ -66,15 +66,18 @@ public class XmxObjectDetails {
 		private String name;
 		
 		/**
-		 * Method signature.
+		 * Method signature, return type and name. Really is a part of signature before ()
 		 */
-		private String signature;
+		private String nameTypeSignature;
 
-		public MethodInfo(int id, String name, String signature) {
+		private String[] parameters;
+
+		public MethodInfo(int id, String name, String nameTypeSignature, String[] parameters) {
 			super();
 			this.id = id;
 			this.name = name;
-			this.signature = signature;
+			this.nameTypeSignature = nameTypeSignature;
+			this.parameters = parameters;
 		}
 
 		public int getId() {
@@ -85,22 +88,15 @@ public class XmxObjectDetails {
 			return name;
 		}
 
-		public String getSignature() {
-			return signature;
+		public String getNameTypeSignature() {
+			return nameTypeSignature;
+		}
+
+		public String[] getParameters() {
+			return parameters;
 		}
 	}
 
-	/**
-	 * toString() value of the object
-	 */
-	final private String toStringValue;
-
-	/**
-	 * JSON representation of the object
-	 */
-	final private String jsonValue;
-	
-	
 	/**
 	 * Names of the object class and all its superclasses,
 	 * in the reverse order of inheritance. The object's class
@@ -124,20 +120,10 @@ public class XmxObjectDetails {
 	public XmxObjectDetails(String toStringValue, String jsonValue, List<String> classesNames,
 							Map<String, List<FieldInfo>> fieldsByClass,
 							Map<String, List<MethodInfo>> methodsByClass) {
-		super();
-		this.toStringValue = toStringValue;
-		this.jsonValue = jsonValue;
+		super(toStringValue, jsonValue);
 		this.classesNames = classesNames;
 		this.fieldsByClass = fieldsByClass;
 		this.methodsByClass = methodsByClass;
-	}
-
-	public String getToStringValue() {
-		return toStringValue;
-	}
-
-	public String getJsonValue() {
-		return jsonValue;
 	}
 
 	public List<String> getClassesNames() {

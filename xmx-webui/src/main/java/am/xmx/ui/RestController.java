@@ -1,16 +1,8 @@
 package am.xmx.ui;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
+import am.xmx.dto.*;
+import am.xmx.service.IXmxService;
+import com.gilecode.yagson.YaGson;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -19,16 +11,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import am.xmx.dto.XmxClassInfo;
-import am.xmx.dto.XmxObjectDetails;
-import am.xmx.dto.XmxObjectInfo;
-import am.xmx.dto.XmxRuntimeException;
-import am.xmx.service.IXmxService;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.*;
+
+import static am.xmx.service.XmxUtils.safeToString;
 
 @Controller
 @RequestMapping("/")
 public class RestController {
 
+	private static YaGson jsonMapper = new YaGson();
 
 	@Autowired
 	private IXmxService xmxService;
@@ -96,44 +91,92 @@ public class RestController {
 		return "objectDetails";
 	}
 
+	private Object deserializeValue(String value, Type formalType, Object contextObj) {
+		final ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
+		try {
+			ClassLoader clToUse = contextObj.getClass().getClassLoader();
+			// TODO: if setting through refschain will be implemented, then we'll probably need to use the classloader of
+			//       the first object. Or maybe multiple class loaders... (svc -> Object[] -> SpecialObj)
+			Thread.currentThread().setContextClassLoader(clToUse);
+			return jsonMapper.fromJson(value, formalType);
+		} catch (Exception e) {
+			throw new XmxRuntimeException("Failed to deserialize the value; class=" + formalType + "; value=" + value, e);
+		} finally {
+			Thread.currentThread().setContextClassLoader(prevContextClassLoader);
+		}
+	}
 
 	@RequestMapping(value = "setObjectField", method = RequestMethod.GET)
 	public String setObjectField(ModelMap model, @RequestParam(required = true) Integer objectId, 
 			@RequestParam(required = true) Integer fieldId, @RequestParam(required = true) String value) {
 		model.addAttribute("objectId", objectId);
-		XmxObjectDetails updatedDetails = xmxService.setObjectField(objectId, fieldId, value);
+
+		final Object obj = xmxService.getObjectById(objectId);
+		if (obj == null) {
+			return "missingObject";
+		}
+		final Field f = xmxService.getObjectFieldById(obj, fieldId);
+		if (f == null) {
+			throw new XmxRuntimeException("Field not found in " + obj.getClass().getName() + " by ID=" + fieldId);
+		}
+
+		Object deserializedValue = deserializeValue(value, f.getType(), obj);
+		try {
+			f.set(obj, deserializedValue);
+		} catch (Exception e) {
+			throw new XmxRuntimeException("Failed to set field", e);
+		}
+
+		XmxObjectDetails updatedDetails = xmxService.getObjectDetails(objectId);
 		if (updatedDetails == null) {
 			return "missingObject";
 		} 
 		model.addAttribute("details", updatedDetails);
 		return "objectDetails";
 	}
-	
+
+	// not used in web, but convenient for manual invocation, like
+	//  curl "http://localhost:8081/invokeMethod?objectId=18&methodId=1&arg=1&arg=2&arg=3"
 	@RequestMapping(value = "invokeMethod", method = RequestMethod.GET)
-	public String invokeObjectMethod(ModelMap model, @RequestParam(required = true) Integer objectId, 
-			@RequestParam(required = true) Integer methodId) throws Throwable {
+	public String invokeObjectMethodTest(ModelMap model, @RequestParam int objectId,
+									 @RequestParam int methodId,
+									 @RequestParam("arg") String[] args) throws Throwable {
+		return "foo";
+	}
+
+	@RequestMapping(value = "invokeMethod", method = RequestMethod.POST)
+	public String invokeObjectMethod(ModelMap model, @RequestParam int objectId,
+			@RequestParam int methodId,
+			@RequestParam(value = "arg", required = false) String[] argsArr) throws Throwable {
 		
 		model.addAttribute("objectId", objectId);
-		// TODO obtain args from request
-		String[] args = new String[0];
-		
 		Object obj = xmxService.getObjectById(objectId);
 		if (obj == null) {
 			return "missingObject";
 		}
-		
+
 		Method m = xmxService.getObjectMethodById(obj, methodId);
+		// set context class loader to enable functionality which depends on it, like JNDI
+		ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
+		Thread.currentThread().setContextClassLoader(obj.getClass().getClassLoader());
+
 		Object result;
 		try {
-			result = xmxService.invokeObjectMethod(obj, m, translateArgs(args, m));
-			model.addAttribute("result", Objects.toString(result));
+			result = m.invoke(obj, translateArgs(argsArr, m, obj));
+			model.addAttribute("result", toText(result));
 		} catch (InvocationTargetException e) {
 			// re-throw cause
 			// alternatively, a special page may be created for exception result, but it seems unnecessary now
 			throw e.getCause();
+		} finally {
+			Thread.currentThread().setContextClassLoader(prevClassLoader);
 		}
 		
 		return "methodResult";
+	}
+
+	private XmxObjectTextRepresentation toText(Object obj) {
+		return new XmxObjectTextRepresentation(safeToString(obj), safeToJson(obj));
 	}
 
 	/**
@@ -142,28 +185,34 @@ public class RestController {
 	 * 
 	 * @param args the arguments as Strings
 	 * @param m the method to be invoked with the arguments
-	 * 
+	 * @param obj the object which method is invoked; used to obtain class loader to use
+	 *
 	 * @return the array of objects which may be used to invoke the method
 	 */
-	private Object[] translateArgs(String[] args, Method m) {
-		
+	private Object[] translateArgs(String[] args, Method m, Object obj) {
+		if (args == null) {
+			args = new String[0];
+		}
 		Class<?>[] parameterTypes = m.getParameterTypes();
-		// less or equal number of args are supported
-		if (parameterTypes.length < args.length) {
-			throw new XmxRuntimeException("Too many arguments for the method " + m);
+		if (parameterTypes.length != args.length) {
+			throw new XmxRuntimeException("Expected " + parameterTypes.length + " arguments, but only got " +
+					args.length);
 		}
 		Object[] methodArgs = new Object[parameterTypes.length]; 
 		for (int i = 0; i < args.length; i++) {
 			Class<?> type = parameterTypes[i];
-			if (!type.equals(String.class)) {
-				// TODO: support json
-				throw new XmxRuntimeException("NOT IMPLEMENTED: Only String's args are supported now for invokeObjectMethod()");
-			} else {
-				methodArgs[i] = args[i];
-			}
+			methodArgs[i] = deserializeValue(args[i], type, obj);
 		}
-		
 		return methodArgs;
 	}
+
+	private static String safeToJson(Object obj) {
+		try {
+			return jsonMapper.toJson(obj, Object.class);
+		} catch (Exception e) {
+			return "";
+		}
+	}
+
 
 }

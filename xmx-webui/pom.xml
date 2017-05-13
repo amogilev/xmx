@@ -64,6 +64,11 @@
       <version>${spring.version}</version>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>com.gilecode.yagson</groupId>
+          <artifactId>yagson</artifactId>
+          <version>0.3-SNAPSHOT</version>
+      </dependency>
   </dependencies>
 
   <build>

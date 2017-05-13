@@ -1,14 +1,13 @@
 package am.xmx.core;
 
+import am.xmx.dto.XmxRuntimeException;
+
+import javax.management.modelmbean.ModelMBeanInfoSupport;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import javax.management.modelmbean.ModelMBeanInfoSupport;
-
-import am.xmx.dto.XmxRuntimeException;
 
 public class ManagedClassInfo {
 	
@@ -154,7 +153,11 @@ public class ManagedClassInfo {
 		if (methodId < 0 || methodId >= methods.size()) {
 			throw new XmxRuntimeException("Method not found in " + className + " by ID=" + methodId);
 		}
-		return methods.get(methodId);
+		Method m = methods.get(methodId);
+		if (!m.isAccessible()) {
+			m.setAccessible(true);
+		}
+		return m;
 	}
 	
 	public Field getFieldById(int fieldId) {

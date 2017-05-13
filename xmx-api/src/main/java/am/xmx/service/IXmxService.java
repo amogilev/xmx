@@ -6,7 +6,6 @@ import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -54,33 +53,6 @@ public interface IXmxService {
 	
 	// TODO: identifying fields and methods is a subject to change, as the order is not guaranteed by JLS 
 	
-	/**
-	 * Sets new value of the specified object field.
-	 * 
-	 * @param objectId the ID of the object, obtained from {@link XmxObjectInfo#getObjectId()}
-	 * @param fieldId the ID of the field to set, obtained from {@link XmxObjectDetails.FieldInfo#getId()}
-	 * @param newValue the string representation of the value to assign to the new field
-	 *  
-	 * @return the new state of the object, after the field is set
-	 *  
-	 * @throws XmxRuntimeException if failed to assign field
-	 */
-	XmxObjectDetails setObjectField(int objectId, int fieldId, String newValue) throws XmxRuntimeException;
-	
-	/**
-	 * Invokes the specified method of the object.
-	 * 
-	 * @param obj the object to use
-	 * @param m the method to invoke
-	 * @param args the arguments to pass, if any
-	 *  
-	 * @return the method's returned value
-	 *  
-	 * @throws XmxRuntimeException if failed to invoke the method
-	 * @throws InvocationTargetException if invoked method thrown exception
-	 */
-	Object invokeObjectMethod(Object obj, Method m, Object...args) throws XmxRuntimeException, InvocationTargetException;
-
 	/**
 	 * Returns the managed object with the specified ID, or {@code null} if no
 	 * object with such ID is managed now.
