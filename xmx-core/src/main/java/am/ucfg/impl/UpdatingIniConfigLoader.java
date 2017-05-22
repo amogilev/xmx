@@ -57,7 +57,7 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 		
 		boolean updated = false;
 		
-		// make "EnhancedIni*" classes available by context class loader, as they are loaded using Reflection 
+		// make "EnhancedIni*" classes available by context class loader, as they are loaded using Reflection
 		ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
 		Thread.currentThread().setContextClassLoader(UpdatingIniConfigLoader.class.getClassLoader());
 		

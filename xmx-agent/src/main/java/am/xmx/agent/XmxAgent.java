@@ -1,13 +1,8 @@
 package am.xmx.agent;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import am.xmx.boot.XmxLoader;
+
+import java.io.*;
 import java.lang.instrument.Instrumentation;
 import java.net.URL;
 import java.nio.file.FileVisitResult;
@@ -22,8 +17,6 @@ import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import am.xmx.loader.XmxLoader;
 
 public class XmxAgent {
 	
@@ -81,23 +74,23 @@ public class XmxAgent {
 
 			File agentLibDir = new File(agentHomeDir, "lib");
 			
-			// find xmx-api.jar, support optional version 
-			File[] xmxApiFiles = agentLibDir.listFiles(new FilenameFilter() {
+			// find xmx-boot.jar, support optional version
+			File[] xmxBootFiles = agentLibDir.listFiles(new FilenameFilter() {
 				@Override
 				public boolean accept(File dir, String name) {
 					name = name.toLowerCase(Locale.ENGLISH);
-					return name.equals("xmx-api.jar") || (name.startsWith("xmx-api-") && name.endsWith(".jar"));
+					return name.equals("xmx-boot.jar") || (name.startsWith("xmx-boot-") && name.endsWith(".jar"));
 				}
 			});
 			
-			if (xmxApiFiles == null || xmxApiFiles.length == 0 || !xmxApiFiles[0].isFile()) {
+			if (xmxBootFiles == null || xmxBootFiles.length == 0 || !xmxBootFiles[0].isFile()) {
 				throw new RuntimeException("Failed to determine proper XMX home directory. Please make sure that xmx-agent.jar resides in XMX_HOME/bin");
 			}
 			
 			System.setProperty(XMX_HOME_PROP, agentHomeDir.getAbsolutePath());
-			instr.appendToBootstrapClassLoaderSearch(new JarFile(xmxApiFiles[0]));
+			instr.appendToBootstrapClassLoaderSearch(new JarFile(xmxBootFiles[0]));
 			
-			// from this moment we can use xmx-api classes
+			// from this moment we can use xmx-boot classes
 			boolean success = initializeLoader(agentProperties);
 			if (success) {
 				// initialize transformer

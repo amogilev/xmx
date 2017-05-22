@@ -69,7 +69,7 @@ public class ManagedAppInfo {
 	 */
 	public ManagedClassLoaderWeakRef getOrInitManagedClassLoaderInfo(ClassLoader cl) {
 		if (cl == null) {
-			// use special placeholder to represent bootstrap class loader 
+			// use special placeholder to represent bootstrap class loader
 			cl = ManagedClassLoaderWeakRef.NULL_CL;
 		}
 		

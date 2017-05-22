@@ -1,15 +1,20 @@
-package am.xmx.service;
+package am.xmx.boot;
 
 import java.util.Map;
 
 /**
- * Extends base {@link IXmxService} interface with the method used
- * for class transformation and registering of beans.
+ * Provides bootstrap functionality for the agent and transformed classes, including the
+ * class transformation method and registering of beans.
  * 
  * @author Andrey Mogilev
  */
-public interface IXmxServiceEx extends IXmxService {
-	
+public interface IXmxBootService {
+
+	/**
+	 * Property name for XMX home folder.
+	 */
+	String XMX_HOME_PROP = "xmx.home.dir";
+
 	/**
 	 * Checks whether the class is configured to be managed and, if needed,
 	 * transform it so that each created instance of it will

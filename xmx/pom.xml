@@ -82,7 +82,7 @@
   </build>
 
   <modules>
-    <module>../xmx-api</module>
+    <module>../xmx-boot</module>
     <module>../xmx-core</module>
     <module>../xmx-agent</module>
     <module>../xmx-webui</module>

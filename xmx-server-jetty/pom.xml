@@ -15,12 +15,6 @@
   <dependencies>
     <dependency>
       <groupId>am.xmx</groupId>
-      <artifactId>xmx-api</artifactId>
-      <version>${project.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>am.xmx</groupId>
       <artifactId>xmx-core</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>

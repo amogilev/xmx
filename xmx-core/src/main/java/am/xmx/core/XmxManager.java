@@ -2,6 +2,7 @@ package am.xmx.core;
 
 
 import am.specr.SpeculativeProcessorFactory;
+import am.xmx.boot.IXmxBootService;
 import am.xmx.cfg.IAppPropertiesSource;
 import am.xmx.cfg.IXmxConfig;
 import am.xmx.cfg.Properties;
@@ -44,7 +45,7 @@ import java.util.regex.Pattern;
 
 import static am.xmx.service.XmxUtils.safeToString;
 
-public class XmxManager implements IXmxCoreService {
+public class XmxManager implements IXmxService, IXmxBootService {
 
 	public static final IXmxConfig config = XmxIniConfig.getDefault();
 
@@ -60,8 +61,8 @@ public class XmxManager implements IXmxCoreService {
 				"am.xmx.core.Tomcat8WebappNameExtractor",
 				"org.apache.catalina.loader.WebappClassLoaderBase");
 		extractorsFactory.registerProcessor(
-				true, // Jetty's WebAppClassLoader shadows all server classes, need to check its parent 
-				"am.xmx.core.JettyWebappNameExtractor", 
+				true, // Jetty's WebAppClassLoader shadows all server classes, need to check its parent
+				"am.xmx.core.JettyWebappNameExtractor",
 				"org.eclipse.jetty.webapp.WebAppClassLoader");
 	}
 
@@ -167,10 +168,14 @@ public class XmxManager implements IXmxCoreService {
 	
 	// Non-public static API, used through reflection 
 	
-	public static IXmxCoreService getService() {
+	public static IXmxBootService getBootService() {
 		return instance;
 	}
-	
+
+	public static IXmxService getService() {
+		return instance;
+	}
+
 	
 	// Inner Implementation of XmxServiceEx API
 	
@@ -742,8 +747,8 @@ public class XmxManager implements IXmxCoreService {
 		
 		final IXmxServerLauncher launcher;
 		try {
-			// use classloader of xmx-api as parent; xmx-core itself is not visible for the server
-			ClassLoader serverCL = new URLClassLoader(urls, IXmxService.class.getClassLoader());
+			// use classloader of xmx-core as parent
+			ClassLoader serverCL = new URLClassLoader(urls, XmxManager.class.getClassLoader());
 			Class<? extends IXmxServerLauncher> launcherClass = 
 					Class.forName(launcherClassName, true, serverCL).asSubclass(IXmxServerLauncher.class);
 			launcher = launcherClass.getConstructor().newInstance();
@@ -767,5 +772,4 @@ public class XmxManager implements IXmxCoreService {
 		startupThread.setDaemon(true);
 		startupThread.start();
 	}
-	
 }

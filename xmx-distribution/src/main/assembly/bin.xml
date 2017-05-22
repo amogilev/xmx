@@ -21,7 +21,7 @@
       <outputDirectory>lib</outputDirectory>
       <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
       <includes>
-        <include>am.xmx:xmx-api:jar</include>
+        <include>am.xmx:xmx-boot:jar</include>
         <include>am.xmx:xmx-core:jar</include>
         <include>am.xmx:xmx-server-jetty:jar</include>
       </includes>

@@ -1,4 +1,4 @@
-package am.xmx.loader;
+package am.xmx.boot;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -8,14 +8,11 @@ import java.net.URLClassLoader;
 import java.util.Locale;
 import java.util.Map;
 
-import am.xmx.service.IXmxService;
-import am.xmx.service.IXmxServiceEx;
-
 public class XmxLoader {
 	
 	private static ClassLoader xmxClassLoader;
 	private static Class<?> xmxManagerClass;
-	private static IXmxServiceEx xmxService;
+	private static IXmxBootService xmxService;
 	private static boolean initialized = false;
 
 	/**
@@ -32,14 +29,14 @@ public class XmxLoader {
 			return xmxService != null;
 		}
 		
-		String homeDir = System.getProperty(IXmxService.XMX_HOME_PROP);
+		String homeDir = System.getProperty(IXmxBootService.XMX_HOME_PROP);
 		if (homeDir == null) {
 			// not proper "agent" start... but still try to determine by this jar location
 			URL jarLocation = XmxLoader.class.getProtectionDomain().getCodeSource().getLocation();
 			if (jarLocation != null) {
 				try {
 					homeDir = new File(jarLocation.toURI()).getParentFile().getParentFile().getAbsolutePath();
-					System.setProperty(IXmxService.XMX_HOME_PROP, homeDir);
+					System.setProperty(IXmxBootService.XMX_HOME_PROP, homeDir);
 				} catch (Exception e) {
 					logError("", e);
 				}
@@ -73,8 +70,8 @@ public class XmxLoader {
 					xmxClassLoader = new URLClassLoader(urls, XmxLoader.class.getClassLoader());
 					xmxManagerClass = Class.forName("am.xmx.core.XmxManager", true, xmxClassLoader);
 					
-					Method getServiceMethod = xmxManagerClass.getDeclaredMethod("getService");
-					xmxService = (IXmxServiceEx) getServiceMethod.invoke(null);
+					Method getServiceMethod = xmxManagerClass.getDeclaredMethod("getBootService");
+					xmxService = (IXmxBootService) getServiceMethod.invoke(null);
 					
 					// agent may override important system properties, so do the override ASAP
 					xmxService.overrideSystemProperties(overrideProperties);
@@ -126,15 +123,7 @@ public class XmxLoader {
 		}
 	}
 	
-	
-	/**
-	 * Return singleton implementation of {@link IXmxService}
-	 */
-	public static IXmxService getService() {
-		return xmxService;
-	}
-
-	// TODO maybe check presence of common Logs via Class.forName() and use them? 
+	// TODO maybe check presence of common Logs via Class.forName() and use them?
 	private static void logError(String message) {
 		System.err.println(message);
 	}

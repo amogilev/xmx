@@ -1,10 +1,10 @@
 package am.xmx.agent;
 
+import am.xmx.boot.XmxLoader;
+
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
-
-import am.xmx.loader.XmxLoader;
 
 public class XmxClassTransformer implements ClassFileTransformer {
 	

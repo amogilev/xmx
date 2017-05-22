@@ -7,9 +7,9 @@
     <relativePath>../xmx/pom.xml</relativePath>
   </parent>  
 
-  <artifactId>xmx-api</artifactId>
+  <artifactId>xmx-boot</artifactId>
 
-  <name>XMX API</name>
-  <description>Shared API used as a bridge between agent, clients and core modules</description>
+  <name>XMX Bootstrap</name>
+  <description>Bootstrap API used as a bridge between the agent, the transformed classes and the core services</description>
   
 </project>

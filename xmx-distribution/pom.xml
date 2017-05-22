@@ -17,7 +17,7 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>xmx-api</artifactId>
+      <artifactId>xmx-boot</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

@@ -5,7 +5,7 @@ import org.apache.catalina.WebResourceRoot;
 import org.apache.catalina.loader.WebappClassLoaderBase;
 
 public class Tomcat8WebappNameExtractor implements IWebappNameExtractor {
-	
+
 	@Override
 	public String extract(ClassLoader cl) {
 		if (cl instanceof WebappClassLoaderBase) {

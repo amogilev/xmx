@@ -9,10 +9,10 @@ import java.util.Map;
 
 /**
  * Class loader which extends parent loader with all class <i>files</i> loadable
- * by an additional class loader.
+ * by an additional class loader, and used to forcibly (re-)load the given target class.
  * <p/>
- * It provides all classes of the parent loader, and, in addition, all classes
- * which files can be loaded as resource by additional class loader. Thus,
+ * It provides all classes of the parent loader (maybe except the target class), and, in addition,
+ * all classes which files can be loaded as resource by additional class loader. Thus,
  * it allows to load and use classes with dependencies in both class loaders.
  * <p/>
  * VMs with Ahead-of-Time compilation which do not provide original .class files
@@ -21,16 +21,31 @@ import java.util.Map;
  * @author Andrey Mogilev
  */
 public class ExtendedClassLoader extends ClassLoader {
-	
-	private WeakReference<ClassLoader> additionalClassLoaderRef;
+
+	/**
+	 * The 'additional' class loader used as the resource locator to jars for loading
+	 * the target class and any additional classes not found in the parent loader.
+	 */
+	private final WeakReference<ClassLoader> additionalClassLoaderRef;
+
+	/**
+	 * The class to be (re-)loaded by this class loader, even if already loaded in parent
+	 */
+	private final String targetClassName;
+
+	/**
+	 * The known classes to ignore - always return these instances.
+	 */
+	private final Class<?>[] predefinedClasses;
+
 	private Map<String, Class<?>> knownClasses = null; // lazily initiated
-	private Class<?>[] predefinedClasses;
-	
+
 
 	public ExtendedClassLoader(ClassLoader parent, ClassLoader additionalClassLoader,
-			Class<?>...predefinedClasses) {
+							   String targetClassName, Class<?>... predefinedClasses) {
 		super(parent);
 		this.additionalClassLoaderRef = new WeakReference<>(additionalClassLoader);
+		this.targetClassName = targetClassName;
 		this.predefinedClasses = predefinedClasses;
 	}
 
@@ -52,15 +67,33 @@ public class ExtendedClassLoader extends ClassLoader {
 	}
 
 	@Override
-	protected Class<?> findClass(String name) throws ClassNotFoundException {
-		// if class is found in parent class path, return it
-		try {
-			return super.findClass(name);
-		} catch (ClassNotFoundException e) {
-			// not available in parent class loader, try find in additional
+	protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+    	if (targetClassName.equals(name)) {
+    		// general super.loadClass() will return already loaded class if laoded by parent
+			// in order to re-load it, force our findClass() if not loaded by this exact CL
+			Class c = findLoadedClass(name);
+    		if (c == null) {
+    			c = findClass(name);
+				if (resolve && c != null) {
+					resolveClass(c);
+				}
+			}
+			return c;
+		} else {
+			return super.loadClass(name, resolve);
 		}
-		
-		// TODO: check if loaded only once!!!
+	}
+
+	@Override
+	protected Class<?> findClass(String name) throws ClassNotFoundException {
+    	if (!targetClassName.equals(name)) {
+			// if class is found in parent class path, return it
+			try {
+				return super.findClass(name);
+			} catch (ClassNotFoundException e) {
+				// not available in parent class loader, try find in additional
+			}
+		}
 		
 		ensureKnownClasses();
 		Class<?> cl = knownClasses.get(name); 
@@ -118,7 +151,6 @@ public class ExtendedClassLoader extends ClassLoader {
 		}
 		
 	}
-	
 
 	private byte[] grow(byte[] buf) {
         int oldCapacity = buf.length;
@@ -128,7 +160,4 @@ public class ExtendedClassLoader extends ClassLoader {
         }
         return Arrays.copyOf(buf, newCapacity);
     }
-	
-	
-
 }

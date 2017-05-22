@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Abstract interface for a config loader, which updates the configuration during 
+ * Abstract interface for a config loader, which updates the configuration during
  * the loading. The configuration setting and defaults are provided by 
- * {@link IConfigInfoProvider} bound to the loader implementation. 
+ * {@link IConfigInfoProvider} bound to the loader implementation.
  * 
  * @author Andrey Mogilev
  *

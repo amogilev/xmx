@@ -1,14 +1,10 @@
 package am.specr;
 
+import am.xmx.util.Pair;
+
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.*;
 
 /**
  * Utility factory which manages speculative processors, i.e. dynamically loaded 
@@ -22,7 +18,7 @@ import java.util.WeakHashMap;
  * @param <P> base interface or abstract class of processors managed by this factory 
  */
 public class SpeculativeProcessorFactory<P> {
-	
+
 	/**
 	 * Description of the registered processors.
 	 */
@@ -97,8 +93,12 @@ public class SpeculativeProcessorFactory<P> {
 	 * <p/>
 	 * The cache uses weak references for both keys and values, so may be invalidate
 	 * after any garbage collection. Otherwise, the cache would prevent class unloading.
+	 * <p/>
+	 * NOTE: 'strong' references are allowed only to processing values like strings, but not
+	 * to processors or class loaders. As this class do not limit the values types returned by
+	 * processors, it is supposed that the values caching, if needed, is implemented in the clients.
 	 */
-	private WeakHashMap<ClassLoader, WeakReference<List<P>>> processorsByClassLoaderCache = new WeakHashMap<>();
+	private WeakHashMap<ClassLoader, WeakReference<List<P>>> processorsByClassLoaderWeakCache = new WeakHashMap<>();
 
 	/**
 	 * Creates the factory, which will manage the implementations of the
@@ -116,13 +116,9 @@ public class SpeculativeProcessorFactory<P> {
 	 * only when all of the required classes are available in the class loader of the
 	 * processed object. 
 	 * <p/>
-	 * <strong>The processor class MUST NOT be loaded by any public class loader anywhere
-	 * except by the factory.</strong> In particular, the processor class name needs to be passed 
-	 * as pure string literal, rather than as <code><strike>MyProcessor.class.getName()</strike></code>
-	 * <p/>
-	 * The processor class is supposed to be loaded by the class loader of processed 
-	 * objects, with an addition class file loaded as resource by class loader of this factory,
-	 * so only two cases are supported: 
+	 * The processor class is supposed to be (re-)loaded by the extension class loader which is a child
+	 * of a class loader of processed objects, with an addition class file loaded as resource by class loader
+	 * of this factory, so only two cases are supported:
 	 * <ul>
 	 *  <li> the processor class shall be available in the class loader of processed objects,
 	 *  	e.g. added to the system class path; or
@@ -145,7 +141,8 @@ public class SpeculativeProcessorFactory<P> {
 	/**
 	 * Registers the processor class name, which shall be used for processing objects
 	 * only when all of the required classes are available in the <i>target</i> class 
-	 * loader, which may be the class loader of the processed object, or, if 
+	 * loader, which may be the class loader of the processed object, or, if
+	 * loader, which may be the class loader of the processed object, or, if
 	 * <b>traverseParents</b> flag is set, its closest parent where the required
 	 * classes are available.
 	 * <p/>
@@ -182,7 +179,7 @@ public class SpeculativeProcessorFactory<P> {
 		ProcessorInfo oldValue = registeredProcesors.get(processorClassName);
 		if (oldValue == null) {
 			registeredProcesors.put(processorClassName, pi);
-			processorsByClassLoaderCache.clear(); // invalidate cache
+			processorsByClassLoaderWeakCache.clear(); // invalidate cache
 		} else if (oldValue.equals(pi)) {
 			throw new IllegalStateException("Speculative processor class \"" + processorClassName + 
 					"\" is already registered with another properties");
@@ -193,7 +190,7 @@ public class SpeculativeProcessorFactory<P> {
 	/**
 	 * Returns instances of all processor classes which have all their dependencies
 	 * available in the class loader of the specified object.
-	 *  
+	 *
 	 * @param processedObject the object to be processed
 	 * 
 	 * @return all processors for the specified object
@@ -230,7 +227,7 @@ public class SpeculativeProcessorFactory<P> {
 			return Collections.emptyList();
 		}
 		
-		WeakReference<List<P>> cachedListRef = processorsByClassLoaderCache.get(classLoader);
+		WeakReference<List<P>> cachedListRef = processorsByClassLoaderWeakCache.get(classLoader);
 		if (cachedListRef != null) {
 			List<P> cachedList = cachedListRef.get();
 			if (cachedList != null) {
@@ -257,7 +254,7 @@ public class SpeculativeProcessorFactory<P> {
 		
 		// always use initial class loader (of processed object) as a key, as targets may
 		// be different (if there are several processors)
-		processorsByClassLoaderCache.put(classLoader, new WeakReference<>(Collections.unmodifiableList(processors)));
+		processorsByClassLoaderWeakCache.put(classLoader, new WeakReference<>(Collections.unmodifiableList(processors)));
 		
 		return processors;
 	}
@@ -297,13 +294,15 @@ public class SpeculativeProcessorFactory<P> {
 	private P tryCreateProcessor(ClassLoader targetClassLoader, String processorClassName) {
 		Class<? extends P> processorClass;
 		try {
-			ClassLoader extendedClassLoader = new ExtendedClassLoader(targetClassLoader, 
-					getClass().getClassLoader(), abstractProcessorClass);
+			Pair<String, ClassLoader> key = Pair.of(processorClassName, targetClassLoader);
+
+			ExtendedClassLoader extendedClassLoader = new ExtendedClassLoader(targetClassLoader,
+					getClass().getClassLoader(), processorClassName, abstractProcessorClass);
 			processorClass = Class.forName(processorClassName, true, extendedClassLoader)
 					.asSubclass(abstractProcessorClass);
 		} catch (ClassNotFoundException e) {
 			System.err.println("Processor class is not available to either class loader of processed object"
-					+ "  and class loader of the factory: class=" + processorClassName + 
+					+ "  and class loader of the factory: class=" + processorClassName +
 					", targetLoader=" + targetClassLoader + ", factoryLoader=" + getClass().getClassLoader());
 			return null;
 		} catch (ClassCastException e) {
