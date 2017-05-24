@@ -287,8 +287,20 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		}
 	}
 
-
+	private static WeakHashMap<ClassLoader, String> appNameByLoader = new WeakHashMap<>();
 	private static String obtainAppNameByLoader(ClassLoader loader) {
+		if (loader == null) {
+			return "";
+		}
+		String name = appNameByLoader.get(loader);
+		if (name == null) {
+			name = extractAppNameByLoader(loader);
+			appNameByLoader.put(loader, name);
+		}
+		return name;
+	}
+
+	private static String extractAppNameByLoader(ClassLoader loader) {
 		List<IWebappNameExtractor> extractors = extractorsFactory.getProcessorsFor(loader);
 		if (extractors != null) {
 			for (IWebappNameExtractor extractor : extractors) {

@@ -1,7 +1,5 @@
 package am.specr;
 
-import am.xmx.util.Pair;
-
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.util.*;
@@ -189,35 +187,19 @@ public class SpeculativeProcessorFactory<P> {
 	
 	/**
 	 * Returns instances of all processor classes which have all their dependencies
-	 * available in the class loader of the specified object.
+	 * available in the specified class loader.
+	 * <p/>
+	 * <strong>NOTE:</strong> if multiple calls are expected, this method may create new instances of the same processor
+	 * and even load its class again. So, it is recommended to cache the values of the processor results (by class
+	 * loader) if possible. This class only uses short-living weak caches (with weak references to values), which may
+	 * be cleared after any garbage collection.
 	 *
-	 * @param processedObject the object to be processed
+	 * @param cl the class loader to find dependencies in
 	 * 
-	 * @return all processors for the specified object
+	 * @return all processors available for the specified class loader
 	 */
-	public List<P> getProcessorsFor(Object processedObject) {
-		if (processedObject == null) {
-			return null;
-		}
-		ClassLoader loader = processedObject instanceof ClassLoader ? (ClassLoader)processedObject : 
-			processedObject.getClass().getClassLoader();
-		return getProcessorsWith(loader);
-	}
-	
-	/**
-	 * Same as {@link #getProcessorsFor(Object)}, but returns only the first matched processor.
-	 * 
-	 * @param processedObject the object to be processed
-	 * 
-	 * @return the first processor for the specified object, or {@code null} if none registered
-	 */
-	public P getFirstProcessorFor(Object processedObject) {
-		List<P> processors = getProcessorsFor(processedObject);
-		if (processors.isEmpty()) {
-			return null;
-		} else {
-			return processors.get(0);
-		}
+	public List<P> getProcessorsFor(ClassLoader cl) {
+		return getProcessorsWith(cl);
 	}
 	
 	///// IMPLEMENTATION FOLLOWS ////
@@ -294,8 +276,6 @@ public class SpeculativeProcessorFactory<P> {
 	private P tryCreateProcessor(ClassLoader targetClassLoader, String processorClassName) {
 		Class<? extends P> processorClass;
 		try {
-			Pair<String, ClassLoader> key = Pair.of(processorClassName, targetClassLoader);
-
 			ExtendedClassLoader extendedClassLoader = new ExtendedClassLoader(targetClassLoader,
 					getClass().getClassLoader(), processorClassName, abstractProcessorClass);
 			processorClass = Class.forName(processorClassName, true, extendedClassLoader)
