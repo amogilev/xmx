@@ -1,5 +1,6 @@
 package am.xmx.core;
 
+import java.lang.ref.ReferenceQueue;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -67,7 +68,7 @@ public class ManagedAppInfo {
 	 * Finds or initializes a reference and information for the given class loader, which shall
 	 * belong this app.
 	 */
-	public ManagedClassLoaderWeakRef getOrInitManagedClassLoaderInfo(ClassLoader cl) {
+	public ManagedClassLoaderWeakRef getOrInitManagedClassLoaderInfo(ClassLoader cl, ReferenceQueue<ClassLoader> managedClassLoadersRefQueue) {
 		if (cl == null) {
 			// use special placeholder to represent bootstrap class loader
 			cl = ManagedClassLoaderWeakRef.NULL_CL;
@@ -81,7 +82,7 @@ public class ManagedAppInfo {
 		}
 		
 		// if iteration fails, putIfAbsent approach will do getOrInit atomically
-		ManagedClassLoaderWeakRef candidate = new ManagedClassLoaderWeakRef(cl, XmxManager.managedClassLoadersRefQueue, this);
+		ManagedClassLoaderWeakRef candidate = new ManagedClassLoaderWeakRef(cl, managedClassLoadersRefQueue, this);
 		ManagedClassLoaderWeakRef ref = classLoaderInfos.putIfAbsent(candidate, candidate);
 		
 		// null ref means that putIfAbsent actually put candidate, so it shall be used 

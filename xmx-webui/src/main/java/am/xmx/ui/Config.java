@@ -10,6 +10,6 @@ public class Config {
 
 	@Bean
 	public IXmxService xmxService() {
-		return XmxManager.getService();
+		return XmxManager.getServiceInstance();
 	}
 }

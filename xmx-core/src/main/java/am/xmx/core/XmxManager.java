@@ -45,15 +45,51 @@ import java.util.regex.Pattern;
 
 import static am.xmx.service.XmxUtils.safeToString;
 
-public class XmxManager implements IXmxService, IXmxBootService {
+public final class XmxManager implements IXmxService, IXmxBootService {
 
-	public static final IXmxConfig config = XmxIniConfig.getDefault();
+	// how many milliseconds to wait before starting embedded web UI
+	private static final int UI_START_DELAY = 10000;
 
-	private static YaGson jsonMapper = new YaGson();
+	private static final String LAUNCHER_CLASS_ATTR = "XMX-Server-Launcher-Class";
 
-	private static SpeculativeProcessorFactory<IWebappNameExtractor> extractorsFactory = 
+	// initialized and overridden in the constructor
+	private final IXmxConfig config;
+	private MBeanServer jmxServer;
+
+	private static XmxManager instance;
+
+	public XmxManager(Map<String, String> overrideSystemProps) {
+		synchronized (XmxManager.class) {
+			if (instance != null) {
+				throw new IllegalStateException("XMX is already initialized");
+			}
+
+			instance = this;
+			config = XmxIniConfig.getDefault();
+			config.overrideSystemProperties(overrideSystemProps);
+
+			if (isEnabled()) {
+				startCleanerThreads();
+				if (config.getSystemProperty(Properties.GLOBAL_JMX_ENABLED).asBool()) {
+					// TODO maybe create a custom server instead, with custom connectors etc.
+					jmxServer = ManagementFactory.getPlatformMBeanServer();
+				}
+				if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
+					startUI();
+				}
+
+			} else {
+				// TODO: logging
+				// log.warn("XMX functionality is disabled by configuration");
+			}
+		}
+	}
+
+	private static final YaGson jsonMapper = new YaGson();
+
+	private SpeculativeProcessorFactory<IWebappNameExtractor> extractorsFactory =
 			new SpeculativeProcessorFactory<>(IWebappNameExtractor.class);
-	static {
+	{
 		extractorsFactory.registerProcessor(
 				"am.xmx.core.Tomcat7WebappNameExtractor",
 				"org.apache.catalina.loader.WebappClassLoader");
@@ -66,53 +102,50 @@ public class XmxManager implements IXmxService, IXmxBootService {
 				"org.eclipse.jetty.webapp.WebAppClassLoader");
 	}
 
-	private static IMethodInfoService methodInfoService = new MethodInfoServiceImpl();
+	private IMethodInfoService methodInfoService = new MethodInfoServiceImpl();
 	
 	/**
 	 * Storage of weak references to each managed objects, mapped by object ID
 	 */
-	private static Map<Integer, ManagedObjectWeakRef> objectsStorage = new HashMap<>(64*1024);
+	private Map<Integer, ManagedObjectWeakRef> objectsStorage = new HashMap<>(64*1024);
 	
 	/**
 	 * Generator of unique IDs for managed objects.
 	 */
-	private static AtomicInteger managedObjectsCounter = new AtomicInteger();
+	private AtomicInteger managedObjectsCounter = new AtomicInteger();
 	
 	/**
 	 * Storage of classes info for managed objects
 	 */
-	private static ConcurrentMap<Integer, ManagedClassInfo> classesInfoById = new ConcurrentHashMap<>(32*1024);
+	private ConcurrentMap<Integer, ManagedClassInfo> classesInfoById = new ConcurrentHashMap<>(32*1024);
 	
 	/**
 	 * Maps appName -> appInfo for each app with managed classes
 	 */
-	private static ConcurrentMap<String, ManagedAppInfo> appInfosByName = new ConcurrentHashMap<>();
+	private ConcurrentMap<String, ManagedAppInfo> appInfosByName = new ConcurrentHashMap<>();
 	
 	/**
 	 * Generator of unique IDs for classes of managed objects.
 	 */
-	private static AtomicInteger managedClassesCounter = new AtomicInteger();
+	private AtomicInteger managedClassesCounter = new AtomicInteger();
 	
 	/**
 	 * Generator of unique IDs for managed applications.
 	 */
-	private static AtomicInteger managedAppsCounter = new AtomicInteger();
+	private AtomicInteger managedAppsCounter = new AtomicInteger();
 	
-	private static ReferenceQueue<Object> managedObjectsRefQueue = new ReferenceQueue<>();
+	private ReferenceQueue<Object> managedObjectsRefQueue = new ReferenceQueue<>();
 	
-	static ReferenceQueue<ClassLoader> managedClassLoadersRefQueue = new ReferenceQueue<>();
+	ReferenceQueue<ClassLoader> managedClassLoadersRefQueue = new ReferenceQueue<>();
 	
-	// how many milliseconds to wait before starting embedded web UI
-	private static final int UI_START_DELAY = 10000;
-
-	static {
+	private void startCleanerThreads() {
 		Thread objCleanerThread = new Thread("XMX-ObjCleaner") {
 			@Override
 			public void run() {
 				while (true) {
 					try {
 						ManagedObjectWeakRef objRef = (ManagedObjectWeakRef) managedObjectsRefQueue.remove();
-						synchronized(instance) {
+						synchronized(this) {
 							ManagedClassInfo classInfo = objRef.classInfo;
 							Set<Integer> objectIds = classInfo.getObjectIds();
 							if (objectIds != null) {
@@ -154,37 +187,8 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		classCleanerThread.start();
 	}
 	
-	private static MBeanServer jmxServer = null;
-	static {
-		if (config.getSystemProperty(Properties.GLOBAL_JMX_ENABLED).asBool()) {
-			// TODO maybe create a custom server instead, with custom connectors etc.
-			jmxServer = ManagementFactory.getPlatformMBeanServer();
-		}
-	}
-	
-	private static final XmxManager instance = new XmxManager();
-	
-	private static final String LAUNCHER_CLASS_ATTR = "XMX-Server-Launcher-Class";
-	
-	// Non-public static API, used through reflection 
-	
-	public static IXmxBootService getBootService() {
-		return instance;
-	}
-
-	public static IXmxService getService() {
-		return instance;
-	}
-
-	
 	// Inner Implementation of XmxServiceEx API
-	
-	
-	@Override
-	public void overrideSystemProperties(Map<String, String> properties) {
-		config.overrideSystemProperties(properties);
-	}
-	
+
 	@Override
 	public boolean isEnabled() {
 		return config.getSystemProperty(Properties.GLOBAL_ENABLED).asBool();
@@ -247,7 +251,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 			ObjectName jmxObjectName = null;
 			if (jmxServer != null && classInfo.getJmxClassModel() != null) {
 				// register as JMX bean
-				jmxObjectName = JmxSupport.registerBean(jmxServer, objectId, classInfo, otherInstancesCount == 0);
+				jmxObjectName = JmxSupport.registerBean(this, jmxServer, objectId, classInfo, otherInstancesCount == 0);
 				
 				if (otherInstancesCount == 1) {
 					// check if another instance is registered in JMX as singleton. If so,
@@ -258,7 +262,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 					if (anotherObjectName.getKeyProperty("id") == null) {
 						// re-register as non-singleton
 						JmxSupport.unregisterBean(jmxServer, anotherObjectName);
-						anotherObject.jmxObjectName = JmxSupport.registerBean(jmxServer, anotherObjectId, classInfo, false); 
+						anotherObject.jmxObjectName = JmxSupport.registerBean(this, jmxServer, anotherObjectId, classInfo, false);
 					}
 				}
 			}
@@ -287,8 +291,8 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		}
 	}
 
-	private static WeakHashMap<ClassLoader, String> appNameByLoader = new WeakHashMap<>();
-	private static String obtainAppNameByLoader(ClassLoader loader) {
+	private WeakHashMap<ClassLoader, String> appNameByLoader = new WeakHashMap<>();
+	private String obtainAppNameByLoader(ClassLoader loader) {
 		if (loader == null) {
 			return "";
 		}
@@ -300,7 +304,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		return name;
 	}
 
-	private static String extractAppNameByLoader(ClassLoader loader) {
+	private String extractAppNameByLoader(ClassLoader loader) {
 		List<IWebappNameExtractor> extractors = extractorsFactory.getProcessorsFor(loader);
 		if (extractors != null) {
 			for (IWebappNameExtractor extractor : extractors) {
@@ -315,7 +319,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		return "";
 	}
 	
-	private static int getMaxInstances(IAppPropertiesSource appConfig, String className) {
+	private int getMaxInstances(IAppPropertiesSource appConfig, String className) {
 		int maxInstances = appConfig.getClassProperty(className, Properties.CLASS_MAX_INSTANCES).asInt();
 		if (maxInstances < 0) {
 			maxInstances = Integer.MAX_VALUE;
@@ -350,7 +354,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		}
 
 		ManagedAppInfo appInfo = getOrInitAppInfo(appName);
-		ManagedClassLoaderWeakRef classLoaderInfo = appInfo.getOrInitManagedClassLoaderInfo(classLoader);		
+		ManagedClassLoaderWeakRef classLoaderInfo = appInfo.getOrInitManagedClassLoaderInfo(classLoader, managedClassLoadersRefQueue);
 		
 		int classId;
 		if (classBeingRedefined != null) {
@@ -611,7 +615,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		}
 		
 		
-		ManagedClassLoaderWeakRef loaderInfo = appInfo.getOrInitManagedClassLoaderInfo(clazz.getClassLoader());
+		ManagedClassLoaderWeakRef loaderInfo = appInfo.getOrInitManagedClassLoaderInfo(clazz.getClassLoader(), managedClassLoadersRefQueue);
 		return getManagedClassInfo(loaderInfo, clazz.getName());
 	}
 	
@@ -621,7 +625,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		return ref == null ? null : ref.get(); 
 	}
 
-	private static List<Method> getManagedMethods(Class<?> clazz) {
+	private List<Method> getManagedMethods(Class<?> clazz) {
 		List<Method> methods = new ArrayList<>(20);
 		while (clazz != null) {
 			Method[] declaredMethods = clazz.getDeclaredMethods();
@@ -639,7 +643,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		return methods;
 	}
 	
-	private static List<Field> getManagedFields(Class<?> clazz) {
+	private List<Field> getManagedFields(Class<?> clazz) {
 		List<Field> fields = new ArrayList<>(20);
 		while (clazz != null) {
 			Field[] declaredFields = clazz.getDeclaredFields();
@@ -659,7 +663,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		return fields;
 	}
 
-	private static void fillLiveObjects(List<XmxObjectInfo> result, Integer classId) {
+	private void fillLiveObjects(List<XmxObjectInfo> result, Integer classId) {
 		ManagedClassInfo classInfo = classesInfoById.get(classId);
 		if (classInfo == null || !classInfo.isInitialized()) {
 			// no objects registered yet
@@ -679,6 +683,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 
 	private static XmxObjectInfo convertToObjectInfo(int id, Object obj, ManagedClassInfo ci) {
 		String json = "";
+		// FIXME: either use YaGson, or remove unused
 /*
 		try {
 			json = jsonMapper.toJson(obj);
@@ -697,7 +702,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		return new XmxClassInfo(ci.getId(), ci.getClassName());
 	}
 
-	private static void fillXmxClassInfo(List<XmxClassInfo> result,
+	private void fillXmxClassInfo(List<XmxClassInfo> result,
 			Collection<Integer> classIds, Pattern classNamePattern) {
 		for (Integer classId : classIds) {
 			ManagedClassInfo classInfo = classesInfoById.get(classId);
@@ -719,12 +724,7 @@ public class XmxManager implements IXmxService, IXmxBootService {
 	/**
 	 * Starts Embedded Jetty Server to serve xmx-webui.war
 	 */
-	public static void startUI() {
-		if (!config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
-			// do nothing
-			return;
-		}
-		
+	public void startUI() {
 		File xmxHomeDir = new File(System.getProperty(XMX_HOME_PROP));
 		final File uiWarFile = new File(xmxHomeDir, "bin" + File.separator + "xmx-webui.war");
 		File xmxLibDir = new File(xmxHomeDir, "lib");
@@ -783,5 +783,10 @@ public class XmxManager implements IXmxService, IXmxBootService {
 		}, "XMX Embedded Server Startup Thread");
 		startupThread.setDaemon(true);
 		startupThread.start();
+	}
+
+	// invoked from Web UI
+	public static IXmxService getServiceInstance() {
+		return instance;
 	}
 }

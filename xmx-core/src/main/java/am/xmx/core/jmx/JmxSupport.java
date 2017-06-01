@@ -1,5 +1,12 @@
 package am.xmx.core.jmx;
 
+import am.xmx.cfg.IXmxPropertiesSource;
+import am.xmx.core.ManagedClassInfo;
+import am.xmx.service.IXmxService;
+
+import javax.management.*;
+import javax.management.modelmbean.*;
+import javax.management.openmbean.CompositeDataSupport;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -7,25 +14,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.management.Descriptor;
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanOperationInfo;
-import javax.management.MBeanParameterInfo;
-import javax.management.MBeanRegistrationException;
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.management.modelmbean.DescriptorSupport;
-import javax.management.modelmbean.ModelMBeanAttributeInfo;
-import javax.management.modelmbean.ModelMBeanConstructorInfo;
-import javax.management.modelmbean.ModelMBeanInfoSupport;
-import javax.management.modelmbean.ModelMBeanNotificationInfo;
-import javax.management.modelmbean.ModelMBeanOperationInfo;
-import javax.management.openmbean.CompositeDataSupport;
-
-import am.xmx.cfg.IXmxPropertiesSource;
-import am.xmx.core.ManagedClassInfo;
 
 public class JmxSupport {
 
@@ -173,8 +161,8 @@ public class JmxSupport {
 		return new String[]{packageName, simpleName};
 	}
 
-	public static ObjectName registerBean(MBeanServer jmxServer, int objectId,
-			ManagedClassInfo classInfo, boolean singleton) {
+	public static ObjectName registerBean(IXmxService xmxService, MBeanServer jmxServer, int objectId,
+										  ManagedClassInfo classInfo, boolean singleton) {
 
 		if (classInfo.getJmxClassModel() == null || classInfo.getJmxObjectNamePart() == null) {
 			return null;
@@ -183,7 +171,7 @@ public class JmxSupport {
 		try {
 			ObjectName objectName = makeObjectName(objectId, classInfo, singleton);
 
-			JmxBridgeModelBean bean = new JmxBridgeModelBean(objectId, classInfo.getJmxClassModel());
+			JmxBridgeModelBean bean = new JmxBridgeModelBean(objectId, classInfo.getJmxClassModel(), xmxService);
 			jmxServer.registerMBean(bean, objectName);
 			
 			return objectName;

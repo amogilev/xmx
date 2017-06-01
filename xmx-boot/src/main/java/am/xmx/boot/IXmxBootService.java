@@ -1,7 +1,5 @@
 package am.xmx.boot;
 
-import java.util.Map;
-
 /**
  * Provides bootstrap functionality for the agent and transformed classes, including the
  * class transformation method and registering of beans.
@@ -35,16 +33,6 @@ public interface IXmxBootService {
 	 * Registers a newly created object, so that it becomes managed by XMX.
 	 */
 	void registerObject(Object obj, int classId);
-	
-	/**
-	 * Overrides known global (XMX [System]) configuration properties
-	 * <p/>
-	 * Property names are compared case-insensitively, so any case of override
-	 * properties is accepted.
-	 * 
-	 * @param properties properties to override
-	 */
-	void overrideSystemProperties(Map<String, String> properties);
 	
 	/**
 	 * Returns whether XMX is globally enabled in the configuration. 

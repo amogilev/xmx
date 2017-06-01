@@ -1,6 +1,5 @@
 package am.xmx.core.jmx;
 
-import am.xmx.core.XmxManager;
 import am.xmx.dto.XmxRuntimeException;
 import am.xmx.service.IXmxService;
 
@@ -21,12 +20,14 @@ import java.util.Objects;
  */
 class JmxBridgeModelBean implements DynamicMBean {
 	
-	private int objectId;
-	private ModelMBeanInfoSupport mbeanInfo;
+	private final int objectId;
+	private final ModelMBeanInfoSupport mbeanInfo;
+	private final IXmxService xmxService;
 
-	public JmxBridgeModelBean(int objectId, ModelMBeanInfoSupport mbeanInfo) {
+	public JmxBridgeModelBean(int objectId, ModelMBeanInfoSupport mbeanInfo, IXmxService xmxService) {
 		this.objectId = objectId;
 		this.mbeanInfo = mbeanInfo;
+		this.xmxService = xmxService;
 	}
 
 	@Override
@@ -95,7 +96,6 @@ class JmxBridgeModelBean implements DynamicMBean {
 	public Object invoke(String actionName, Object[] params, String[] signature)
 			throws MBeanException, ReflectionException {
 		
-		IXmxService xmxService = XmxManager.getService();
 		Object obj = getObject();
 		
 		MBeanOperationInfo foundOp = null;
@@ -139,7 +139,7 @@ class JmxBridgeModelBean implements DynamicMBean {
 	}
 
 	private Object getObject() {
-		Object obj = XmxManager.getService().getObjectById(objectId);
+		Object obj = xmxService.getObjectById(objectId);
 		if (obj == null) {
 			throw new XmxRuntimeException("Object not found. It may be already GC'ed: objectId=" + objectId);
 		}
@@ -147,7 +147,6 @@ class JmxBridgeModelBean implements DynamicMBean {
 	}
 	
 	private Field getField(String name) throws RuntimeOperationsException, MBeanException {
-		IXmxService xmxService = XmxManager.getService();
 		Object obj = getObject();
 		
 		ModelMBeanAttributeInfo foundAttr = mbeanInfo.getAttribute(name);
@@ -183,6 +182,4 @@ class JmxBridgeModelBean implements DynamicMBean {
 	public MBeanInfo getMBeanInfo() {
 		return mbeanInfo;
 	}
-	
-	
 }

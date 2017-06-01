@@ -2,7 +2,7 @@ package am.xmx.boot;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.lang.reflect.Method;
+import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Locale;
@@ -11,7 +11,7 @@ import java.util.Map;
 public class XmxLoader {
 	
 	private static ClassLoader xmxClassLoader;
-	private static Class<?> xmxManagerClass;
+	private static Class<? extends IXmxBootService> xmxManagerClass;
 	private static IXmxBootService xmxService;
 	private static boolean initialized = false;
 
@@ -28,6 +28,7 @@ public class XmxLoader {
 			logError("XMX is already initialized!");
 			return xmxService != null;
 		}
+		initialized = true;
 		
 		String homeDir = System.getProperty(IXmxBootService.XMX_HOME_PROP);
 		if (homeDir == null) {
@@ -68,23 +69,17 @@ public class XmxLoader {
 				try {
 					URL[] urls = new URL[]{coreImpls[0].toURI().toURL()};
 					xmxClassLoader = new URLClassLoader(urls, XmxLoader.class.getClassLoader());
-					xmxManagerClass = Class.forName("am.xmx.core.XmxManager", true, xmxClassLoader);
-					
-					Method getServiceMethod = xmxManagerClass.getDeclaredMethod("getBootService");
-					xmxService = (IXmxBootService) getServiceMethod.invoke(null);
-					
-					// agent may override important system properties, so do the override ASAP
-					xmxService.overrideSystemProperties(overrideProperties);
-					
+					xmxManagerClass = Class.forName("am.xmx.core.XmxManager", true, xmxClassLoader)
+							.asSubclass(IXmxBootService.class);
+
+					Constructor<? extends IXmxBootService> xmxManagerConstr =
+							xmxManagerClass.getDeclaredConstructor(Map.class);
+					xmxService = xmxManagerConstr.newInstance(overrideProperties);
+
 					if (!xmxService.isEnabled()) {
 						// disabled
 						xmxClassLoader = null;
 						xmxService = null;
-						logError("XMX functionality is disabled by configuration");
-					} else {
-						// start UI if needed (xmx-webui.war in Embedded Jetty or another server)
-						Method xmxManagerStartUIMethod = xmxManagerClass.getDeclaredMethod("startUI");
-						xmxManagerStartUIMethod.invoke(null);
 					}
 				} catch (Exception e) {
 					logError("Failed to find or instantiate XmxManager, XMX functionality is disabled");
@@ -123,12 +118,12 @@ public class XmxLoader {
 		}
 	}
 	
-	// TODO maybe check presence of common Logs via Class.forName() and use them?
+	private static String ERR_PREFIX = "[XMX ERROR!] ";
 	private static void logError(String message) {
-		System.err.println(message);
+		System.err.println(ERR_PREFIX + message);
 	}
 	private static void logError(String message, Throwable e) {
-		System.err.print(message + " :: ");
+		System.err.print(ERR_PREFIX + message + " :: ");
 		e.printStackTrace(System.err);
 	}
 }
