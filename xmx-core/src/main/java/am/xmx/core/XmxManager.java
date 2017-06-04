@@ -16,12 +16,15 @@ import am.xmx.dto.XmxObjectDetails.FieldInfo;
 import am.xmx.dto.XmxObjectDetails.MethodInfo;
 import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
+import am.xmx.log.LogbackConfigurator;
 import am.xmx.server.IXmxServerLauncher;
 import am.xmx.service.IXmxService;
 import com.gilecode.yagson.YaGson;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -55,6 +58,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	// initialized and overridden in the constructor
 	private final IXmxConfig config;
 	private MBeanServer jmxServer;
+	private final Logger logger;
 
 	private static XmxManager instance;
 
@@ -67,6 +71,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			instance = this;
 			config = XmxIniConfig.getDefault();
 			config.overrideSystemProperties(overrideSystemProps);
+			logger = configureLogging(config);
 
 			if (isEnabled()) {
 				startCleanerThreads();
@@ -79,10 +84,15 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				}
 
 			} else {
-				// TODO: logging
-				// log.warn("XMX functionality is disabled by configuration");
+				logger.warn("XMX functionality is disabled by configuration");
 			}
 		}
+	}
+
+	private Logger configureLogging(IXmxConfig config) {
+		LogbackConfigurator.setConfig(this.config);
+		// LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+		return LoggerFactory.getLogger(XmxManager.class);
 	}
 
 	private static final YaGson jsonMapper = new YaGson();
@@ -383,8 +393,8 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			classesInfoById.put(classId, classInfo);
 			classLoaderInfo.getClassIdsByName().put(className, classId);
 			appInfo.addManagedClassId(classId);
-			
-			System.err.println("transformClass: " + className);
+
+			logger.info("transformClass: {}", className);
 		}
 		
 		// actually transform the class - add registerObject to constructors

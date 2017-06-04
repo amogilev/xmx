@@ -9,9 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class XmxLoader {
-	
-	private static ClassLoader xmxClassLoader;
-	private static Class<? extends IXmxBootService> xmxManagerClass;
+
 	private static IXmxBootService xmxService;
 	private static boolean initialized = false;
 
@@ -42,7 +40,7 @@ public class XmxLoader {
 					logError("", e);
 				}
 			} else {
-				// seems there is now way to determine JAR location for for bootstrap class loader in
+				// seems there is no way to determine JAR location for for bootstrap class loader in
 				// this implementation of Java; 
 				// TODO check getResource for non-class resources
 			}
@@ -52,7 +50,6 @@ public class XmxLoader {
 		File xmxLibDir = homeDir == null ? null : new File(homeDir, "lib");
 		if (xmxLibDir == null || !xmxLibDir.isDirectory() || !new File(xmxLibDir, "xmx-core.jar").isFile()) {
 			logError("Could not find loadable XMX lib directory, XMX functionality is disabled");
-			xmxClassLoader = null;
 		} else {
 			// find xmx-core.jar, support optional version (like xmx-core-1.0.0.jar) 
 			File[] coreImpls = xmxLibDir.listFiles(new FilenameFilter() {
@@ -62,14 +59,14 @@ public class XmxLoader {
 					return name.equals("xmx-core.jar") || (name.startsWith("xmx-core-") && name.endsWith(".jar")); 
 				}
 			});
-			if (coreImpls.length == 0) {
+			if (coreImpls == null || coreImpls.length == 0) {
 				logError("Could not find xmx-core.jar, XMX functionality is disabled");
-				xmxClassLoader = null;
 			} else {
 				try {
 					URL[] urls = new URL[]{coreImpls[0].toURI().toURL()};
-					xmxClassLoader = new URLClassLoader(urls, XmxLoader.class.getClassLoader());
-					xmxManagerClass = Class.forName("am.xmx.core.XmxManager", true, xmxClassLoader)
+					ClassLoader xmxClassLoader = new URLClassLoader(urls, XmxLoader.class.getClassLoader());
+					Class<? extends IXmxBootService> xmxManagerClass =
+							Class.forName("am.xmx.core.XmxManager", true, xmxClassLoader)
 							.asSubclass(IXmxBootService.class);
 
 					Constructor<? extends IXmxBootService> xmxManagerConstr =
@@ -78,12 +75,10 @@ public class XmxLoader {
 
 					if (!xmxService.isEnabled()) {
 						// disabled
-						xmxClassLoader = null;
 						xmxService = null;
 					}
 				} catch (Exception e) {
 					logError("Failed to find or instantiate XmxManager, XMX functionality is disabled");
-					xmxClassLoader = null;
 					xmxService = null;
 					throw new RuntimeException(e);
 				}
@@ -106,7 +101,8 @@ public class XmxLoader {
 		
 		return classBuffer;
 	}
-	
+
+	@SuppressWarnings("unused")
 	public static void registerObject(Object obj, int classId) {
 		if (xmxService != null) {
 			try {
