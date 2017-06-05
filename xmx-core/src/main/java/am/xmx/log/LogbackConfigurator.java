@@ -1,6 +1,7 @@
 package am.xmx.log;
 
 import am.xmx.cfg.IXmxConfig;
+import am.xmx.cfg.Properties;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
@@ -29,7 +30,6 @@ public class LogbackConfigurator extends ContextAwareBase implements Configurato
 			Logger rootLogger = lc.getLogger("ROOT");
 			rootLogger.setLevel(Level.OFF);
 		} else {
-			// TODO configure root level
 			// TODO configure appender - FILE or CONSOLE
 			ConsoleAppender<ILoggingEvent> ca = new ConsoleAppender();
 			ca.setContext(lc);
@@ -46,11 +46,17 @@ public class LogbackConfigurator extends ContextAwareBase implements Configurato
 			ca.start();
 
 			Logger rootLogger = lc.getLogger("ROOT");
-			rootLogger.setLevel(Level.WARN);
+
+			String levelStr = config.getSystemProperty(Properties.GLOBAL_LOG_LEVEL).asString();
+			Level xmxLevel = Level.toLevel(levelStr);
+
+			// non-xmx lubs (e.g. Jetty) shall have WARN level at minimum
+			Level rootLevel = xmxLevel.isGreaterOrEqual(Level.WARN) ? xmxLevel : Level.WARN;
+			rootLogger.setLevel(rootLevel);
 			rootLogger.addAppender(ca);
 
 			Logger xmxLogger = lc.getLogger("am");
-			xmxLogger.setLevel(Level.DEBUG);
+			xmxLogger.setLevel(xmxLevel);
 		}
 	}
 }
