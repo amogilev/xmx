@@ -56,7 +56,9 @@ public interface ConfigDefaults {
 			new OptionDescription(Properties.GLOBAL_SORT_FIELDS, false, "Whether to sort shown class fields alphabetically"),
 			new OptionDescription(Properties.GLOBAL_LOG_LEVEL, "INFO", "The log level: OFF, ERROR, WARN, INFO or DEBUG"),
 			new OptionDescription(Properties.GLOBAL_LOG_DIR, "${user.home}/.xmx/logs/",
-				"The directory for log files or STDOUT or STDERR")
+				"The directory for log files or STDOUT or STDERR"),
+			new OptionDescription(Properties.GLOBAL_LOG_CFG_FILE, "",
+				"(optional) A custom Logback configuration XML file")
 			);
 	
 	SectionDescription SECTION_ALLAPPS_DESC = new SectionDescription(SectionsNamespace.SECTION_ALLAPPS, 
