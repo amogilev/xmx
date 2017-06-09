@@ -160,7 +160,12 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		}
 	}
 
-	
+	@Override
+	public File getConfigurationFile() {
+		return ini.getFile();
+	}
+
+
 	//
 	// Implementation of IConfigManager is not implemented yet
 	// 

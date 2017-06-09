@@ -1,5 +1,6 @@
 package am.xmx.cfg;
 
+import java.io.File;
 import java.util.Map;
 
 /**
@@ -35,5 +36,9 @@ public interface IXmxConfig extends IXmxPropertiesSource /*, IConfigManager */ {
 	 * @param properties properties to override
 	 */
 	void overrideSystemProperties(Map<String, String> properties);
-	
+
+	/**
+	 * Return the configuration file used
+	 */
+	File getConfigurationFile();
 }

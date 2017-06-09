@@ -95,10 +95,6 @@ public class XmxAgent {
 			if (success) {
 				// initialize transformer
 				instr.addTransformer(new XmxClassTransformer());
-				System.err.println("XmxAgent is enabled");
-			} else {
-				// disabled or failed 
-				return;
 			}
 		} catch (Exception e) {
 			System.err.println("Failed to start XmxAgent");

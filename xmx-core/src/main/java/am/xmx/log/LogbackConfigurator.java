@@ -40,12 +40,20 @@ public class LogbackConfigurator extends ContextAwareBase implements Configurato
 		config = newConfig;
 	}
 
+	private static final String OFF_STATUS = "Logging is OFF";
+	private static String lastConfigureStatus;
+
+	public static String getLastStatus() {
+		return lastConfigureStatus;
+	}
+
 	@Override
 	public void configure(LoggerContext lc) {
 		if (config == null) {
 			// pre-mature configuration, ignore
 			Logger rootLogger = lc.getLogger("ROOT");
 			rootLogger.setLevel(Level.OFF);
+			lastConfigureStatus = OFF_STATUS;
 			return;
 		}
 		addCustomConverters(lc);
@@ -73,6 +81,7 @@ public class LogbackConfigurator extends ContextAwareBase implements Configurato
 		xmxLogger.setLevel(xmxLevel);
 
 		StatusPrinter.printInCaseOfErrorsOrWarnings(lc);
+		lastConfigureStatus = "Logging " + xmxLevel + " events to " + logOut;
 	}
 
 	private boolean configureUsingFile(LoggerContext lc, String logbackCfgPath) {
@@ -106,6 +115,7 @@ public class LogbackConfigurator extends ContextAwareBase implements Configurato
 
 		// success
 		StatusPrinter.printInCaseOfErrorsOrWarnings(lc);
+		lastConfigureStatus = "Logging is configured by " + cfgFile;
 		return true;
 	}
 

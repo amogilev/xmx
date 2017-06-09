@@ -74,6 +74,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			logger = configureLogging(config);
 
 			if (isEnabled()) {
+				printWelcomeMessage();
 				startCleanerThreads();
 				if (config.getSystemProperty(Properties.GLOBAL_JMX_ENABLED).asBool()) {
 					// TODO maybe create a custom server instead, with custom connectors etc.
@@ -87,6 +88,20 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				logger.warn("XMX functionality is disabled by configuration");
 			}
 		}
+	}
+
+	private void printWelcomeMessage() {
+		StringBuilder sb = new StringBuilder(1024);
+		String prefix = "=[XMX]= ";
+		String newline = System.lineSeparator();
+		sb.append(prefix).append("XMX agent is started using configuration in ")
+				.append(config.getConfigurationFile()).append(newline);
+		sb.append(prefix).append(LogbackConfigurator.getLastStatus()).append(newline);
+		if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
+			String webPort = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT).asString();
+			sb.append(prefix).append("Web console will be started at http://localhost:").append(webPort).append(newline);
+		}
+		System.out.print(sb.toString());
 	}
 
 	private Logger configureLogging(IXmxConfig config) {
