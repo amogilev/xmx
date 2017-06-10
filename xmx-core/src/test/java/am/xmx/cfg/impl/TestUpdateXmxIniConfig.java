@@ -1,26 +1,21 @@
 package am.xmx.cfg.impl;
 
-import static am.xmx.cfg.impl.ConfigDefaults.*;
-import static am.ucfg.impl.IniSettings.*;
-import static org.junit.Assert.*;
+import am.ucfg.OptionDescription;
+import am.ucfg.SectionDescription;
+import am.xmx.cfg.Properties;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import org.junit.Test;
-
-import am.ucfg.OptionDescription;
-import am.ucfg.SectionDescription;
-import am.xmx.cfg.Properties;
+import static am.ucfg.impl.IniSettings.*;
+import static am.xmx.cfg.impl.ConfigDefaults.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class TestUpdateXmxIniConfig {
 	
@@ -316,7 +311,10 @@ public class TestUpdateXmxIniConfig {
 			result.add("#" + AUTO_COMMENT_PREFIX + line);
 		}
 		if (includeDefaultCommentedValue) {
-			result.add("#" + AUTO_PREFIX + " " + option.getName()+ " = " + option.getDefautValue());
+			result.add("#" + AUTO_PREFIX + " " + option.getName() +
+					(option.getDefautValue().isEmpty() ? " =" : " = ") +
+					option.getDefautValue());
+
 		}
 		if (newValue != null) {
 			result.add(option.getName() + " = " + newValue);

@@ -240,11 +240,13 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 			for (String commentLine : optDesc.getComments()) {
 				sb.append(AUTO_COMMENT_PREFIX).append(commentLine).append(lineSeparator);
 			}
-			sb.append(AUTO_PREFIX).append(' ').append(optDesc.getName()).append(" = ").append(optDesc.getDefautValue()).append(lineSeparator);
+			sb.append(AUTO_PREFIX).append(' ').append(optDesc.getName())
+					.append(optDesc.getDefautValue().isEmpty() ? " =" : " = ")
+					.append(optDesc.getDefautValue()).append(lineSeparator);
 		}
 		return sb.toString();
 	}
-	
+
 	private String generateComment(List<String> autoComments, List<String> manualComments) {
 		StringBuilder sb = new StringBuilder();
 		if (autoComments != null) {
