@@ -9,6 +9,7 @@ import org.ini4j.*;
 import org.ini4j.Profile.Section;
 import org.ini4j.spi.IniBuilder;
 import org.ini4j.spi.IniFormatter;
+import org.slf4j.Logger;
 
 import java.io.*;
 import java.util.*;
@@ -30,13 +31,15 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 	private final Map<String, SectionDescription> defaultSectionsByName;
 	private final Map<String, SectionDescription> defaultHiddenSectionsByName;
 	private final String lineSeparator;
-	
+	private final Logger logger;
+
 	public UpdatingIniConfigLoader(IConfigInfoProvider cfgInfoProvider) {
 		this.cfgInfoProvider = cfgInfoProvider;
 		this.lineSeparator = cfgInfoProvider.getLineSeparator();
 		
 		this.defaultSectionsByName = mapSectionsByName(cfgInfoProvider.getAllDefaultSectionsDescriptions());
 		this.defaultHiddenSectionsByName = mapSectionsByName(cfgInfoProvider.getAllDefaultHiddenSectionsDescriptions());
+		this.logger = cfgInfoProvider.getLogger(UpdatingIniConfigLoader.class);
 	}
 
 	private static Map<String, SectionDescription> mapSectionsByName(List<SectionDescription> sections) {
@@ -55,7 +58,7 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 		Ini ini = makeIni();
 		ini.setFile(iniFile);
 		
-		boolean updated = false;
+		boolean updated;
 		
 		// make "EnhancedIni*" classes available by context class loader, as they are loaded using Reflection
 		ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
@@ -77,7 +80,7 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 			
 		} catch (IOException e) {
 			// report error but continue with default in-memory config
-			cfgInfoProvider.logError("Failed to read configuration file: " + e);
+			logger.error("Failed to read configuration file", e);
 			updateConfig(ini);
 			updated = true;
 		} finally {
@@ -108,7 +111,7 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 			sectionsWithOptionsByName.add(Pair.of(sectionEntry.getKey(), optionsByName));
 		}
 		
-		return new ConfigUpdateResult<Ini>(updated, sectionsWithOptionsByName, ini);
+		return new ConfigUpdateResult<>(updated, sectionsWithOptionsByName, ini);
 	}
 	
 	/**
@@ -444,7 +447,7 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 				OptionDescription optionDesc = sectionDesc.getOptionsByName().get(optionName);
 				if (optionDesc == null) {
 					if (line instanceof OptionLine && !cfgInfoProvider.isSupportedOption(sectionDesc.getName(), optionName)) {
-						cfgInfoProvider.logWarning("Configuration: removing unsupported option " + optionName);
+						logger.warn("Configuration: removing unsupported option {}", optionName);
 						s.remove(optionName);
 					}
 					
@@ -554,7 +557,7 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 			Entry<String, String> entry = entriesIt.next();
 			String optionName = entry.getKey();
 			if (!cfgInfoProvider.isSupportedOption(sectionName, optionName)) {
-				cfgInfoProvider.logWarning("Configuration: removing non-existing option " + optionName);
+				logger.warn("Configuration: removing non-existing option {}", optionName);
 				section.remove(optionName);
 				updated = true;
 			}
@@ -562,7 +565,7 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 		
 		if (section.isEmpty()) {
 			// remove empty user sections (as this is not one of default sections!)
-			cfgInfoProvider.logWarning("Configuration: removing empty section '" + sectionName + "'");
+			logger.warn("Configuration: removing empty section '{}'", sectionName);
 			ini.remove(section);
 			updated = true;
 		}

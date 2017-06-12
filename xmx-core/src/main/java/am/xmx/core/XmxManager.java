@@ -106,8 +106,10 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 
 	private Logger configureLogging(IXmxConfig config) {
 		LogbackConfigurator.setConfig(this.config);
-		// LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
-		return LoggerFactory.getLogger(XmxManager.class);
+		// the following line actually initializes SLF4J/Logback logging
+		Logger logger = LoggerFactory.getLogger(XmxManager.class);
+		config.onLoggingInitialized();
+		return logger;
 	}
 
 	private static final YaGson jsonMapper = new YaGson();

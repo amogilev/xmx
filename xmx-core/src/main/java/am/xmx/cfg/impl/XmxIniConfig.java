@@ -165,6 +165,10 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		return ini.getFile();
 	}
 
+	@Override
+	public void onLoggingInitialized() {
+		cfgInfoProvider.onLoggingInitialized();
+	}
 
 	//
 	// Implementation of IConfigManager is not implemented yet

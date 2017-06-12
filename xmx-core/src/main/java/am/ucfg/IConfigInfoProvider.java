@@ -1,5 +1,7 @@
 package am.ucfg;
 
+import org.slf4j.Logger;
+
 import java.util.List;
 
 /**
@@ -36,16 +38,6 @@ public interface IConfigInfoProvider {
 	boolean isSupportedOption(String sectionName, String optionName);
 	
 	/**
-	 * Reports an error found during loading of the configuration file.
-	 */
-	void logError(String message);
-	
-	/**
-	 * Reports a warning found during loading of the configuration file.
-	 */
-	void logWarning(String message);
-
-	/**
 	 * Returns the line separator to use in configuration file.
 	 */
 	String getLineSeparator();
@@ -55,4 +47,16 @@ public interface IConfigInfoProvider {
 	 */
 	String[] getFileComments();
 
+	/**
+	 * Returns a logger to use for the logging class.
+	 * <p/>
+	 * Used to defer logging events of the configuration reader until the configuration is completely read, processed
+	 * and logging is initialized (as logging configuration may depend on the configuration being read)
+	 */
+	Logger getLogger(Class<?> loggingClass);
+
+	/**
+	 * Invoked when logging is initialized and so the deferred logging events may be printed.
+	 */
+	void onLoggingInitialized();
 }

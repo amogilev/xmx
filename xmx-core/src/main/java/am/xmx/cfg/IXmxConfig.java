@@ -41,4 +41,9 @@ public interface IXmxConfig extends IXmxPropertiesSource /*, IConfigManager */ {
 	 * Return the configuration file used
 	 */
 	File getConfigurationFile();
+
+	/**
+	 * Invoked after the logging is initialized. If there are deferred log events, they shall be replayed now.
+	 */
+	void onLoggingInitialized();
 }

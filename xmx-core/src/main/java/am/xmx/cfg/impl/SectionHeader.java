@@ -1,8 +1,8 @@
 package am.xmx.cfg.impl;
 
-import java.util.regex.Pattern;
-
 import am.xmx.cfg.CfgEntityLevel;
+
+import java.util.regex.Pattern;
 
 /**
  * Parsed name for System, App-level, Class-level or Member-level configuration section. 
@@ -22,6 +22,7 @@ class SectionHeader {
 	String memberSpec;
 	
 	SectionHeader() {
+		initLevel();
 	}
 
 	SectionHeader(Pattern appPattern, Pattern classPattern,
