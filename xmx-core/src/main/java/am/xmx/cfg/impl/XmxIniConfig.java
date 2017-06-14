@@ -96,17 +96,20 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 	
 	
 	/**
-	 * Loads xmx.ini file from ${user.home} location, or creates
+	 * Loads xmx.ini file from '${user.home}/.xmx/' location, or creates
 	 * it and fills with default values. 
 	 * 
 	 * @return the configuration to use
 	 * 
-	 * @throws IOException if xmx.ini file in user home folder is corrupted, or cannot be written 
+	 * @throws IOException if the xmx.ini file is corrupted, or cannot be written
 	 */
 	public static XmxIniConfig getDefault() {
-		File userHome = new File(System.getProperty("user.home"));
-		File iniFile = new File(userHome, XMX_INI);
-		
+		File xmxDir = new File(System.getProperty("user.home") +
+				File.separator + ".xmx");
+		if (!xmxDir.exists()) {
+			xmxDir.mkdirs();
+		}
+		File iniFile = new File(xmxDir, XMX_INI);
 		return load(iniFile, true);
 	}
 
