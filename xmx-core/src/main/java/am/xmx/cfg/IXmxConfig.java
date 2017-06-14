@@ -1,5 +1,7 @@
 package am.xmx.cfg;
 
+import am.ucfg.ConfigLoadStatus;
+
 import java.io.File;
 import java.util.Map;
 
@@ -46,4 +48,9 @@ public interface IXmxConfig extends IXmxPropertiesSource /*, IConfigManager */ {
 	 * Invoked after the logging is initialized. If there are deferred log events, they shall be replayed now.
 	 */
 	void onLoggingInitialized();
+
+	/**
+	 * Returns the loading status
+	 */
+	ConfigLoadStatus getLoadStatus();
 }

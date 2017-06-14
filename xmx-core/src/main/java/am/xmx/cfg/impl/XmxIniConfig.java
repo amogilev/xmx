@@ -1,5 +1,6 @@
 package am.xmx.cfg.impl;
 
+import am.ucfg.ConfigLoadStatus;
 import am.ucfg.IConfigInfoProvider;
 import am.ucfg.IUpdatingConfigLoader;
 import am.ucfg.IUpdatingConfigLoader.ConfigUpdateResult;
@@ -26,9 +27,9 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 	private static final String XMX_INI = "xmx.ini";
 	
 	@SuppressWarnings("unused")
-	private Ini ini;
+	private final Ini ini;
 	
-	private Map<String, String> systemOptions;
+	private final Map<String, String> systemOptions;
 	
 	/**
 	 * All sections listed in reverse order. 
@@ -37,17 +38,20 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 	 * overrides the same property in other sections. Due to reverse order
 	 * of this list, the first found property in a matching section will be used. 
 	 */
-	private List<SectionWithHeader> sectionsReversed;
-	
+	private final List<SectionWithHeader> sectionsReversed;
+	private final ConfigLoadStatus loadStatus;
+
 	private ConcurrentHashMap<String, IAppPropertiesSource> appConfigs = new ConcurrentHashMap<>();
 	
 	private static IConfigInfoProvider cfgInfoProvider = new ConfigDefaultsInfoProvider();
 	private static IUpdatingConfigLoader<Ini> cfgLoader = new UpdatingIniConfigLoader(cfgInfoProvider);
 
-	private XmxIniConfig(Ini ini, Map<String, String> systemOptions, List<SectionWithHeader> sectionsReversed) {
+	private XmxIniConfig(Ini ini, Map<String, String> systemOptions, List<SectionWithHeader> sectionsReversed,
+						 ConfigLoadStatus loadStatus) {
 		this.ini = ini;
 		this.systemOptions = systemOptions;
 		this.sectionsReversed = sectionsReversed;
+		this.loadStatus = loadStatus;
 	}
 	
 	/**
@@ -87,7 +91,7 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		sections.trimToSize();
 		Collections.reverse(sections);
 		
-		return new XmxIniConfig(result.getRawConfig(), systemOptions, sections);
+		return new XmxIniConfig(result.getRawConfig(), systemOptions, sections, result.getStatus());
 	}
 	
 	
@@ -168,6 +172,11 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 	@Override
 	public void onLoggingInitialized() {
 		cfgInfoProvider.onLoggingInitialized();
+	}
+
+	@Override
+	public ConfigLoadStatus getLoadStatus() {
+		return loadStatus;
 	}
 
 	//

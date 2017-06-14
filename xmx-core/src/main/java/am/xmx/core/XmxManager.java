@@ -2,6 +2,7 @@ package am.xmx.core;
 
 
 import am.specr.SpeculativeProcessorFactory;
+import am.ucfg.ConfigLoadStatus;
 import am.xmx.boot.IXmxBootService;
 import am.xmx.cfg.IAppPropertiesSource;
 import am.xmx.cfg.IXmxConfig;
@@ -94,8 +95,15 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		StringBuilder sb = new StringBuilder(1024);
 		String prefix = "=[XMX]= ";
 		String newline = System.lineSeparator();
+
+		ConfigLoadStatus cfgStatus = config.getLoadStatus();
 		sb.append(prefix).append("XMX agent is started using configuration in ")
-				.append(config.getConfigurationFile()).append(newline);
+				.append(config.getConfigurationFile());
+		if (cfgStatus != ConfigLoadStatus.SUCCESS) {
+			sb.append(" (").append(cfgStatus).append(")");
+		}
+		sb.append(newline);
+
 		sb.append(prefix).append(LogbackConfigurator.getLastStatus()).append(newline);
 		if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
 			String webPort = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT).asString();

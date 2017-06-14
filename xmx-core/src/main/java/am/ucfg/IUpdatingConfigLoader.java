@@ -23,9 +23,9 @@ public interface IUpdatingConfigLoader<T> {
 	class ConfigUpdateResult<T> {
 		
 		/**
-		 * Whether the update was required.
+		 * The loading result status.
 		 */
-		private boolean isUpdated;
+		private final ConfigLoadStatus status;
 		
 		/**
 		 * Ordered list of section represented as the section name and all options of that section;
@@ -33,24 +33,20 @@ public interface IUpdatingConfigLoader<T> {
 		 * <p/>
 		 * The options and/or sections may override each other; in case of duplication, the latter one is used.
 		 */
-		private List<Pair<String, Map<String, String>>> sectionsWithOptionsByName;
+		private final List<Pair<String, Map<String, String>>> sectionsWithOptionsByName;
 		
 		/**
 		 * Loaded configuration object, with updated comments but without 
 		 * the default options. The actual type is implementation-dependent.   
 		 */
-		private T rawConfig;
+		private final T rawConfig;
 		
-		public ConfigUpdateResult(boolean isUpdated,
+		public ConfigUpdateResult(ConfigLoadStatus status,
 								  List<Pair<String, Map<String, String>>> sectionsWithOptionsByName,
 								  T rawConfig) {
-			this.isUpdated = isUpdated;
+			this.status = status;
 			this.sectionsWithOptionsByName = sectionsWithOptionsByName;
 			this.rawConfig = rawConfig;
-		}
-
-		public boolean isUpdated() {
-			return isUpdated;
 		}
 
 		public List<Pair<String, Map<String, String>>> getSectionsWithOptionsByName() {
@@ -59,6 +55,10 @@ public interface IUpdatingConfigLoader<T> {
 
 		public T getRawConfig() {
 			return rawConfig;
+		}
+
+		public ConfigLoadStatus getStatus() {
+			return status;
 		}
 	}
 	

@@ -1,9 +1,6 @@
 package am.ucfg.impl;
 
-import am.ucfg.IConfigInfoProvider;
-import am.ucfg.IUpdatingConfigLoader;
-import am.ucfg.OptionDescription;
-import am.ucfg.SectionDescription;
+import am.ucfg.*;
 import am.xmx.util.Pair;
 import org.ini4j.*;
 import org.ini4j.Profile.Section;
@@ -58,7 +55,7 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 		Ini ini = makeIni();
 		ini.setFile(iniFile);
 		
-		boolean updated;
+		ConfigLoadStatus status;
 		
 		// make "EnhancedIni*" classes available by context class loader, as they are loaded using Reflection
 		ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
@@ -67,7 +64,8 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 		try {
 			// create if missing
 			boolean created = iniFile.createNewFile();
-			
+			boolean updated;
+
 			try (FileInputStream in = new FileInputStream(iniFile)) {
 				// avoid using Ini4J's load(File), to have more reliable streams closing
 				ini.load(in);
@@ -77,12 +75,14 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 			if (created || (rewriteAllowed && updated)) {
 				ini.store();
 			}
+
+			status = created ? ConfigLoadStatus.NEW : (updated ? ConfigLoadStatus.UPDATED : ConfigLoadStatus.SUCCESS);
 			
 		} catch (IOException e) {
 			// report error but continue with default in-memory config
 			logger.error("Failed to read configuration file", e);
 			updateConfig(ini);
-			updated = true;
+			status = ConfigLoadStatus.FAIL;
 		} finally {
 			Thread.currentThread().setContextClassLoader(prevContextClassLoader);
 		}
@@ -91,7 +91,9 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 		for (Section section : ini.values()) {
 			String sectionName = section.getName();
 			Map<String, String> optionsByName;
-			
+
+			// convert "default" options (which are just comments in Ini) to actual options, but do not write
+			//   them back to file
 			SectionDescription sectionDesc = defaultSectionsByName.get(sectionName);
 			if (sectionDesc != null) {
 				// this section may contain default options
@@ -111,7 +113,7 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 			sectionsWithOptionsByName.add(Pair.of(sectionEntry.getKey(), optionsByName));
 		}
 		
-		return new ConfigUpdateResult<>(updated, sectionsWithOptionsByName, ini);
+		return new ConfigUpdateResult<>(status, sectionsWithOptionsByName, ini);
 	}
 	
 	/**
