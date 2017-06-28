@@ -1,6 +1,6 @@
 package am.xmx.agent;
 
-import am.xmx.boot.XmxLoader;
+import am.xmx.boot.XmxProxy;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -42,7 +42,7 @@ public class XmxClassTransformer implements ClassFileTransformer {
 		}
 
 		try {
-			byte[] transformClass = XmxLoader.transformClass(loader, className, classfileBuffer, classBeingRedefined);
+			byte[] transformClass = XmxProxy.transformClass(loader, className, classfileBuffer, classBeingRedefined);
 			return transformClass;
 		} catch (Throwable e) {
 			e.printStackTrace();

@@ -2,12 +2,10 @@ package am.xmx.core;
 
 
 import am.specr.SpeculativeProcessorFactory;
-import am.ucfg.ConfigLoadStatus;
 import am.xmx.boot.IXmxBootService;
 import am.xmx.cfg.IAppPropertiesSource;
 import am.xmx.cfg.IXmxConfig;
 import am.xmx.cfg.Properties;
-import am.xmx.cfg.impl.XmxIniConfig;
 import am.xmx.core.jmx.JmxSupport;
 import am.xmx.core.type.IMethodInfoService;
 import am.xmx.core.type.MethodInfoServiceImpl;
@@ -17,7 +15,6 @@ import am.xmx.dto.XmxObjectDetails.FieldInfo;
 import am.xmx.dto.XmxObjectDetails.MethodInfo;
 import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
-import am.xmx.log.LogbackConfigurator;
 import am.xmx.server.IXmxServerLauncher;
 import am.xmx.service.IXmxService;
 import com.gilecode.yagson.YaGson;
@@ -51,6 +48,8 @@ import static am.xmx.service.XmxUtils.safeToString;
 
 public final class XmxManager implements IXmxService, IXmxBootService {
 
+	private final static Logger logger = LoggerFactory.getLogger(XmxManager.class);
+
 	// how many milliseconds to wait before starting embedded web UI
 	private static final int UI_START_DELAY = 10000;
 
@@ -59,65 +58,21 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	// initialized and overridden in the constructor
 	private final IXmxConfig config;
 	private MBeanServer jmxServer;
-	private final Logger logger;
 
-	private static XmxManager instance;
-
-	public XmxManager(Map<String, String> overrideSystemProps) {
-		synchronized (XmxManager.class) {
-			if (instance != null) {
-				throw new IllegalStateException("XMX is already initialized");
+	XmxManager(IXmxConfig config) {
+		this.config = config;
+		if (isEnabled()) {
+			startCleanerThreads();
+			if (config.getSystemProperty(Properties.GLOBAL_JMX_ENABLED).asBool()) {
+				// TODO maybe create a custom server instead, with custom connectors etc.
+				jmxServer = ManagementFactory.getPlatformMBeanServer();
 			}
-
-			instance = this;
-			config = XmxIniConfig.getDefault();
-			config.overrideSystemProperties(overrideSystemProps);
-			logger = configureLogging(config);
-
-			if (isEnabled()) {
-				printWelcomeMessage();
-				startCleanerThreads();
-				if (config.getSystemProperty(Properties.GLOBAL_JMX_ENABLED).asBool()) {
-					// TODO maybe create a custom server instead, with custom connectors etc.
-					jmxServer = ManagementFactory.getPlatformMBeanServer();
-				}
-				if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
-					startUI();
-				}
-
-			} else {
-				logger.warn("XMX functionality is disabled by configuration");
+			if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
+				startUI();
 			}
+		} else {
+			logger.warn("XMX functionality is disabled by configuration");
 		}
-	}
-
-	private void printWelcomeMessage() {
-		StringBuilder sb = new StringBuilder(1024);
-		String prefix = "=[XMX]= ";
-		String newline = System.lineSeparator();
-
-		ConfigLoadStatus cfgStatus = config.getLoadStatus();
-		sb.append(prefix).append("XMX agent is started using configuration in ")
-				.append(config.getConfigurationFile());
-		if (cfgStatus != ConfigLoadStatus.SUCCESS) {
-			sb.append(" (").append(cfgStatus).append(")");
-		}
-		sb.append(newline);
-
-		sb.append(prefix).append(LogbackConfigurator.getLastStatus()).append(newline);
-		if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
-			String webPort = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT).asString();
-			sb.append(prefix).append("Web console will be started at http://localhost:").append(webPort).append(newline);
-		}
-		System.out.print(sb.toString());
-	}
-
-	private Logger configureLogging(IXmxConfig config) {
-		LogbackConfigurator.setConfig(this.config);
-		// the following line actually initializes SLF4J/Logback logging
-		Logger logger = LoggerFactory.getLogger(XmxManager.class);
-		config.onLoggingInitialized();
-		return logger;
 	}
 
 	private static final YaGson jsonMapper = new YaGson();
@@ -401,7 +356,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			assert classInfo != null : "Should have been transformed already: " + classBeingRedefined;
 			classId = classInfo.getId();
 			
-			System.err.println("re-transformClass: " + className);
+			logger.info("re-transformClass: {}", className);
 		} else {
 			// initialize known properties of managed class, e.g. class ID and name
 			// other properties may require Class itself, and will be initialized later
@@ -724,10 +679,6 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			json = jsonMapper.toJson(obj);
 		} catch (Throwable e) {
 			json = "N/A: " + e;
-			
-			// TODO there are lot of StackOverflowError in Gson serialization
-			// better switch to impl which supports recursion limit
-			System.err.println(e);
 		}
 */
 		return new XmxObjectInfo(id, toDto(ci), obj.toString(), json);
@@ -818,10 +769,5 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		}, "XMX Embedded Server Startup Thread");
 		startupThread.setDaemon(true);
 		startupThread.start();
-	}
-
-	// invoked from Web UI
-	public static IXmxService getServiceInstance() {
-		return instance;
 	}
 }

@@ -2,13 +2,13 @@ package am.xmx.boot;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Locale;
 import java.util.Map;
 
-public class XmxLoader {
+public class XmxProxy {
 
 	private static IXmxBootService xmxService;
 	private static boolean initialized = false;
@@ -31,7 +31,7 @@ public class XmxLoader {
 		String homeDir = System.getProperty(IXmxBootService.XMX_HOME_PROP);
 		if (homeDir == null) {
 			// not proper "agent" start... but still try to determine by this jar location
-			URL jarLocation = XmxLoader.class.getProtectionDomain().getCodeSource().getLocation();
+			URL jarLocation = XmxProxy.class.getProtectionDomain().getCodeSource().getLocation();
 			if (jarLocation != null) {
 				try {
 					homeDir = new File(jarLocation.toURI()).getParentFile().getParentFile().getAbsolutePath();
@@ -64,14 +64,13 @@ public class XmxLoader {
 			} else {
 				try {
 					URL[] urls = new URL[]{coreImpls[0].toURI().toURL()};
-					ClassLoader xmxClassLoader = new URLClassLoader(urls, XmxLoader.class.getClassLoader());
-					Class<? extends IXmxBootService> xmxManagerClass =
-							Class.forName("am.xmx.core.XmxManager", true, xmxClassLoader)
-							.asSubclass(IXmxBootService.class);
+					ClassLoader xmxClassLoader = new URLClassLoader(urls, XmxProxy.class.getClassLoader());
 
-					Constructor<? extends IXmxBootService> xmxManagerConstr =
-							xmxManagerClass.getDeclaredConstructor(Map.class);
-					xmxService = xmxManagerConstr.newInstance(overrideProperties);
+					Class<?> xmxLoaderClass =
+							Class.forName("am.xmx.core.XmxLoader", true, xmxClassLoader);
+					Method xmxCreateSvcMethod =
+							xmxLoaderClass.getDeclaredMethod("createXmxService", Map.class);
+					xmxService = (IXmxBootService) xmxCreateSvcMethod.invoke(xmxLoaderClass, overrideProperties);
 
 					if (!xmxService.isEnabled()) {
 						// disabled
@@ -91,6 +90,7 @@ public class XmxLoader {
 	public static byte[] transformClass(ClassLoader classLoader, String className, 
 			byte[] classBuffer, Class<?> classBeingRedefined) {
 		if (xmxService != null) {
+			// FIXME: move try/catch to XmxManager?
 			try {
 				return xmxService.transformClassIfInterested(classLoader, className, classBuffer, classBeingRedefined);
 			} catch (RuntimeException e) {
@@ -105,6 +105,7 @@ public class XmxLoader {
 	@SuppressWarnings("unused")
 	public static void registerObject(Object obj, int classId) {
 		if (xmxService != null) {
+			// FIXME: move try/catch to XmxManager?
 			try {
 				xmxService.registerObject(obj, classId);
 			} catch (RuntimeException e) {

@@ -1,6 +1,6 @@
 package am.xmx.agent;
 
-import am.xmx.boot.XmxLoader;
+import am.xmx.boot.XmxProxy;
 
 import java.io.*;
 import java.lang.instrument.Instrumentation;
@@ -61,8 +61,8 @@ public class XmxAgent {
 					}
 					
 					copyContents(distrImageZip, agentHomeDir);
-					double delta = (System.currentTimeMillis() - copyStart) / 1000.0;
-					System.err.println("XMX distribution extraction completed in " + delta + " sec");
+//					double delta = (System.currentTimeMillis() - copyStart) / 1000.0;
+//					System.err.println("XMX distribution extraction completed in " + delta + " sec");
 				}
 			} else {
 				// normal xmx-agent.jar run, check if run in XMX_HOME/bin
@@ -103,8 +103,8 @@ public class XmxAgent {
 	}
 
 	private static boolean initializeLoader(Map<String, String> agentProperties) {
-		// no additional errors required if failed or disabled - all printed by XmxLoader
-		return XmxLoader.initialize(agentProperties);
+		// no additional errors required if failed or disabled - all printed by XmxProxy
+		return XmxProxy.initialize(agentProperties);
 	}
 
 	private static Map<String, String> parseArguments(String agentArgs) {
@@ -155,7 +155,7 @@ public class XmxAgent {
 
 	// TODO support starting agent after VM startup
 	public static void agentmain(String agentArgs, Instrumentation instr) {
-		System.err.println("XmxAgent agentmain");
+		System.err.println("NOT IMPLEMENTED YET: XmxAgent agentmain");
 	}
 	
 	/**

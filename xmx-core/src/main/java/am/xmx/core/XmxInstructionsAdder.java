@@ -68,7 +68,7 @@ public class XmxInstructionsAdder extends ClassVisitor {
 						}
 						
 						
-						super.visitMethodInsn(Opcodes.INVOKESTATIC, "am/xmx/boot/XmxLoader", "registerObject", "(Ljava/lang/Object;I)V", false);
+						super.visitMethodInsn(Opcodes.INVOKESTATIC, "am/xmx/boot/XmxProxy", "registerObject", "(Ljava/lang/Object;I)V", false);
 					}
 					super.visitInsn(opcode);
 				}
