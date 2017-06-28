@@ -1,7 +1,12 @@
 package am.xmx.cfg.impl;
 
-import static org.junit.Assert.*;
+import am.xmx.cfg.IAppPropertiesSource;
+import am.xmx.cfg.Properties;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -9,12 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import am.xmx.cfg.IAppPropertiesSource;
-import am.xmx.cfg.Properties;
+import static org.junit.Assert.*;
 
 public class TestDefaultXmxIniConfig {
 	
@@ -64,7 +64,7 @@ public class TestDefaultXmxIniConfig {
 		assertTrue(appConfig.getClassProperty("MyManager", Properties.SP_MANAGED).asBool());
 		
 		// check that file is created
-		Path iniFile = testFolder.resolve("xmx.ini");
+		Path iniFile = testFolder.resolve(".xmx" + File.separator + "xmx.ini");
 		assertTrue(Files.exists(iniFile));
 		assertTrue(Files.size(iniFile) > 0);
 		
