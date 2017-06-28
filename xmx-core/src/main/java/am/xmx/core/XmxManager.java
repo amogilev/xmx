@@ -190,6 +190,15 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	 */
 	@Override
 	public void registerObject(Object obj, int classId) {
+		try {
+			_registerObject(obj, classId);
+		} catch (RuntimeException e) {
+			// not really expected. Try-catch used to make sure that XMX bugs do not break users' apps
+			logger.error("Failed to register object, classId={}", classId, e);
+		}
+	}
+
+	private void _registerObject(Object obj, int classId) {
 		Class<?> objClass = obj.getClass();
 		
 		ManagedClassInfo classInfo = classesInfoById.get(classId);
@@ -322,6 +331,16 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	 */
 	@Override
 	public byte[] transformClassIfInterested(ClassLoader classLoader, String bcClassName, 
+			byte[] classBuffer, Class<?> classBeingRedefined) {
+		try {
+			return _transformClassIfInterested(classLoader, bcClassName, classBuffer, classBeingRedefined);
+		} catch (RuntimeException e) {
+			logger.error("Failed to register class {}", bcClassName, e);
+			return classBuffer;
+		}
+	}
+
+	private byte[] _transformClassIfInterested(ClassLoader classLoader, String bcClassName,
 			byte[] classBuffer, Class<?> classBeingRedefined) {
 		String appName = obtainAppNameByLoader(classLoader);
 		IAppPropertiesSource appConfig = config.getAppConfig(appName);

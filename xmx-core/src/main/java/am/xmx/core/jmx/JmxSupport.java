@@ -3,6 +3,8 @@ package am.xmx.core.jmx;
 import am.xmx.cfg.IXmxPropertiesSource;
 import am.xmx.core.ManagedClassInfo;
 import am.xmx.service.IXmxService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.management.*;
 import javax.management.modelmbean.*;
@@ -16,6 +18,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class JmxSupport {
+
+	private final static Logger logger = LoggerFactory.getLogger(JmxSupport.class);
 
 	public static ModelMBeanInfoSupport createModelForClass(Class<?> objClass, String appName, 
 			List<Method> managedMethods, List<Field> managedFields,
@@ -95,8 +99,7 @@ public class JmxSupport {
 			return mbi;
 
 		} catch (Exception e) {
-			System.err.println("Failed to create JMX model for " + objClass.getName());
-			e.printStackTrace();
+			logger.error("Failed to create JMX model for {}", objClass.getName(), e);
 			return null;
 		}
 	}
@@ -176,8 +179,7 @@ public class JmxSupport {
 			
 			return objectName;
 		} catch (Exception e) {
-			System.err.println("Failed to register object as JMX bean; class=" + classInfo.getClassName());
-			e.printStackTrace(System.err);
+			logger.error("Failed to register object as JMX bean; class={}", classInfo.getClassName(), e);
 			return null;
 		}
 	}
@@ -189,8 +191,7 @@ public class JmxSupport {
 					(singleton ?  "" : ",id=" + objectId));
 			return objectName;
 		} catch (MalformedObjectNameException e) {
-			System.err.println("Unexpected: Failed to create ObjectName; part=" + classInfo.getJmxObjectNamePart());
-			e.printStackTrace(System.err);
+			logger.error("Unexpected: Failed to create ObjectName; part={}", classInfo.getJmxObjectNamePart(), e);
 			return null;
 		}
 	}
@@ -201,8 +202,7 @@ public class JmxSupport {
 		try {
 			jmxServer.unregisterMBean(jmxObjectName);
 		} catch (MBeanRegistrationException | InstanceNotFoundException e) {
-			System.err.println("Failed to unregister bean from JMX: " + jmxObjectName);
-			e.printStackTrace(System.err);
+			logger.error("Failed to unregister bean from JMX: {}", jmxObjectName, e);
 		}
 	}
 

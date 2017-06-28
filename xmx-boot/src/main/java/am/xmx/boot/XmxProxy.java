@@ -90,28 +90,16 @@ public class XmxProxy {
 	public static byte[] transformClass(ClassLoader classLoader, String className, 
 			byte[] classBuffer, Class<?> classBeingRedefined) {
 		if (xmxService != null) {
-			// FIXME: move try/catch to XmxManager?
-			try {
-				return xmxService.transformClassIfInterested(classLoader, className, classBuffer, classBeingRedefined);
-			} catch (RuntimeException e) {
-				// not really expected. Try-catch used to make sure that XMX bugs do not break users' apps
-				logError("XMX: Failed to register class", e);
-			}
+			return xmxService.transformClassIfInterested(classLoader, className, classBuffer, classBeingRedefined);
+		} else {
+			return classBuffer;
 		}
-		
-		return classBuffer;
 	}
 
 	@SuppressWarnings("unused")
 	public static void registerObject(Object obj, int classId) {
 		if (xmxService != null) {
-			// FIXME: move try/catch to XmxManager?
-			try {
-				xmxService.registerObject(obj, classId);
-			} catch (RuntimeException e) {
-				// not really expected. Try-catch used to make sure that XMX bugs do not break users' apps
-				logError("XMX: Failed to register object", e);
-			}
+			xmxService.registerObject(obj, classId);
 		}
 	}
 	

@@ -1,5 +1,8 @@
 package am.specr;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.util.*;
@@ -16,6 +19,8 @@ import java.util.*;
  * @param <P> base interface or abstract class of processors managed by this factory 
  */
 public class SpeculativeProcessorFactory<P> {
+
+	private final static Logger logger = LoggerFactory.getLogger(SpeculativeProcessorFactory.class);
 
 	/**
 	 * Description of the registered processors.
@@ -281,18 +286,17 @@ public class SpeculativeProcessorFactory<P> {
 			processorClass = Class.forName(processorClassName, true, extendedClassLoader)
 					.asSubclass(abstractProcessorClass);
 		} catch (ClassNotFoundException e) {
-			System.err.println("Processor class is not available to either class loader of processed object"
-					+ "  and class loader of the factory: class=" + processorClassName +
-					", targetLoader=" + targetClassLoader + ", factoryLoader=" + getClass().getClassLoader());
+			logger.error("Processor class is not available to either class loader of processed object"
+					+ "  and class loader of the factory: class={}, targetLoader={}, factoryLoader={}",
+					processorClassName, targetClassLoader, getClass().getClassLoader());
 			return null;
 		} catch (ClassCastException e) {
-			System.err.println("Processor class MUST be subclass of base processor class: "
-					+ "class=" + processorClassName + ", baseClass=" + abstractProcessorClass);
+			logger.error("Processor class MUST be subclass of base processor class: class={}, baseClass={}",
+					processorClassName, abstractProcessorClass);
 			return null;
 		} catch (Error e) {
-			System.err.println("Failed to initialize processor class: "
-					+ "class=" + processorClassName + ", loader=" + targetClassLoader);
-			e.printStackTrace();
+			logger.error("Failed to initialize processor class: class={}, loader={}",
+					processorClassName, targetClassLoader, e);
 			return null;
 		}
 		
@@ -300,9 +304,8 @@ public class SpeculativeProcessorFactory<P> {
 		try {
 			constructor = processorClass.getConstructor();
 		} catch (NoSuchMethodException | SecurityException e) {
-			System.err.println("Processor class MUST have a no-args public constructor: "
-					+ "class=" + processorClassName + "\"");
-			e.printStackTrace();
+			logger.error("Processor class MUST have a no-args public constructor: class={}",
+					processorClassName, e);
 			return null;
 		}
 		
@@ -310,9 +313,7 @@ public class SpeculativeProcessorFactory<P> {
 			P instance = constructor.newInstance();
 			return instance;
 		} catch (Exception e) {
-			System.err.println("Failed to instantiated processor: "
-					+ "class=" + processorClassName + "\"");
-			e.printStackTrace();
+			logger.error("Failed to instantiated processor: class={}", processorClassName, e);
 			return null;
 		}
 	}
