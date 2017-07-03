@@ -66,6 +66,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			if (config.getSystemProperty(Properties.GLOBAL_JMX_ENABLED).asBool()) {
 				// TODO maybe create a custom server instead, with custom connectors etc.
 				jmxServer = ManagementFactory.getPlatformMBeanServer();
+				logger.debug("JMX Bridge is started");
 			}
 			if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
 				startUI();
@@ -138,17 +139,21 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 						synchronized(this) {
 							ManagedClassInfo classInfo = objRef.classInfo;
 							Set<Integer> objectIds = classInfo.getObjectIds();
+							int objectId = objRef.objectId;
 							if (objectIds != null) {
-								objectIds.remove(objRef.objectId);
+								objectIds.remove(objectId);
 							}
-							objectsStorage.remove(objRef.objectId);
-							
+							objectsStorage.remove(objectId);
+							logger.debug("Clean GC'ed object id={} of class {}", objectId, classInfo.getClassName());
+
 							if (objRef.jmxObjectName != null) {
 								JmxSupport.unregisterBean(jmxServer, objRef.jmxObjectName);
+								logger.debug("Unregistered bean {}", objRef.jmxObjectName);
 							}
 							if (objectIds != null && objectIds.isEmpty()) {
 								// reset and init are synchronized on classInfo, so there is no race 
 								classInfo.reset();
+								logger.debug("Reset class {} (classId={})", classInfo.getClassName(), classInfo.getId());
 							}
 						}
 					} catch (InterruptedException e) {
@@ -168,6 +173,12 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 						Collection<Integer> classIdsToRemove = loaderInfo.getClassIdsByName().values();
 						classesInfoById.keySet().removeAll(classIdsToRemove);
 						loaderInfo.getAppInfo().removeManagedClassIds(classIdsToRemove);
+						if (logger.isDebugEnabled()) {
+							for (Integer classId : classIdsToRemove) {
+								logger.debug("Clean GC'ed classId={}", classId);
+							}
+						}
+
 					} catch (InterruptedException e) {
 					}
 				}
@@ -241,7 +252,10 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			int otherInstancesCount = objectIds.size();
 			if (otherInstancesCount >= classInfo.getMaxInstances()) {
 				// limit exceeded
-				classInfo.setDisabledByMaxInstances(true);
+				if (!classInfo.isDisabledByMaxInstances()) {
+					classInfo.setDisabledByMaxInstances(true);
+					logger.debug("Max instances exceeded for class {} (classId={})", classInfo.getClassName(), classId);
+				}
 				return;
 			}
 			
@@ -251,7 +265,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			if (jmxServer != null && classInfo.getJmxClassModel() != null) {
 				// register as JMX bean
 				jmxObjectName = JmxSupport.registerBean(this, jmxServer, objectId, classInfo, otherInstancesCount == 0);
-				
+
 				if (otherInstancesCount == 1) {
 					// check if another instance is registered in JMX as singleton. If so,
 					// re-register it with id
@@ -270,6 +284,10 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			objectsStorage.put(objectId, new ManagedObjectWeakRef(obj, managedObjectsRefQueue, 
 					objectId, classInfo, jmxObjectName));
 			objectIds.add(objectId);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Registered new instance objId={} for class {} (classId={})", objectId,
+						classInfo.getClassName(), classId);
+			}
 		}
 	}
 
@@ -286,6 +304,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				}
 				
 				info.init(managedMethods, managedFields, jmxClassModel);
+				logger.debug("Initialized class info for class (classId={})", info.getClassName(), info.getId());
 			}
 		}
 	}
@@ -374,8 +393,6 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			ManagedClassInfo classInfo = getManagedClassInfo(classLoaderInfo, classBeingRedefined.getName());
 			assert classInfo != null : "Should have been transformed already: " + classBeingRedefined;
 			classId = classInfo.getId();
-			
-			logger.info("re-transformClass: {}", className);
 		} else {
 			// initialize known properties of managed class, e.g. class ID and name
 			// other properties may require Class itself, and will be initialized later
@@ -392,8 +409,12 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			classesInfoById.put(classId, classInfo);
 			classLoaderInfo.getClassIdsByName().put(className, classId);
 			appInfo.addManagedClassId(classId);
-
-			logger.info("transformClass: {}", className);
+		}
+		String action = classBeingRedefined == null ? "transformClass" : "re-transformClass";
+		if (logger.isDebugEnabled()) {
+			logger.info("{}: {} (classId={})", action, className, classId);
+		} else {
+			logger.info("{}: {}", action, className);
 		}
 		
 		// actually transform the class - add registerObject to constructors
@@ -423,6 +444,9 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			int appId = managedAppsCounter.getAndIncrement();
 			appInfo = new ManagedAppInfo(appId, appName);
 			appInfosByName.put(appName, appInfo);
+
+			logger.debug("Initialized AppInfo appId={} for appName={}", appId, appName);
+
 			return appInfo;
 		}
 	}
@@ -730,6 +754,8 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	 * Starts Embedded Jetty Server to serve xmx-webui.war
 	 */
 	public void startUI() {
+		logger.debug("Starting XMX Web UI..,");
+
 		File xmxHomeDir = new File(System.getProperty(XMX_HOME_PROP));
 		final File uiWarFile = new File(xmxHomeDir, "bin" + File.separator + "xmx-webui.war");
 		File xmxLibDir = new File(xmxHomeDir, "lib");
@@ -761,7 +787,9 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			throw new XmxRuntimeException("Invalid server implementation in " + implFile.getAbsolutePath() + 
 					": no " + LAUNCHER_CLASS_ATTR + " in manifest");
 		}
-		
+
+		logger.debug("XMX Web UI LauncherClass found: {} in {}", launcherClassName, implFile);
+
 		final IXmxServerLauncher launcher;
 		try {
 			// use classloader of xmx-core as parent
@@ -788,5 +816,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		}, "XMX Embedded Server Startup Thread");
 		startupThread.setDaemon(true);
 		startupThread.start();
+
+		logger.debug("XMX Web UI StartupThread is started with delay {} ms", UI_START_DELAY);
 	}
 }

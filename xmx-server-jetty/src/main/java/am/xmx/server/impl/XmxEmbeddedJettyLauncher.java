@@ -1,8 +1,6 @@
 package am.xmx.server.impl;
 
-import java.io.File;
-import java.util.Arrays;
-
+import am.xmx.server.IXmxServerLauncher;
 import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
 import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
 import org.eclipse.jetty.plus.annotation.ContainerInitializer;
@@ -14,9 +12,11 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 import org.eclipse.jetty.util.thread.Scheduler;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import am.xmx.dto.XmxRuntimeException;
-import am.xmx.server.IXmxServerLauncher;
+import java.io.File;
+import java.util.Arrays;
 
 /**
  * Starter for Embedded Jetty running xmx-webui.war 
@@ -24,14 +24,11 @@ import am.xmx.server.IXmxServerLauncher;
  * @author Andrey Mogilev
  */
 public class XmxEmbeddedJettyLauncher implements IXmxServerLauncher {
-	
+
+	private final static Logger logger = LoggerFactory.getLogger(XmxEmbeddedJettyLauncher.class);
+
 	@Override
 	public void launchServer(File warFile, int port) {
-		// TODO redirect Jetty logging somewhere
-//		 LoggingUtil.config();
-//		 Log.setLog(new JavaUtilLog());
-		
-		
 		try {
 			Thread.currentThread().setContextClassLoader(XmxEmbeddedJettyLauncher.class.getClassLoader());
 			
@@ -76,8 +73,10 @@ public class XmxEmbeddedJettyLauncher implements IXmxServerLauncher {
 	 
 	        server.setHandler(webapp);
 	        server.start();
+
+	        logger.info("Started XMX Web Server at http://localhost:{}", port);
 		} catch (Exception e) {
-			throw new XmxRuntimeException(e);
+			logger.error("Failed to launch XMX Web Server", e);
 		}
 	}
 }

@@ -176,6 +176,8 @@ public class JmxSupport {
 
 			JmxBridgeModelBean bean = new JmxBridgeModelBean(objectId, classInfo.getJmxClassModel(), xmxService);
 			jmxServer.registerMBean(bean, objectName);
+
+			logger.debug("Registered JMX bean \"{}\"", objectName);
 			
 			return objectName;
 		} catch (Exception e) {
@@ -201,8 +203,9 @@ public class JmxSupport {
 
 		try {
 			jmxServer.unregisterMBean(jmxObjectName);
+			logger.debug("Unregistered JMX bean \"{}\"", jmxObjectName);
 		} catch (MBeanRegistrationException | InstanceNotFoundException e) {
-			logger.error("Failed to unregister bean from JMX: {}", jmxObjectName, e);
+			logger.error("Failed to unregister bean from JMX: \"{}\"", jmxObjectName, e);
 		}
 	}
 
