@@ -5,12 +5,17 @@ import am.xmx.service.IXmxService;
 import com.gilecode.yagson.YaGson;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -175,6 +180,34 @@ public class RestController {
 		return "methodResult";
 	}
 
+	@RequestMapping(value = "reportAllObjects", method = RequestMethod.GET)
+	@ResponseStatus(HttpStatus.OK)
+	public void getAllObjectsReport(HttpServletResponse resp) throws IOException {
+		PrintWriter out = resp.getWriter();
+
+		List<String> applicationNames = xmxService.getApplicationNames();
+		Collections.sort(applicationNames);
+		for (String applicationName : applicationNames) {
+			out.println("Application: " + applicationName);
+			List<XmxClassInfo> managedClassInfos = xmxService.findManagedClassInfos(applicationName, null);
+			Collections.sort(managedClassInfos, new Comparator<XmxClassInfo>() {
+				@Override
+				public int compare(XmxClassInfo o1, XmxClassInfo o2) {
+					return o1.getClassName().compareTo(o2.getClassName());
+				}
+			});
+			for (XmxClassInfo managedClassInfo : managedClassInfos) {
+				List<XmxObjectInfo> managedObjects = xmxService.getManagedObjects(managedClassInfo.getId());
+				out.println("Class: " + managedClassInfo.getClassName() + " (" + managedObjects.size() + " instances)");
+				for (XmxObjectInfo objectInfo : managedObjects) {
+					out.println("  id=" + objectInfo.getObjectId() + ", json=" + objectInfo.getJsonRepresentation());
+				}
+				out.println("-------------");
+			}
+			out.println("=============\n");
+		}
+	}
+
 	private XmxObjectTextRepresentation toText(Object obj) {
 		return new XmxObjectTextRepresentation(safeToString(obj), safeToJson(obj));
 	}
@@ -213,6 +246,4 @@ public class RestController {
 			return "";
 		}
 	}
-
-
 }

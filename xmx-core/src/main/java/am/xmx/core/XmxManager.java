@@ -715,16 +715,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	}
 
 	private static XmxObjectInfo convertToObjectInfo(int id, Object obj, ManagedClassInfo ci) {
-		String json = "";
-		// FIXME: either use YaGson, or remove unused
-/*
-		try {
-			json = jsonMapper.toJson(obj);
-		} catch (Throwable e) {
-			json = "N/A: " + e;
-		}
-*/
-		return new XmxObjectInfo(id, toDto(ci), obj.toString(), json);
+		return new XmxObjectInfo(id, toDto(ci), safeToString(obj), safeToJson(obj));
 	}
 	
 	private static XmxClassInfo toDto(ManagedClassInfo ci) {
