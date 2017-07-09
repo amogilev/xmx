@@ -605,7 +605,8 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	private static String safeToJson(Object obj) {
 		try {
 			return jsonMapper.toJson(obj, Object.class);
-		} catch (Exception e) {
+		} catch (Throwable e) {
+			logger.warn("toJson() failed for an instance of {}", obj.getClass(), e);
 			return "";
 		}
 	}

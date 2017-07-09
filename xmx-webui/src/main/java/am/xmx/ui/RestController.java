@@ -4,6 +4,8 @@ import am.xmx.dto.*;
 import am.xmx.service.IXmxService;
 import com.gilecode.yagson.YaGson;
 import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -29,6 +31,7 @@ import static am.xmx.service.XmxUtils.safeToString;
 public class RestController {
 
 	private static YaGson jsonMapper = new YaGson();
+	private final static Logger logger = LoggerFactory.getLogger(RestController.class);
 
 	@Autowired
 	private IXmxService xmxService;
@@ -242,7 +245,8 @@ public class RestController {
 	private static String safeToJson(Object obj) {
 		try {
 			return jsonMapper.toJson(obj, Object.class);
-		} catch (Exception e) {
+		} catch (Throwable e) {
+			logger.warn("toJson() failed for an instance of {}", obj == null ? "null" : obj.getClass(), e);
 			return "";
 		}
 	}
