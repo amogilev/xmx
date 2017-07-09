@@ -227,12 +227,11 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			return;
 		}
 		// ok, class id corresponds to the actual class
-		if (!classInfo.isInitialized()) {
-			initClassInfo(objClass, classInfo);
-		}
-		
-		// TODO: think about synchronization - maybe use by-class for part of the code
+
 		synchronized(this) {
+			if (!classInfo.isInitialized()) {
+				initClassInfo(objClass, classInfo);
+			}
 			Set<Integer> objectIds = classInfo.getObjectIds();
 			
 			/* - not required anymore, as potential sources if duplicate registration are eliminated;  
@@ -292,20 +291,18 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	}
 
 	private void initClassInfo(Class<?> objClass, ManagedClassInfo info) {
-		synchronized(info) {
-			if (!info.isInitialized()) {
-				String appName = info.getAppInfo().getName();
-				List<Method> managedMethods = getManagedMethods(objClass);
-				List<Field> managedFields = getManagedFields(objClass);
-				
-				ModelMBeanInfoSupport jmxClassModel = null;
-				if (jmxServer != null) {
-					jmxClassModel = JmxSupport.createModelForClass(objClass, appName, managedMethods, managedFields, config);
-				}
-				
-				info.init(managedMethods, managedFields, jmxClassModel);
-				logger.debug("Initialized class info for class (classId={})", info.getClassName(), info.getId());
+		if (!info.isInitialized()) {
+			String appName = info.getAppInfo().getName();
+			List<Method> managedMethods = getManagedMethods(objClass);
+			List<Field> managedFields = getManagedFields(objClass);
+
+			ModelMBeanInfoSupport jmxClassModel = null;
+			if (jmxServer != null) {
+				jmxClassModel = JmxSupport.createModelForClass(objClass, appName, managedMethods, managedFields, config);
 			}
+
+			info.init(managedMethods, managedFields, jmxClassModel);
+			logger.debug("Initialized class info for class (classId={})", info.getClassName(), info.getId());
 		}
 	}
 
