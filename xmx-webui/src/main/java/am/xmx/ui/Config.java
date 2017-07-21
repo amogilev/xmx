@@ -1,7 +1,8 @@
 package am.xmx.ui;
 
-import am.xmx.core.XmxLoader;
+import am.xmx.service.IMapperService;
 import am.xmx.service.IXmxService;
+import am.xmx.service.XmxServiceRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,6 +11,11 @@ public class Config {
 
 	@Bean
 	public IXmxService xmxService() {
-		return XmxLoader.getServiceInstance();
+		return XmxServiceRegistry.getXmxService();
+	}
+
+	@Bean
+	public IMapperService mapperService() {
+		return XmxServiceRegistry.getMapperService();
 	}
 }

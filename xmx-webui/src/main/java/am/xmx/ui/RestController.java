@@ -1,6 +1,7 @@
 package am.xmx.ui;
 
 import am.xmx.dto.*;
+import am.xmx.service.IMapperService;
 import am.xmx.service.IXmxService;
 import com.gilecode.yagson.YaGson;
 import org.apache.commons.collections4.CollectionUtils;
@@ -24,17 +25,20 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.*;
 
-import static am.xmx.service.XmxUtils.safeToString;
-
 @Controller
 @RequestMapping("/")
 public class RestController {
 
 	private static YaGson jsonMapper = new YaGson();
+
+	@SuppressWarnings("unused")
 	private final static Logger logger = LoggerFactory.getLogger(RestController.class);
 
 	@Autowired
 	private IXmxService xmxService;
+
+	@Autowired
+	private IMapperService mapperService;
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String getAppsAndClasses(ModelMap model) {
@@ -212,7 +216,7 @@ public class RestController {
 	}
 
 	private XmxObjectTextRepresentation toText(Object obj) {
-		return new XmxObjectTextRepresentation(safeToString(obj), safeToJson(obj));
+		return new XmxObjectTextRepresentation(mapperService.safeToString(obj), mapperService.safeToJson(obj));
 	}
 
 	/**
@@ -240,14 +244,5 @@ public class RestController {
 			methodArgs[i] = deserializeValue(args[i], type, obj);
 		}
 		return methodArgs;
-	}
-
-	private static String safeToJson(Object obj) {
-		try {
-			return jsonMapper.toJson(obj, Object.class);
-		} catch (Throwable e) {
-			logger.warn("toJson() failed for an instance of {}", obj == null ? "null" : obj.getClass(), e);
-			return "";
-		}
 	}
 }

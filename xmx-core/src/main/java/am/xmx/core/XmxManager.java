@@ -16,8 +16,9 @@ import am.xmx.dto.XmxObjectDetails.MethodInfo;
 import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
 import am.xmx.server.IXmxServerLauncher;
+import am.xmx.service.IMapperService;
 import am.xmx.service.IXmxService;
-import com.gilecode.yagson.YaGson;
+import am.xmx.service.XmxServiceRegistry;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -44,8 +45,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
-import static am.xmx.service.XmxUtils.safeToString;
-
 public final class XmxManager implements IXmxService, IXmxBootService {
 
 	private final static Logger logger = LoggerFactory.getLogger(XmxManager.class);
@@ -55,8 +54,8 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 
 	private static final String LAUNCHER_CLASS_ATTR = "XMX-Server-Launcher-Class";
 
-	// initialized and overridden in the constructor
 	private final IXmxConfig config;
+	private final IMapperService mapperService = XmxServiceRegistry.getMapperService();
 	private MBeanServer jmxServer;
 
 	XmxManager(IXmxConfig config) {
@@ -75,8 +74,6 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			logger.warn("XMX functionality is disabled by configuration");
 		}
 	}
-
-	private static final YaGson jsonMapper = new YaGson();
 
 	private SpeculativeProcessorFactory<IWebappNameExtractor> extractorsFactory =
 			new SpeculativeProcessorFactory<>(IWebappNameExtractor.class);
@@ -568,8 +565,8 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		}
 		
 		XmxObjectDetails details = new XmxObjectDetails(
-				safeToString(obj),
-				safeToJson(obj),
+				mapperService.safeToString(obj),
+				mapperService.safeToJson(obj),
 				classNames, fieldsByClass, methodsByClass);
 		return details;
 	}
@@ -578,19 +575,17 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	 * Returns "smart" string representation of the value, which is toString() if declared
 	 * in the actual run-time type of the objct, and JSON otherwise.
 	 */
-	private static String safeFieldValue(Object obj, Field f) {
+	private String safeFieldValue(Object obj, Field f) {
+		Object val;
 		try {
-			Object val = f.get(obj);
-			if (val == null) {
-				return "null";
-			}
-			if (hasDeclaredToString(val.getClass())) {
-				return val.toString();
-			} else {
-				return safeToJson(val);
-			}
+			val = f.get(obj);
 		} catch (Exception e) {
 			return e.toString();
+		}
+		if (val == null || hasDeclaredToString(val.getClass())) {
+			return mapperService.safeToString(val);
+		} else {
+			return mapperService.safeToJson(val);
 		}
 	}
 
@@ -599,15 +594,6 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			return c == c.getMethod("toString").getDeclaringClass();
 		} catch (NoSuchMethodException e) {
 			return false;
-		}
-	}
-
-	private static String safeToJson(Object obj) {
-		try {
-			return jsonMapper.toJson(obj, Object.class);
-		} catch (Throwable e) {
-			logger.warn("toJson() failed for an instance of {}", obj.getClass(), e);
-			return "";
 		}
 	}
 
@@ -712,8 +698,8 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		}
 	}
 
-	private static XmxObjectInfo convertToObjectInfo(int id, Object obj, ManagedClassInfo ci) {
-		return new XmxObjectInfo(id, toDto(ci), safeToString(obj), safeToJson(obj));
+	private XmxObjectInfo convertToObjectInfo(int id, Object obj, ManagedClassInfo ci) {
+		return new XmxObjectInfo(id, toDto(ci), mapperService.safeToString(obj), mapperService.safeToJson(obj));
 	}
 	
 	private static XmxClassInfo toDto(ManagedClassInfo ci) {

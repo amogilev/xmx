@@ -5,13 +5,4 @@ package am.xmx.service;
  */
 public class XmxUtils {
 
-	public static String safeToString(Object obj) {
-		try {
-			return obj == null ? "null" : obj.toString();
-		} catch (Exception e) {
-			return e.toString();
-		}
-	}
-
-
 }

@@ -47,11 +47,11 @@
 <table border="2">
     <tr>
         <td><b>toString()</b></td>
-        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="${fn:escapeXml(details.toStringValue)}"/></td>
+        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${details.toStringValue}"/>"/></td>
     </tr>
     <tr>
         <td><b>JSON</b></td>
-        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="${fn:escapeXml(details.jsonValue)}"/></td>
+        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${details.jsonValue}"/>"/></td>
     </tr>
 </table>
 
