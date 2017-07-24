@@ -8,30 +8,22 @@ public class XmxObjectInfo {
 	/**
 	 * Unique object ID in XMX system 
 	 */
-	private int objectId;
+	private final int objectId;
 	
 	/**
 	 * Information about the object's class.
 	 */
-	private XmxClassInfo classInfo;
-	
-	/**
-	 * Result of {@link Object#toString()}
-	 */
-	private String strRepresentation;
-	
-	/**
-	 * JSON representation of the object
-	 */
-	private String jsonRepresentation;
+	private final XmxClassInfo classInfo;
 
-	public XmxObjectInfo(int objectId, XmxClassInfo classInfo,
-			String strRepresentation, String jsonRepresentation) {
-		super();
+	/**
+	 * The managed object itself.
+	 */
+	private final Object value;
+	
+	public XmxObjectInfo(int objectId, XmxClassInfo classInfo, Object value) {
 		this.objectId = objectId;
 		this.classInfo = classInfo;
-		this.strRepresentation = strRepresentation;
-		this.jsonRepresentation = jsonRepresentation;
+		this.value = value;
 	}
 
 	public int getObjectId() {
@@ -42,11 +34,7 @@ public class XmxObjectInfo {
 		return classInfo;
 	}
 
-	public String getStrRepresentation() {
-		return strRepresentation;
-	}
-
-	public String getJsonRepresentation() {
-		return jsonRepresentation;
+	public Object getValue() {
+		return value;
 	}
 }

@@ -1,5 +1,6 @@
 package am.xmx.core.jmx;
 
+import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
 import am.xmx.service.IXmxService;
 
@@ -118,7 +119,7 @@ class JmxBridgeModelBean implements DynamicMBean {
 			throw new XmxRuntimeException("Missing methodId in operation descriptor: " + descr);
 		}
 		int methodId = (Integer)methodIdField;
-		Method m = xmxService.getObjectMethodById(obj, methodId);
+		Method m = xmxService.getObjectMethodById(objectId, methodId);
 
 		// set context class loader to enable functionality which depends on it, like JNDI
 		ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
@@ -139,16 +140,14 @@ class JmxBridgeModelBean implements DynamicMBean {
 	}
 
 	private Object getObject() {
-		Object obj = xmxService.getObjectById(objectId);
-		if (obj == null) {
+		XmxObjectInfo objectInfo = xmxService.getManagedObject(objectId);
+		if (objectInfo == null) {
 			throw new XmxRuntimeException("Object not found. It may be already GC'ed: objectId=" + objectId);
 		}
-		return obj;
+		return objectInfo.getValue();
 	}
 	
 	private Field getField(String name) throws RuntimeOperationsException, MBeanException {
-		Object obj = getObject();
-		
 		ModelMBeanAttributeInfo foundAttr = mbeanInfo.getAttribute(name);
 		if (foundAttr == null) {
 			throw new XmxRuntimeException("Failed to find attribute: name=" + name);
@@ -161,7 +160,7 @@ class JmxBridgeModelBean implements DynamicMBean {
 			throw new XmxRuntimeException("Missing fieldId in operation descriptor: " + descr);
 		}
 		int fieldId = (Integer)fieldIdField;
-		return xmxService.getObjectFieldById(obj, fieldId);
+		return xmxService.getObjectFieldById(objectId, fieldId);
 	}
 
 	private boolean signatureMatches(String[] signature, MBeanParameterInfo[] paramsInfo) {

@@ -2,8 +2,8 @@ package am.xmx.ui;
 
 import am.xmx.dto.XmxClassInfo;
 
-public class AdvancedXmxClassInfo extends XmxClassInfo {
-	public AdvancedXmxClassInfo(int id, String className) {
+public class ExtendedXmxClassInfo extends XmxClassInfo {
+	public ExtendedXmxClassInfo(int id, String className) {
 		super(id, className);
 	}
 

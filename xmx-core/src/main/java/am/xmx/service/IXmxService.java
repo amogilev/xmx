@@ -40,7 +40,15 @@ public interface IXmxService {
 	 * @param classId unique class ID (or null to return all objects)
 	 */
 	List<XmxObjectInfo> getManagedObjects(Integer classId) throws XmxRuntimeException;
-	
+
+	/**
+	 * Returns an managed object (along with some meta-information) by its ID.
+	 * If this object is already GC'ed, returns null.
+	 *
+	 * @param objectId unique object ID
+	 */
+	XmxObjectInfo getManagedObject(int objectId) throws XmxRuntimeException;
+
 	/**
 	 * Obtains the details of the object by its ID, which includes all fields
 	 * and methods. If this object is already GC'ed, returns null.
@@ -52,38 +60,26 @@ public interface IXmxService {
 	// TODO: identifying fields and methods is a subject to change, as the order is not guaranteed by JLS 
 	
 	/**
-	 * Returns the managed object with the specified ID, or {@code null} if no
-	 * object with such ID is managed now.
-	 * <p/>
-	 * For example, {@code null} is returned if the managed object is GC'ed.  
-	 * 
-	 * @param objectId the internal object ID
-	 * 
-	 * @return the object, or {@code null}
-	 */
-	Object getObjectById(int objectId);
-	
-	/**
 	 * Resolves and returns actual Method by internal method ID. 
 	 * 
-	 * @param obj the object to which the method belongs
+	 * @param objectId the internal ID of the object to which the method belongs
 	 * @param methodId the internal method ID
 	 * 
 	 * @return the resolved {@link Method}
 	 * @throws XmxRuntimeException if the method cannot be resolved
 	 */
-	Method getObjectMethodById(Object obj, int methodId) throws XmxRuntimeException;
+	Method getObjectMethodById(int objectId, int methodId) throws XmxRuntimeException;
 	
 	/**
 	 * Resolves and returns actual Field by internal field ID. 
-	 * 
-	 * @param obj the object to which the method belongs
+	 *
+	 * @param objectId the internal ID of the object to which the field belongs
 	 * @param fieldId the internal field ID
 	 * 
 	 * @return the resolved {@link Field}
 	 * @throws XmxRuntimeException if the field cannot be resolved
 	 */
-	Field getObjectFieldById(Object obj, int fieldId) throws XmxRuntimeException;
+	Field getObjectFieldById(int objectId, int fieldId) throws XmxRuntimeException;
 	
 	// TBC...
 }

@@ -33,7 +33,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -502,6 +501,19 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		
 		return result;
 	}
+
+	@Override
+	synchronized public XmxObjectInfo getManagedObject(int objectId) throws XmxRuntimeException {
+		ManagedObjectWeakRef ref = objectsStorage.get(objectId);
+		if (ref != null) {
+			Object obj = ref.get();
+			if (obj != null) {
+				return convertToObjectInfo(objectId, obj, ref.classInfo);
+			}
+		}
+		return null;
+	}
+
 	
 	/**
 	 * Obtains the details of the object by its ID, which includes all fields
@@ -511,8 +523,12 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	 */
 	@Override
 	public XmxObjectDetails getObjectDetails(int objectId) {
-		
-		Object obj = getObjectById(objectId);
+		ManagedObjectWeakRef ref = objectsStorage.get(objectId);
+		if (ref == null) {
+			return null;
+		}
+
+		Object obj = ref.get();
 		if (obj == null) {
 			return null;
 		}
@@ -563,12 +579,8 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			classNames.add(clazz.getName());
 			clazz = clazz.getSuperclass();
 		}
-		
-		XmxObjectDetails details = new XmxObjectDetails(
-				mapperService.safeToString(obj),
-				mapperService.safeToJson(obj),
+		return new XmxObjectDetails(objectId, toDto(classInfo), obj,
 				classNames, fieldsByClass, methodsByClass);
-		return details;
 	}
 
 	/**
@@ -598,20 +610,25 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	}
 
 	@Override
-	public Method getObjectMethodById(Object obj, int methodId)
+	public Method getObjectMethodById(int objectId, int methodId)
 			throws XmxRuntimeException {
-		
-		ManagedClassInfo classInfo = getManagedClassInfo(obj.getClass());
-		return classInfo.getMethodById(methodId);
+		ManagedObjectWeakRef ref = objectsStorage.get(objectId);
+		if (ref == null) {
+			return null;
+		}
+		return ref.classInfo.getMethodById(methodId);
 	}
 	
 	@Override
-	public Field getObjectFieldById(Object obj, int fieldId) {
-		ManagedClassInfo classInfo = getManagedClassInfo(obj.getClass());
-		return classInfo.getFieldById(fieldId);
+	public Field getObjectFieldById(int objectId, int fieldId) {
+		ManagedObjectWeakRef ref = objectsStorage.get(objectId);
+		if (ref == null) {
+			return null;
+		}
+		return ref.classInfo.getFieldById(fieldId);
 	}
 	
-	public ManagedClassInfo getManagedClassInfo(ManagedClassLoaderWeakRef loaderInfo, String className) {
+	private ManagedClassInfo getManagedClassInfo(ManagedClassLoaderWeakRef loaderInfo, String className) {
 		Integer classId = loaderInfo.getClassIdsByName().get(className);
 		
 		if (classId == null) {
@@ -636,12 +653,6 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		return getManagedClassInfo(loaderInfo, clazz.getName());
 	}
 	
-	@Override
-	synchronized public Object getObjectById(int objectId) {
-		WeakReference<Object> ref = objectsStorage.get(objectId);
-		return ref == null ? null : ref.get(); 
-	}
-
 	private List<Method> getManagedMethods(Class<?> clazz) {
 		List<Method> methods = new ArrayList<>(20);
 		while (clazz != null) {
@@ -699,7 +710,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	}
 
 	private XmxObjectInfo convertToObjectInfo(int id, Object obj, ManagedClassInfo ci) {
-		return new XmxObjectInfo(id, toDto(ci), mapperService.safeToString(obj), mapperService.safeToJson(obj));
+		return new XmxObjectInfo(id, toDto(ci), obj);
 	}
 	
 	private static XmxClassInfo toDto(ManagedClassInfo ci) {
@@ -728,7 +739,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	/**
 	 * Starts Embedded Jetty Server to serve xmx-webui.war
 	 */
-	public void startUI() {
+	private void startUI() {
 		logger.debug("Starting XMX Web UI..,");
 
 		File xmxHomeDir = new File(System.getProperty(XMX_HOME_PROP));
@@ -744,7 +755,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				return name.equalsIgnoreCase(serverImplJarName); 
 			}
 		});
-		if (serverImpls.length == 0) {
+		if (serverImpls == null || serverImpls.length == 0) {
 			throw new XmxRuntimeException("Missing file XMX_HOME/lib/" + serverImplJarName);
 		}
 		

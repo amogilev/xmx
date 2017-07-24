@@ -8,7 +8,7 @@ import java.util.Map;
  * (with values) and all methods of the managed object, including 
  * inherited ones.
  */
-public class XmxObjectDetails extends XmxObjectTextRepresentation {
+public class XmxObjectDetails extends XmxObjectInfo {
 	
 	/**
 	 * Information about a single field.
@@ -117,10 +117,11 @@ public class XmxObjectDetails extends XmxObjectTextRepresentation {
 	 */
 	final private Map<String, List<MethodInfo>> methodsByClass;
 
-	public XmxObjectDetails(String toStringValue, String jsonValue, List<String> classesNames,
+	public XmxObjectDetails(int objectId, XmxClassInfo classInfo, Object value,
+							List<String> classesNames,
 							Map<String, List<FieldInfo>> fieldsByClass,
 							Map<String, List<MethodInfo>> methodsByClass) {
-		super(toStringValue, jsonValue);
+		super(objectId, classInfo, value);
 		this.classesNames = classesNames;
 		this.fieldsByClass = fieldsByClass;
 		this.methodsByClass = methodsByClass;

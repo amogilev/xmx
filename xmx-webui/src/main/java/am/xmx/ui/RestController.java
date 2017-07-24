@@ -1,6 +1,9 @@
 package am.xmx.ui;
 
-import am.xmx.dto.*;
+import am.xmx.dto.XmxClassInfo;
+import am.xmx.dto.XmxObjectDetails;
+import am.xmx.dto.XmxObjectInfo;
+import am.xmx.dto.XmxRuntimeException;
 import am.xmx.service.IMapperService;
 import am.xmx.service.IXmxService;
 import com.gilecode.yagson.YaGson;
@@ -42,7 +45,7 @@ public class RestController {
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String getAppsAndClasses(ModelMap model) {
-		Map<String, Collection<AdvancedXmxClassInfo>> appsClassesMap = new LinkedHashMap<>();
+		Map<String, Collection<ExtendedXmxClassInfo>> appsClassesMap = new LinkedHashMap<>();
 		List<String> applicationNames = xmxService.getApplicationNames();
 		Collections.sort(applicationNames);
 		if (CollectionUtils.isNotEmpty(applicationNames)) {
@@ -55,18 +58,18 @@ public class RestController {
 					}
 				});
 				if (CollectionUtils.isNotEmpty(managedClassInfos)) {
-					List<AdvancedXmxClassInfo> advancedXmxClassInfos = new ArrayList<>(managedClassInfos.size());
+					List<ExtendedXmxClassInfo> extendedXmxClassInfos = new ArrayList<>(managedClassInfos.size());
 					for (XmxClassInfo managedClassInfo : managedClassInfos) {
-						AdvancedXmxClassInfo advancedXmxClassInfo = new AdvancedXmxClassInfo(
+						ExtendedXmxClassInfo extendedXmxClassInfo = new ExtendedXmxClassInfo(
 								managedClassInfo.getId(),
 								managedClassInfo.getClassName());
-						advancedXmxClassInfo.setNumberOfObjects(CollectionUtils.size(
-										xmxService.getManagedObjects(advancedXmxClassInfo.getId()))
+						extendedXmxClassInfo.setNumberOfObjects(CollectionUtils.size(
+										xmxService.getManagedObjects(extendedXmxClassInfo.getId()))
 						);
-						advancedXmxClassInfos.add(advancedXmxClassInfo);
+						extendedXmxClassInfos.add(extendedXmxClassInfo);
 					}
 
-					appsClassesMap.put(applicationName, advancedXmxClassInfos);
+					appsClassesMap.put(applicationName, extendedXmxClassInfos);
 				}
 			}
 		}
@@ -75,7 +78,7 @@ public class RestController {
 	}
 
 	@RequestMapping(value = "getClassObjects", method = RequestMethod.GET)
-	public String getClassObjects(ModelMap model, @RequestParam(required = true) Integer classId, @RequestParam(required = true) String className) {
+	public String getClassObjects(ModelMap model, @RequestParam Integer classId, @RequestParam String className) {
 		List<XmxObjectInfo> managedObjects = xmxService.getManagedObjects(classId);
 		if (managedObjects.size() == 1) {
 			// fast path for singletons
@@ -84,13 +87,21 @@ public class RestController {
 			// alternative way to change URL 
 			// return "redirect:/getObjectDetails?objectId=" + managedObjects.get(0).getObjectId();
 		}
+		List<ExtendedXmxObjectInfo> extObjectsInfo = new ArrayList<>(managedObjects.size());
+		for (XmxObjectInfo o : managedObjects) {
+			extObjectsInfo.add(toExtendedInfo(o));
+		}
 		model.addAttribute("className", className);
-		model.addAttribute("objects", managedObjects);
+		model.addAttribute("objects", extObjectsInfo);
 		return "classObjects";
 	}
 
+	private ExtendedXmxObjectInfo toExtendedInfo(XmxObjectInfo info) {
+		return new ExtendedXmxObjectInfo(info, toText(info.getValue()));
+	}
+
 	@RequestMapping(value = "getObjectDetails", method = RequestMethod.GET)
-	public String getObjectDetails(ModelMap model, @RequestParam(required = true) Integer objectId) {
+	public String getObjectDetails(ModelMap model, @RequestParam Integer objectId) {
 		model.addAttribute("objectId", objectId);
 		XmxObjectDetails details = xmxService.getObjectDetails(objectId);
 		if (details == null) {
@@ -100,6 +111,8 @@ public class RestController {
 		String className = details.getClassesNames().get(0);
 		model.addAttribute("className", className);
 		model.addAttribute("details", details);
+		model.addAttribute("text", toText(details.getValue()));
+
 		return "objectDetails";
 	}
 
@@ -119,17 +132,19 @@ public class RestController {
 	}
 
 	@RequestMapping(value = "setObjectField", method = RequestMethod.GET)
-	public String setObjectField(ModelMap model, @RequestParam(required = true) Integer objectId, 
-			@RequestParam(required = true) Integer fieldId, @RequestParam(required = true) String value) {
+	public String setObjectField(ModelMap model, @RequestParam Integer objectId,
+			@RequestParam Integer fieldId, @RequestParam String value) {
 		model.addAttribute("objectId", objectId);
 
-		final Object obj = xmxService.getObjectById(objectId);
-		if (obj == null) {
+		final XmxObjectInfo objInfo = xmxService.getManagedObject(objectId);
+		if (objInfo == null) {
 			return "missingObject";
 		}
-		final Field f = xmxService.getObjectFieldById(obj, fieldId);
+		final Object obj = objInfo.getValue();
+		final Field f = xmxService.getObjectFieldById(objectId, fieldId);
 		if (f == null) {
-			throw new XmxRuntimeException("Field not found in " + obj.getClass().getName() + " by ID=" + fieldId);
+			throw new XmxRuntimeException("Field not found in " + objInfo.getClassInfo().getClassName() +
+					" by ID=" + fieldId);
 		}
 
 		Object deserializedValue = deserializeValue(value, f.getType(), obj);
@@ -142,8 +157,10 @@ public class RestController {
 		XmxObjectDetails updatedDetails = xmxService.getObjectDetails(objectId);
 		if (updatedDetails == null) {
 			return "missingObject";
-		} 
+		}
 		model.addAttribute("details", updatedDetails);
+		model.addAttribute("text", toText(obj));
+
 		return "objectDetails";
 	}
 
@@ -160,14 +177,20 @@ public class RestController {
 	public String invokeObjectMethod(ModelMap model, @RequestParam int objectId,
 			@RequestParam int methodId,
 			@RequestParam(value = "arg", required = false) String[] argsArr) throws Throwable {
-		
-		model.addAttribute("objectId", objectId);
-		Object obj = xmxService.getObjectById(objectId);
-		if (obj == null) {
+
+		final XmxObjectInfo objInfo = xmxService.getManagedObject(objectId);
+		if (objInfo == null) {
 			return "missingObject";
 		}
+		model.addAttribute("objectId", objectId);
 
-		Method m = xmxService.getObjectMethodById(obj, methodId);
+		final Object obj = objInfo.getValue();
+		final Method m = xmxService.getObjectMethodById(objectId, methodId);
+		if (m == null) {
+			throw new XmxRuntimeException("Method not found in " + objInfo.getClassInfo().getClassName() +
+					" by ID=" + methodId);
+		}
+
 		// set context class loader to enable functionality which depends on it, like JNDI
 		ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
 		Thread.currentThread().setContextClassLoader(obj.getClass().getClassLoader());
@@ -207,7 +230,7 @@ public class RestController {
 				List<XmxObjectInfo> managedObjects = xmxService.getManagedObjects(managedClassInfo.getId());
 				out.println("Class: " + managedClassInfo.getClassName() + " (" + managedObjects.size() + " instances)");
 				for (XmxObjectInfo objectInfo : managedObjects) {
-					out.println("  id=" + objectInfo.getObjectId() + ", json=" + objectInfo.getJsonRepresentation());
+					out.println("  id=" + objectInfo.getObjectId() + ", json=" + mapperService.safeToJson(objectInfo.getValue()));
 				}
 				out.println("-------------");
 			}

@@ -6,15 +6,15 @@
     <thead>
     <tr>
         <td>ID of object</td>
-        <td>Object's json representation</td>
+        <td>Object's JSON representation</td>
         <td>Object's toString() representation</td>
     </tr>
     </thead>
     <c:forEach items="${objects}" var="object">
     <tr>
             <td>${object.objectId} (<a href="${pageContext.request.contextPath}/getObjectDetails?objectId=${object.objectId}">Details</a>)</td>
-            <td>${object.jsonRepresentation}</td>
-            <td>${object.strRepresentation}</td>
+            <td>${object.text.jsonValue}</td>
+            <td>${object.text.toStringValue}</td>
         </tr>
     </c:forEach>
 </table>

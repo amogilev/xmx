@@ -1,4 +1,4 @@
-package am.xmx.dto;
+package am.xmx.ui;
 
 /**
  * String representations of the Object, contains toString() and JSON values
