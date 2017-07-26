@@ -1,11 +1,14 @@
 package am.xmx.ui;
 
+import am.xmx.core.type.IMethodInfoService;
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
 import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
 import am.xmx.service.IMapperService;
 import am.xmx.service.IXmxService;
+import am.xmx.ui.ExtendedXmxObjectDetails.FieldInfo;
+import am.xmx.ui.ExtendedXmxObjectDetails.MethodInfo;
 import com.gilecode.yagson.YaGson;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -42,6 +45,9 @@ public class RestController {
 
 	@Autowired
 	private IMapperService mapperService;
+
+	@Autowired
+	private IMethodInfoService methodInfoService;
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String getAppsAndClasses(ModelMap model) {
@@ -103,7 +109,7 @@ public class RestController {
 	@RequestMapping(value = "getObjectDetails", method = RequestMethod.GET)
 	public String getObjectDetails(ModelMap model, @RequestParam Integer objectId) {
 		model.addAttribute("objectId", objectId);
-		XmxObjectDetails details = xmxService.getObjectDetails(objectId);
+		ExtendedXmxObjectDetails details = getExtendedObjectDetails(objectId);
 		if (details == null) {
 			return "missingObject";
 		} 
@@ -111,7 +117,6 @@ public class RestController {
 		String className = details.getClassesNames().get(0);
 		model.addAttribute("className", className);
 		model.addAttribute("details", details);
-		model.addAttribute("text", toText(details.getValue()));
 
 		return "objectDetails";
 	}
@@ -154,12 +159,11 @@ public class RestController {
 			throw new XmxRuntimeException("Failed to set field", e);
 		}
 
-		XmxObjectDetails updatedDetails = xmxService.getObjectDetails(objectId);
+		ExtendedXmxObjectDetails updatedDetails = getExtendedObjectDetails(objectId);
 		if (updatedDetails == null) {
 			return "missingObject";
 		}
 		model.addAttribute("details", updatedDetails);
-		model.addAttribute("text", toText(obj));
 
 		return "objectDetails";
 	}
@@ -267,5 +271,96 @@ public class RestController {
 			methodArgs[i] = deserializeValue(args[i], type, obj);
 		}
 		return methodArgs;
+	}
+
+	/**
+	 * Obtains the details of the object by its ID, which includes all fields
+	 * and methods. If this object is already GC'ed, returns null.
+	 *
+	 * @param objectId the unique object ID
+	 */
+	public ExtendedXmxObjectDetails getExtendedObjectDetails(int objectId) {
+		XmxObjectDetails objectDetails = xmxService.getObjectDetails(objectId);
+		if (objectDetails == null) {
+			return null;
+		}
+		Object obj = objectDetails.getValue();
+
+		List<String> classNames = new ArrayList<>();
+		Map<String, List<FieldInfo>> fieldsByClass = new LinkedHashMap<>();
+		Map<String, List<MethodInfo>> methodsByClass = new LinkedHashMap<>();
+
+
+		Class<?> clazz = obj.getClass();
+
+		// fill fields
+		Map<Integer, Field> managedFields = objectDetails.getManagedFields();
+		for (Map.Entry<Integer, Field> e : managedFields.entrySet()) {
+			Integer fieldId = e.getKey();
+			Field f = e.getValue();
+
+			String declaringClassName = f.getDeclaringClass().getName();
+
+			List<FieldInfo> classFieldsInfo = fieldsByClass.get(declaringClassName);
+			if (classFieldsInfo == null) {
+				classFieldsInfo = new ArrayList<>();
+				fieldsByClass.put(declaringClassName, classFieldsInfo);
+			}
+
+			String strValue = safeFieldValue(obj, f);
+			FieldInfo fi = new FieldInfo(fieldId, f.getName(), strValue);
+			classFieldsInfo.add(fi);
+		}
+
+		// fill methods
+		Map<Integer, Method> managedMethods = objectDetails.getManagedMethods();
+		for (Map.Entry<Integer, Method> e : managedMethods.entrySet()) {
+			Integer methodId = e.getKey();
+			Method m = e.getValue();
+			String declaringClassName = m.getDeclaringClass().getName();
+
+			List<MethodInfo> classMethodsInfo = methodsByClass.get(declaringClassName);
+			if (classMethodsInfo == null) {
+				classMethodsInfo = new ArrayList<>();
+				methodsByClass.put(declaringClassName, classMethodsInfo);
+			}
+			String methodNameTypeSignature = methodInfoService.getMethodNameTypeSignature(m);
+			MethodInfo mi = new MethodInfo(methodId, m.getName(), methodNameTypeSignature,
+					methodInfoService.getMethodParameters(m));
+			classMethodsInfo.add(mi);
+		}
+
+		while (clazz != null) {
+			classNames.add(clazz.getName());
+			clazz = clazz.getSuperclass();
+		}
+		return new ExtendedXmxObjectDetails(objectId, objectDetails.getClassInfo(), obj, toText(obj),
+				classNames, fieldsByClass, methodsByClass);
+	}
+
+	/**
+	 * Returns "smart" string representation of the value, which is toString() if declared
+	 * in the actual run-time type of the objct, and JSON otherwise.
+	 */
+	private String safeFieldValue(Object obj, Field f) {
+		Object val;
+		try {
+			val = f.get(obj);
+		} catch (Exception e) {
+			return e.toString();
+		}
+		if (val == null || hasDeclaredToString(val.getClass())) {
+			return mapperService.safeToString(val);
+		} else {
+			return mapperService.safeToJson(val);
+		}
+	}
+
+	private static boolean hasDeclaredToString(Class<?> c) {
+		try {
+			return c == c.getMethod("toString").getDeclaringClass();
+		} catch (NoSuchMethodException e) {
+			return false;
+		}
 	}
 }

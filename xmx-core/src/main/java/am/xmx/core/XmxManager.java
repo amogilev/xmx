@@ -7,18 +7,12 @@ import am.xmx.cfg.IAppPropertiesSource;
 import am.xmx.cfg.IXmxConfig;
 import am.xmx.cfg.Properties;
 import am.xmx.core.jmx.JmxSupport;
-import am.xmx.core.type.IMethodInfoService;
-import am.xmx.core.type.MethodInfoServiceImpl;
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
-import am.xmx.dto.XmxObjectDetails.FieldInfo;
-import am.xmx.dto.XmxObjectDetails.MethodInfo;
 import am.xmx.dto.XmxObjectInfo;
 import am.xmx.dto.XmxRuntimeException;
 import am.xmx.server.IXmxServerLauncher;
-import am.xmx.service.IMapperService;
 import am.xmx.service.IXmxService;
-import am.xmx.service.XmxServiceRegistry;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -54,7 +48,6 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	private static final String LAUNCHER_CLASS_ATTR = "XMX-Server-Launcher-Class";
 
 	private final IXmxConfig config;
-	private final IMapperService mapperService = XmxServiceRegistry.getMapperService();
 	private MBeanServer jmxServer;
 
 	XmxManager(IXmxConfig config) {
@@ -89,8 +82,6 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				"org.eclipse.jetty.webapp.WebAppClassLoader");
 	}
 
-	private IMethodInfoService methodInfoService = new MethodInfoServiceImpl();
-	
 	/**
 	 * Storage of weak references to each managed objects, mapped by object ID
 	 */
@@ -533,80 +524,23 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			return null;
 		}
 		
-		List<String> classNames = new ArrayList<>();
-		Map<String, List<FieldInfo>> fieldsByClass = new LinkedHashMap<>();
-		Map<String, List<MethodInfo>> methodsByClass = new LinkedHashMap<>();
-		
-		
-		Class<?> clazz = obj.getClass();
-		ManagedClassInfo classInfo = getManagedClassInfo(clazz);
+		ManagedClassInfo classInfo = ref.classInfo;
 
 		// fill fields
 		List<Field> managedFields = classInfo.getManagedFields();
+		Map<Integer, Field> fieldsById = new HashMap<>();
 		for (int fieldId = 0; fieldId < managedFields.size(); fieldId++) {
-			Field f = managedFields.get(fieldId);
-			String declaringClassName = f.getDeclaringClass().getName();
-			
-			List<FieldInfo> classFieldsInfo = fieldsByClass.get(declaringClassName);
-			if (classFieldsInfo == null) {
-				classFieldsInfo = new ArrayList<>();
-				fieldsByClass.put(declaringClassName, classFieldsInfo);
-			}
-			
-			String strValue = safeFieldValue(obj, f);
-			FieldInfo fi = new FieldInfo(fieldId, f.getName(), strValue);
-			classFieldsInfo.add(fi);
+			fieldsById.put(fieldId, managedFields.get(fieldId));
 		}
 		
 		// fill methods
 		List<Method> managedMethods = classInfo.getManagedMethods();
+		Map<Integer, Method> methodsById = new HashMap<>();
 		for (int methodId = 0; methodId < managedMethods.size(); methodId++) {
-			Method m = managedMethods.get(methodId);
-			String declaringClassName = m.getDeclaringClass().getName();
-			
-			List<MethodInfo> classMethodsInfo = methodsByClass.get(declaringClassName);
-			if (classMethodsInfo == null) {
-				classMethodsInfo = new ArrayList<>();
-				methodsByClass.put(declaringClassName, classMethodsInfo);
-			}
-			String methodNameTypeSignature = methodInfoService.getMethodNameTypeSignature(m);
-			MethodInfo mi = new MethodInfo(methodId, m.getName(), methodNameTypeSignature,
-					methodInfoService.getMethodParameters(m));
-			classMethodsInfo.add(mi);
-		}
-		
-		while (clazz != null) {
-			classNames.add(clazz.getName());
-			clazz = clazz.getSuperclass();
+			methodsById.put(methodId, managedMethods.get(methodId));
 		}
 		return new XmxObjectDetails(objectId, toDto(classInfo), obj,
-				classNames, fieldsByClass, methodsByClass);
-	}
-
-	/**
-	 * Returns "smart" string representation of the value, which is toString() if declared
-	 * in the actual run-time type of the objct, and JSON otherwise.
-	 */
-	private String safeFieldValue(Object obj, Field f) {
-		Object val;
-		try {
-			val = f.get(obj);
-		} catch (Exception e) {
-			return e.toString();
-		}
-		if (val == null || hasDeclaredToString(val.getClass())) {
-			return mapperService.safeToString(val);
-		} else {
-			return mapperService.safeToJson(val);
-		}
-	}
-
-	private static boolean hasDeclaredToString(Class<?> c) {
-		try {
-			return c == c.getMethod("toString").getDeclaringClass();
-		} catch (NoSuchMethodException e) {
-			return false;
-		}
+				fieldsById, methodsById);
 	}
 
 	@Override
@@ -638,19 +572,6 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		ManagedClassInfo classInfo = classesInfoById.get(classId);
 		assert classInfo != null;
 		return classInfo;
-	}
-	
-	@Override
-	public ManagedClassInfo getManagedClassInfo(Class<?> clazz) {
-		String appName = obtainAppNameByLoader(clazz.getClassLoader());
-		ManagedAppInfo appInfo = appInfosByName.get(appName);
-		if (appInfo == null) {
-			throw new XmxRuntimeException("App is not managed: " + appName); 
-		}
-		
-		
-		ManagedClassLoaderWeakRef loaderInfo = appInfo.getOrInitManagedClassLoaderInfo(clazz.getClassLoader(), managedClassLoadersRefQueue);
-		return getManagedClassInfo(loaderInfo, clazz.getName());
 	}
 	
 	private List<Method> getManagedMethods(Class<?> clazz) {

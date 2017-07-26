@@ -47,11 +47,11 @@
 <table border="2">
     <tr>
         <td><b>toString()</b></td>
-        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${text.toStringValue}"/>"/></td>
+        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${details.text.toStringValue}"/>"/></td>
     </tr>
     <tr>
         <td><b>JSON</b></td>
-        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${text.jsonValue}"/>"/></td>
+        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${details.text.jsonValue}"/>"/></td>
     </tr>
 </table>
 

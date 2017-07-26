@@ -1,6 +1,5 @@
 package am.xmx.service;
 
-import am.xmx.core.ManagedClassInfo;
 import am.xmx.dto.XmxClassInfo;
 import am.xmx.dto.XmxObjectDetails;
 import am.xmx.dto.XmxObjectInfo;
@@ -30,8 +29,6 @@ public interface IXmxService {
 	 * @return matching classes information
 	 */
 	List<XmxClassInfo> findManagedClassInfos(String appNameOrNull, String classNamePatternOrNull) throws XmxRuntimeException;
-
-	ManagedClassInfo getManagedClassInfo(Class<?> clazz);
 
 	/**
 	 * Returns all 'live' objects info for the specified class ID, which may be obtained from classes info
