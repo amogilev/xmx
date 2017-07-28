@@ -35,6 +35,15 @@ import java.util.*;
 @RequestMapping("/")
 public class RestController {
 
+	// default JSON chars limit for object on 'details' page
+	static final long OBJ_JSON_CHARS_LIMIT = 2_000_000;
+
+	// default JSON chars limit for object's fields on 'details' page
+	static final long OBJ_FIELDS_JSON_CHARS_LIMIT = 10_000;
+
+	// default JSON chars limit for object selection on 'classObjects' page
+	static final long CLASS_OBJS_JSON_CHARS_LIMIT = 100_000;
+
 	private static YaGson jsonMapper = new YaGson();
 
 	@SuppressWarnings("unused")
@@ -95,15 +104,15 @@ public class RestController {
 		}
 		List<ExtendedXmxObjectInfo> extObjectsInfo = new ArrayList<>(managedObjects.size());
 		for (XmxObjectInfo o : managedObjects) {
-			extObjectsInfo.add(toExtendedInfo(o));
+			extObjectsInfo.add(toExtendedInfo(o, CLASS_OBJS_JSON_CHARS_LIMIT));
 		}
 		model.addAttribute("className", className);
 		model.addAttribute("objects", extObjectsInfo);
 		return "classObjects";
 	}
 
-	private ExtendedXmxObjectInfo toExtendedInfo(XmxObjectInfo info) {
-		return new ExtendedXmxObjectInfo(info, toText(info.getValue()));
+	private ExtendedXmxObjectInfo toExtendedInfo(XmxObjectInfo info, long jsonCharsLimit) {
+		return new ExtendedXmxObjectInfo(info, toText(info.getValue(), jsonCharsLimit));
 	}
 
 	@RequestMapping(value = "getObjectDetails", method = RequestMethod.GET)
@@ -202,7 +211,7 @@ public class RestController {
 		Object result;
 		try {
 			result = m.invoke(obj, translateArgs(argsArr, m, obj));
-			model.addAttribute("result", toText(result));
+			model.addAttribute("result", toText(result, 0));
 		} catch (InvocationTargetException e) {
 			// re-throw cause
 			// alternatively, a special page may be created for exception result, but it seems unnecessary now
@@ -242,8 +251,9 @@ public class RestController {
 		}
 	}
 
-	private XmxObjectTextRepresentation toText(Object obj) {
-		return new XmxObjectTextRepresentation(mapperService.safeToString(obj), mapperService.safeToJson(obj));
+	private XmxObjectTextRepresentation toText(Object obj, long jsonCharsLimit) {
+		return new XmxObjectTextRepresentation(mapperService.safeToString(obj),
+				mapperService.safeToJson(obj, jsonCharsLimit), jsonCharsLimit);
 	}
 
 	/**
@@ -307,7 +317,7 @@ public class RestController {
 				fieldsByClass.put(declaringClassName, classFieldsInfo);
 			}
 
-			String strValue = safeFieldValue(obj, f);
+			String strValue = safeFieldValue(obj, f, OBJ_FIELDS_JSON_CHARS_LIMIT);
 			FieldInfo fi = new FieldInfo(fieldId, f.getName(), strValue);
 			classFieldsInfo.add(fi);
 		}
@@ -334,7 +344,8 @@ public class RestController {
 			classNames.add(clazz.getName());
 			clazz = clazz.getSuperclass();
 		}
-		return new ExtendedXmxObjectDetails(objectId, objectDetails.getClassInfo(), obj, toText(obj),
+		return new ExtendedXmxObjectDetails(objectId, objectDetails.getClassInfo(), obj,
+				toText(obj, OBJ_JSON_CHARS_LIMIT),
 				classNames, fieldsByClass, methodsByClass);
 	}
 
@@ -342,7 +353,7 @@ public class RestController {
 	 * Returns "smart" string representation of the value, which is toString() if declared
 	 * in the actual run-time type of the objct, and JSON otherwise.
 	 */
-	private String safeFieldValue(Object obj, Field f) {
+	private String safeFieldValue(Object obj, Field f, long jsonCharsLimit) {
 		Object val;
 		try {
 			val = f.get(obj);
@@ -352,7 +363,7 @@ public class RestController {
 		if (val == null || hasDeclaredToString(val.getClass())) {
 			return mapperService.safeToString(val);
 		} else {
-			return mapperService.safeToJson(val);
+			return mapperService.safeToJson(val, jsonCharsLimit);
 		}
 	}
 

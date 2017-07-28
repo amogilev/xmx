@@ -1,6 +1,7 @@
 package am.xmx.service;
 
 import com.gilecode.yagson.YaGson;
+import com.gilecode.yagson.stream.StringOutputLimitExceededException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,7 +9,6 @@ public class MapperService implements IMapperService {
 
 	private static final Logger logger = LoggerFactory.getLogger(MapperService.class);
 	private static final YaGson jsonMapper = new YaGson();
-	private static final String NOT_AVAILABLE = "N/A";
 	private static final long JSON_DISABLE_ON_ERROR_SECONDS = 30;
 
 	private volatile long toJsonDisabledUntilTime = 0;
@@ -18,6 +18,14 @@ public class MapperService implements IMapperService {
 	 */
 	@Override
 	public String safeToJson(Object obj) {
+		return safeToJson(obj, 0);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String safeToJson(Object obj, long cLimit) {
 		if (toJsonDisabledUntilTime > 0) {
 			if (toJsonDisabledUntilTime > System.currentTimeMillis()) {
 				// still disabled
@@ -29,7 +37,15 @@ public class MapperService implements IMapperService {
 			}
 		}
 		try {
-			return jsonMapper.toJson(obj, Object.class);
+			if (cLimit > 0) {
+				try {
+					return jsonMapper.toJson(obj, Object.class, cLimit);
+				} catch (StringOutputLimitExceededException e) {
+					return e.getLimitedResult() + LIMIT_EXCEEDED_SUFFIX;
+				}
+			} else {
+				return jsonMapper.toJson(obj, Object.class);
+			}
 		} catch (Throwable e) {
 			logger.warn("toJson() failed for an instance of {}", obj.getClass(), e);
 
@@ -37,6 +53,7 @@ public class MapperService implements IMapperService {
 			return NOT_AVAILABLE;
 		}
 	}
+
 
 	/**
 	 * {@inheritDoc}

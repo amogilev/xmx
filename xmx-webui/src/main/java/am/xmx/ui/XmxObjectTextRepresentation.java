@@ -1,5 +1,7 @@
 package am.xmx.ui;
 
+import am.xmx.service.IMapperService;
+
 /**
  * String representations of the Object, contains toString() and JSON values
  */
@@ -14,9 +16,15 @@ public class XmxObjectTextRepresentation {
 	 */
 	final private String jsonValue;
 
-	public XmxObjectTextRepresentation(String toStringValue, String jsonValue) {
+	final private boolean isJsonLimited;
+
+	final private long jsonCharsLimit;
+
+	public XmxObjectTextRepresentation(String toStringValue, String jsonValue, long jsonCharsLimit) {
 		this.toStringValue = toStringValue;
 		this.jsonValue = jsonValue;
+		this.isJsonLimited = jsonCharsLimit > 0 && jsonValue.endsWith(IMapperService.LIMIT_EXCEEDED_SUFFIX);
+		this.jsonCharsLimit = jsonCharsLimit;
 	}
 
 	public String getToStringValue() {
@@ -25,5 +33,13 @@ public class XmxObjectTextRepresentation {
 
 	public String getJsonValue() {
 		return jsonValue;
+	}
+
+	public boolean isJsonLimited() {
+		return isJsonLimited;
+	}
+
+	public long getJsonCharsLimit() {
+		return jsonCharsLimit;
 	}
 }
