@@ -111,8 +111,8 @@
     <thead>
     <tr>
         <td>Name</td>
-        <td></td>
         <td>Signature</td>
+        <td></td>
     </tr>
     </thead>
     
@@ -123,7 +123,6 @@
   <c:forEach items="${entry.value}" var="methodInfo">
     <tr>
         <td>${methodInfo.name}</td>
-        <td><a id="inv${methodInfo.id}" href="#" onclick="invokeMethod(${objectId}, ${methodInfo.id}); return false;">Invoke</a></td>
         <td id="m${methodInfo.id}">
             ${methodInfo.nameTypeSignature}(
             <c:forEach items="${methodInfo.parameters}" var="p" varStatus="status">
@@ -131,6 +130,9 @@
                 <c:if test="${not status.last}">,</c:if>
             </c:forEach>
             )
+        </td>
+        <td>
+            <input type="button" onclick="invokeMethod(${objectId}, ${methodInfo.id});" value="Invoke"/>
         </td>
     </tr>
   </c:forEach>
