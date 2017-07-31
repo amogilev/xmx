@@ -25,6 +25,7 @@
         form.method = 'POST';
         form.action = 'invokeMethod';
         form.style = 'display: none;';
+        form.target = '_blank';
         addFormData(form, 'objectId', objId);
         addFormData(form, 'methodId', methodId);
         for (var i = 0; i < inputs.length; i++) {
