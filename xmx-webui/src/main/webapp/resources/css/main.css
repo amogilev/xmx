@@ -1,0 +1,9 @@
+span.jsonTruncatedWarning {
+    position:absolute;
+    right:auto;
+    margin-left:15px;
+}
+
+span.jsonTruncatedWarning > input {
+    vertical-align: top;
+}

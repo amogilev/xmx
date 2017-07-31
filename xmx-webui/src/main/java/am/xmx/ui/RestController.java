@@ -251,6 +251,41 @@ public class RestController {
 		}
 	}
 
+	@RequestMapping(value = "getFullJson", method = RequestMethod.GET)
+	@ResponseStatus(HttpStatus.OK)
+	public void loadFullJson(HttpServletResponse resp,
+							 @RequestParam(value = "objectId") int objectId,
+							 @RequestParam(value = "fieldId", required = false) Integer fieldId) throws IOException {
+
+		PrintWriter out = resp.getWriter();
+
+		XmxObjectDetails objectDetails = xmxService.getObjectDetails(objectId);
+		if (objectDetails == null) {
+			out.println("Error: the object is missing!");
+			return;
+		}
+		Object jsonSourceObject = null;
+		Object obj = objectDetails.getValue();
+		if (fieldId != null) {
+			Map<Integer, Field> managedFields = objectDetails.getManagedFields();
+			Field f = managedFields.get(fieldId);
+			if (f == null) {
+				out.println("Error: the field is missing!");
+				return;
+			}
+			try {
+				jsonSourceObject = f.get(obj);
+			} catch (Exception e) {
+				throw new IOException(e);
+			}
+		} else {
+			jsonSourceObject = obj;
+		}
+
+		// do not use safeToJson here, force toJson attempt even if recently failed
+		out.println(jsonMapper.toJson(jsonSourceObject));
+	}
+
 	private XmxObjectTextRepresentation toText(Object obj, long jsonCharsLimit) {
 		return new XmxObjectTextRepresentation(mapperService.safeToString(obj),
 				mapperService.safeToJson(obj, jsonCharsLimit), jsonCharsLimit);

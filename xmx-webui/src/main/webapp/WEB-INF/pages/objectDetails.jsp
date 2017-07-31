@@ -2,12 +2,16 @@
     pageEncoding="ISO-8859-1"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jstl/fmt" %>
+<fmt:setBundle basename="messages"/>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>XMX Object Details</title>
+
+<link href="./css/main.css" rel="stylesheet" type="text/css" />
 
 <script type="text/javascript">
 	function callSetField(fieldId) {
@@ -39,6 +43,12 @@
         form.appendChild(input);
     }
 
+    function loadFullJson(fieldId) {
+	    var url = "${pageContext.request.contextPath}/getFullJson?objectId=${objectId}" +
+            (fieldId ? "&fieldId=" + fieldId : "");
+        window.open(url, '_blank');
+    }
+
 </script>
 </head>
 
@@ -51,7 +61,14 @@
     </tr>
     <tr>
         <td><b>JSON</b></td>
-        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${details.text.jsonValue}"/>"/></td>
+        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${details.text.jsonValue}"/>"/>
+            <c:if test="${details.text.jsonTruncated}">
+                <span class="jsonTruncatedWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
+                    <img src="./images/alert.red.png" alt="Warning!">
+                    <input type="button" onclick="loadFullJson();" value="<fmt:message key='jsonTruncated.loadFull'/>" >
+                </span>
+            </c:if>
+        </td>
     </tr>
 </table>
 
@@ -74,7 +91,9 @@
     <tr>
         <td>${fieldInfo.name}</td>
         <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldInfo.value)}"/></td>
-        <td><input type="button" onclick="callSetField(${fieldInfo.id});" value="Set"></td>
+        <td>
+            <input type="button" onclick="callSetField(${fieldInfo.id});" value="Set">
+        </td>
     </tr>
   </c:forEach>
 </c:forEach>

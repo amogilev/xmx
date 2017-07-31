@@ -16,14 +16,14 @@ public class XmxObjectTextRepresentation {
 	 */
 	final private String jsonValue;
 
-	final private boolean isJsonLimited;
+	final private boolean isJsonTruncated;
 
 	final private long jsonCharsLimit;
 
 	public XmxObjectTextRepresentation(String toStringValue, String jsonValue, long jsonCharsLimit) {
 		this.toStringValue = toStringValue;
 		this.jsonValue = jsonValue;
-		this.isJsonLimited = jsonCharsLimit > 0 && jsonValue.endsWith(IMapperService.LIMIT_EXCEEDED_SUFFIX);
+		this.isJsonTruncated = jsonCharsLimit > 0 && jsonValue.endsWith(IMapperService.LIMIT_EXCEEDED_SUFFIX);
 		this.jsonCharsLimit = jsonCharsLimit;
 	}
 
@@ -35,8 +35,8 @@ public class XmxObjectTextRepresentation {
 		return jsonValue;
 	}
 
-	public boolean isJsonLimited() {
-		return isJsonLimited;
+	public boolean isJsonTruncated() {
+		return isJsonTruncated;
 	}
 
 	public long getJsonCharsLimit() {
