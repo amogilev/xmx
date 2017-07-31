@@ -41,7 +41,7 @@ public class MapperService implements IMapperService {
 				try {
 					return jsonMapper.toJson(obj, Object.class, cLimit);
 				} catch (StringOutputLimitExceededException e) {
-					return e.getLimitedResult() + LIMIT_EXCEEDED_SUFFIX;
+					return e.getTruncatedResult() + LIMIT_EXCEEDED_SUFFIX;
 				}
 			} else {
 				return jsonMapper.toJson(obj, Object.class);
