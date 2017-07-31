@@ -288,7 +288,8 @@ public class RestController {
 
 	private XmxObjectTextRepresentation toText(Object obj, long jsonCharsLimit) {
 		return new XmxObjectTextRepresentation(mapperService.safeToString(obj),
-				mapperService.safeToJson(obj, jsonCharsLimit), jsonCharsLimit);
+				mapperService.safeToJson(obj, jsonCharsLimit), jsonCharsLimit,
+				obj == null || hasDeclaredToString(obj.getClass()));
 	}
 
 	/**
@@ -352,8 +353,8 @@ public class RestController {
 				fieldsByClass.put(declaringClassName, classFieldsInfo);
 			}
 
-			String strValue = safeFieldValue(obj, f, OBJ_FIELDS_JSON_CHARS_LIMIT);
-			FieldInfo fi = new FieldInfo(fieldId, f.getName(), strValue);
+			XmxObjectTextRepresentation textValue = safeFieldToText(obj, f, OBJ_FIELDS_JSON_CHARS_LIMIT);
+			FieldInfo fi = new FieldInfo(fieldId, f.getName(), textValue);
 			classFieldsInfo.add(fi);
 		}
 
@@ -388,18 +389,18 @@ public class RestController {
 	 * Returns "smart" string representation of the value, which is toString() if declared
 	 * in the actual run-time type of the objct, and JSON otherwise.
 	 */
-	private String safeFieldValue(Object obj, Field f, long jsonCharsLimit) {
+	private XmxObjectTextRepresentation safeFieldToText(Object obj, Field f, long jsonCharsLimit) {
 		Object val;
 		try {
 			val = f.get(obj);
 		} catch (Exception e) {
-			return e.toString();
+			String err = e.toString();
+			return new XmxObjectTextRepresentation(err, err, 0, true);
 		}
-		if (val == null || hasDeclaredToString(val.getClass())) {
-			return mapperService.safeToString(val);
-		} else {
-			return mapperService.safeToJson(val, jsonCharsLimit);
-		}
+		String strValue = mapperService.safeToString(val);
+		String jsonValue = mapperService.safeToJson(val, jsonCharsLimit);
+		return new XmxObjectTextRepresentation(strValue, jsonValue, jsonCharsLimit,
+				val == null || hasDeclaredToString(val.getClass()));
 	}
 
 	private static boolean hasDeclaredToString(Class<?> c) {

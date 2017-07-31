@@ -22,15 +22,15 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 		private String name;
 
 		/**
-		 * Field value in string representation.
+		 * Field text in string representation.
 		 */
-		private String value;
+		private XmxObjectTextRepresentation text;
 
-		public FieldInfo(int id, String name, String value) {
+		public FieldInfo(int id, String name, XmxObjectTextRepresentation text) {
 			super();
 			this.id = id;
 			this.name = name;
-			this.value = value;
+			this.text = text;
 		}
 
 		public int getId() {
@@ -41,8 +41,8 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 			return name;
 		}
 
-		public String getValue() {
-			return value;
+		public XmxObjectTextRepresentation getText() {
+			return text;
 		}
 	}
 

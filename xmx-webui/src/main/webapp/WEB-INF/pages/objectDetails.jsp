@@ -45,7 +45,7 @@
 
     function loadFullJson(fieldId) {
 	    var url = "${pageContext.request.contextPath}/getFullJson?objectId=${objectId}" +
-            (fieldId ? "&fieldId=" + fieldId : "");
+            (fieldId === undefined ? "" : "&fieldId=" + fieldId);
         window.open(url, '_blank');
     }
 
@@ -90,9 +90,16 @@
   <c:forEach items="${entry.value}" var="fieldInfo">
     <tr>
         <td>${fieldInfo.name}</td>
-        <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldInfo.value)}"/></td>
+        <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldInfo.text.smartTextValue)}"/></td>
         <td>
             <input type="button" onclick="callSetField(${fieldInfo.id});" value="Set">
+            <c:if test="${!fieldInfo.text.toStringDeclared && fieldInfo.text.jsonTruncated}">
+                <span class="jsonTruncatedWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
+                    <img src="./images/alert.red.png" alt="Warning!">
+                    <input type="button" onclick="loadFullJson(${fieldInfo.id});" value="<fmt:message key='jsonTruncated.loadFull'/>" >
+                </span>
+            </c:if>
+        </td>
         </td>
     </tr>
   </c:forEach>
