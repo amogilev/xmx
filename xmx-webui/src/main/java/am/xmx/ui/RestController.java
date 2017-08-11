@@ -283,7 +283,7 @@ public class RestController {
 		}
 
 		// do not use safeToJson here, force toJson attempt even if recently failed
-		out.println(jsonMapper.toJson(jsonSourceObject));
+		jsonMapper.toJson(jsonSourceObject, out);
 	}
 
 	private XmxObjectTextRepresentation toText(Object obj, long jsonCharsLimit) {
