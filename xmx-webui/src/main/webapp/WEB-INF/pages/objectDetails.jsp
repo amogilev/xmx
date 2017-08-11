@@ -62,12 +62,15 @@
     </tr>
     <tr>
         <td><b>JSON</b></td>
-        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${details.text.jsonValue}"/>"/>
+        <td width="90%" class="supportsTruncationWarning">
+            <input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${details.text.jsonValue}"/>"/>
             <c:if test="${details.text.jsonTruncated}">
-                <span class="jsonTruncatedWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
-                    <img src="./images/alert.red.png" alt="Warning!">
-                    <input type="button" onclick="loadFullJson();" value="<fmt:message key='jsonTruncated.loadFull'/>" >
-                </span>
+                <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
+                    <tr>
+                        <td><img src="./images/alert.red.png" alt="Warning!"/></td>
+                        <td><input type="button" onclick="loadFullJson();" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
+                    </tr>
+                </table>
             </c:if>
         </td>
     </tr>
@@ -92,15 +95,16 @@
     <tr>
         <td>${fieldInfo.name}</td>
         <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldInfo.text.smartTextValue)}"/></td>
-        <td>
+        <td class="supportsTruncationWarning">
             <input type="button" onclick="callSetField(${fieldInfo.id});" value="Set">
             <c:if test="${!fieldInfo.text.toStringDeclared && fieldInfo.text.jsonTruncated}">
-                <span class="jsonTruncatedWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
-                    <img src="./images/alert.red.png" alt="Warning!">
-                    <input type="button" onclick="loadFullJson(${fieldInfo.id});" value="<fmt:message key='jsonTruncated.loadFull'/>" >
-                </span>
+                <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
+                    <tr>
+                        <td><img src="./images/alert.red.png" alt="Warning!"/></td>
+                        <td><input type="button" onclick="loadFullJson(${fieldInfo.id});" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
+                    </tr>
+                </table>
             </c:if>
-        </td>
         </td>
     </tr>
   </c:forEach>

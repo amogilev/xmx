@@ -1,9 +1,11 @@
-span.jsonTruncatedWarning {
-    position:absolute;
-    right:auto;
-    margin-left:15px;
+td.supportsTruncationWarning {
+    position: relative;
 }
 
-span.jsonTruncatedWarning > input {
-    vertical-align: top;
+table.truncationWarning {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: 10px;
+    display: inline;
 }
