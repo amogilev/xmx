@@ -42,7 +42,7 @@ public class RestController {
 	static final long OBJ_FIELDS_JSON_CHARS_LIMIT = 10_000;
 
 	// default JSON chars limit for object selection on 'classObjects' page
-	static final long CLASS_OBJS_JSON_CHARS_LIMIT = 100_000;
+	static final long CLASS_OBJS_JSON_CHARS_LIMIT = 2_000;
 
 	private static YaGson jsonMapper = new YaGson();
 
