@@ -51,11 +51,11 @@ public class XmxObjectTextRepresentation {
 		return jsonCharsLimit;
 	}
 
-	public boolean isToStringDeclared() {
-		return isToStringDeclared;
-	}
-
 	public String getSmartTextValue() {
 		return isToStringDeclared ? getToStringValue() : getJsonValue();
+	}
+
+	public boolean isSmartUsesJson() {
+		return !isToStringDeclared;
 	}
 }

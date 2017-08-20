@@ -97,10 +97,7 @@ public class RestController {
 		List<XmxObjectInfo> managedObjects = xmxService.getManagedObjects(classId);
 		if (managedObjects.size() == 1) {
 			// fast path for singletons
-			return getObjectDetails(model, managedObjects.get(0).getObjectId());
-			
-			// alternative way to change URL 
-			// return "redirect:/getObjectDetails?objectId=" + managedObjects.get(0).getObjectId();
+			 return "redirect:/getObjectDetails?objectId=" + managedObjects.get(0).getObjectId();
 		}
 		List<ExtendedXmxObjectInfo> extObjectsInfo = new ArrayList<>(managedObjects.size());
 		for (XmxObjectInfo o : managedObjects) {
@@ -116,7 +113,9 @@ public class RestController {
 	}
 
 	@RequestMapping(value = "getObjectDetails", method = RequestMethod.GET)
-	public String getObjectDetails(ModelMap model, @RequestParam Integer objectId) {
+	public String getObjectDetails(ModelMap model,
+               @RequestParam Integer objectId,
+               @RequestParam(required = false, defaultValue = "SMART") ValuesDisplayKind valKind) {
 		model.addAttribute("objectId", objectId);
 		ExtendedXmxObjectDetails details = getExtendedObjectDetails(objectId);
 		if (details == null) {
@@ -126,6 +125,7 @@ public class RestController {
 		String className = details.getClassesNames().get(0);
 		model.addAttribute("className", className);
 		model.addAttribute("details", details);
+		model.addAttribute("valKind", valKind);
 
 		return "objectDetails";
 	}

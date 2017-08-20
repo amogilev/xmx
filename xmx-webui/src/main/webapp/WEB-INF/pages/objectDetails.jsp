@@ -14,7 +14,14 @@
 <link href="./css/main.css" rel="stylesheet" type="text/css" />
 
 <script type="text/javascript">
-	function callSetField(fieldId) {
+
+function changeValuesDisplay(newValKind) {
+    if ('${valKind}' != newValKind) {
+        window.location = "${pageContext.request.contextPath}/getObjectDetails?objectId=${objectId}&valKind=" + newValKind;
+    }
+}
+
+function callSetField(fieldId) {
 		var value = document.getElementById("value_" + fieldId).value; 
 		window.location = "${pageContext.request.contextPath}/setObjectField?objectId=${objectId}&fieldId=" + fieldId + "&value=" + encodeURIComponent(value);
 	}
@@ -76,7 +83,20 @@
     </tr>
 </table>
 
-<h2>Fields</h2>
+<h2 style="display: inline-block">Fields</h2>
+<span style="margin-left: 50px">
+    (Display values as
+    <form action="#" style="display: inline">
+    	<c:set var="kinds" value="<%=am.xmx.ui.ValuesDisplayKind.values()%>"/>
+        <c:forEach var="k" items="${kinds}">
+            <label><input name="vdKind" type="radio" value="${k}"
+                          onchange="changeValuesDisplay('${k}');" <c:if test="${k==valKind}">checked="checked"</c:if>/>
+                    ${k.displayName}
+            </label>
+        </c:forEach>
+    </form>)
+</span>
+<br style="clear: left" />
 
 <table border="2">
     <thead>
@@ -94,10 +114,17 @@
   <c:forEach items="${entry.value}" var="fieldInfo">
     <tr>
         <td>${fieldInfo.name}</td>
-        <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldInfo.text.smartTextValue)}"/></td>
+        <c:set var="fieldValue" value="${
+            valKind == 'SMART' ? fieldInfo.text.smartTextValue :
+            valKind == 'JSON' ? fieldInfo.text.jsonValue : fieldInfo.text.toStringValue
+        }"/>
+        <c:set var="truncated" value="${fieldInfo.text.jsonTruncated &&
+            (valKind == 'JSON' || (valKind == 'SMART' && fieldInfo.text.smartUsesJson))
+        }"/>
+        <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldValue)}"/></td>
         <td class="supportsTruncationWarning">
             <input type="button" onclick="callSetField(${fieldInfo.id});" value="Set">
-            <c:if test="${!fieldInfo.text.toStringDeclared && fieldInfo.text.jsonTruncated}">
+            <c:if test="${truncated}">
                 <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
                     <tr>
                         <td><img src="./images/alert.red.png" alt="Warning!"/></td>

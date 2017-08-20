@@ -30,7 +30,7 @@
             <td>${object.objectId} (<a href="${pageContext.request.contextPath}/getObjectDetails?objectId=${object.objectId}">Details</a>)</td>
             <td class="supportsTruncationWarning">
                 <c:out value="${object.text.smartTextValue}"/>
-                <c:if test="${!object.text.toStringDeclared && object.text.jsonTruncated}">
+                <c:if test="${object.text.smartUsesJson && object.text.jsonTruncated}">
                     <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
                         <tr>
                             <td><img src="./images/alert.red.png" alt="Warning!"/></td>
