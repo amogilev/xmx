@@ -1,8 +1,12 @@
+// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
+
 package am.xmx.cfg.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import am.xmx.cfg.IAppPropertiesSource;
+import am.xmx.cfg.Properties;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -10,12 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import am.xmx.cfg.IAppPropertiesSource;
-import am.xmx.cfg.Properties;
+import static org.junit.Assert.*;
 
 /**
  * Checks loading from existing but incomplete file. Standard properties 

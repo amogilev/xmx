@@ -1,9 +1,10 @@
+// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
+
 package am.xmx.core;
 
+import javax.management.ObjectName;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
-
-import javax.management.ObjectName;
 
 /**
  * Weak reference for managed object, which additionally contains 

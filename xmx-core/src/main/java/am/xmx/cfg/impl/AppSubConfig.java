@@ -1,10 +1,12 @@
-package am.xmx.cfg.impl;
+// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
 
-import java.util.List;
+package am.xmx.cfg.impl;
 
 import am.xmx.cfg.IAppPropertiesSource;
 import am.xmx.cfg.Properties;
 import am.xmx.cfg.PropertyValue;
+
+import java.util.List;
 
 public class AppSubConfig implements IAppPropertiesSource {
 	

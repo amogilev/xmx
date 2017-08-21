@@ -1,3 +1,5 @@
+// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
+
 package am.xmx.server;
 
 import java.io.File;

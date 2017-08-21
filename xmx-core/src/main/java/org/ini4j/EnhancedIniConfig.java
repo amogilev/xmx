@@ -1,3 +1,5 @@
+// Copyright © 2015 Andrey Mogilev. All rights reserved.
+
 package org.ini4j;
 
 /**

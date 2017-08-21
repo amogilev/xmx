@@ -1,9 +1,12 @@
+// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
+
 package am.xmx.cfg.impl;
 
-import static am.xmx.cfg.Properties.SP_MANAGED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import am.xmx.cfg.Properties;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -14,12 +17,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import am.xmx.cfg.Properties;
+import static am.xmx.cfg.Properties.SP_MANAGED;
+import static org.junit.Assert.*;
 
 public class TestCustomXmxIniConfig {
 	

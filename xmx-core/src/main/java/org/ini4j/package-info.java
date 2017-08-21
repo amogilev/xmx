@@ -1,3 +1,5 @@
+// Copyright © 2015 Andrey Mogilev. All rights reserved.
+
 /**
  * Enhancements to Ini4J related to better handling of comments, including
  * multi-comments (separated by empty lines), ending section comments etc.

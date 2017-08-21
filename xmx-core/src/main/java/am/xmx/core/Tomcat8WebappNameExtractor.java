@@ -1,3 +1,5 @@
+// Copyright © 2017 Andrey Mogilev. All rights reserved.
+
 package am.xmx.core;
 
 import org.apache.catalina.Context;

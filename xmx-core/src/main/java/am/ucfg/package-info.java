@@ -1,3 +1,5 @@
+// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
+
 /**
  * Updateable configuration based on standard .ini files, which stores the 
  * current default values of all known options in a special form of comments

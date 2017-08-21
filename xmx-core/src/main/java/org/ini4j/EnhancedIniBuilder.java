@@ -1,12 +1,13 @@
+// Copyright © 2015 Andrey Mogilev. All rights reserved.
+
 package org.ini4j;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
 import org.ini4j.spi.IniBuilder;
 import org.ini4j.spi.IniHandler;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Replacement of the standard Ini4J's IniBuilder for better

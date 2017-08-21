@@ -1,3 +1,5 @@
+// Copyright © 2017 Andrey Mogilev. All rights reserved.
+
 package am.xmx.core.type;
 
 import java.lang.reflect.Method;

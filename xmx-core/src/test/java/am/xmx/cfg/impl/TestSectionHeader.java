@@ -1,11 +1,12 @@
+// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
+
 package am.xmx.cfg.impl;
+
+import am.xmx.cfg.CfgEntityLevel;
+import org.junit.Test;
 
 import static am.xmx.cfg.impl.PatternsSupport.parse;
 import static org.junit.Assert.*;
-
-import org.junit.Test;
-
-import am.xmx.cfg.CfgEntityLevel;
 
 public class TestSectionHeader {
 	
