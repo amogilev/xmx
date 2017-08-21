@@ -3,9 +3,8 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>am.xmx</groupId>
-    <artifactId>xmx</artifactId>
+    <artifactId>xmx-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>../xmx/pom.xml</relativePath>
   </parent>
 
   <artifactId>xmx-distributions-all</artifactId>

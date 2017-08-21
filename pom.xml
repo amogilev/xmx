@@ -1,12 +1,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>am.xmx</groupId>
-  <artifactId>xmx</artifactId>
+  <artifactId>xmx-parent</artifactId>
   <version>0.0.1-SNAPSHOT</version>
 
   <packaging>pom</packaging>
 
-  <name>XMX</name>
+  <name>XMX Parent</name>
   <description>Parent POM for all XMX modules</description>
 
   <properties>
@@ -84,12 +84,12 @@
   </build>
 
   <modules>
-    <module>../xmx-boot</module>
-    <module>../xmx-core</module>
-    <module>../xmx-agent</module>
-    <module>../xmx-webui</module>
-    <module>../xmx-server-jetty</module>
-    <module>../xmx-distribution</module>
-    <module>../xmx-distributions-all</module>
+    <module>xmx-boot</module>
+    <module>xmx-core</module>
+    <module>xmx-agent</module>
+    <module>xmx-webui</module>
+    <module>xmx-server-jetty</module>
+    <module>xmx-distribution</module>
+    <module>xmx-distributions-all</module>
   </modules>
 </project>
