@@ -87,7 +87,7 @@ function callSetField(fieldId) {
 <span style="margin-left: 50px">
     (Display values as
     <form action="#" style="display: inline">
-    	<c:set var="kinds" value="<%=am.xmx.ui.ValuesDisplayKind.values()%>"/>
+    	<c:set var="kinds" value="<%=com.gilecode.xmx.ui.ValuesDisplayKind.values()%>"/>
         <c:forEach var="k" items="${kinds}">
             <label><input name="vdKind" type="radio" value="${k}"
                           onchange="changeValuesDisplay('${k}');" <c:if test="${k==valKind}">checked="checked"</c:if>/>

@@ -56,7 +56,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <XMX-Server-Launcher-Class>am.xmx.server.impl.XmxEmbeddedJettyLauncher</XMX-Server-Launcher-Class>
+              <XMX-Server-Launcher-Class>com.gilecode.xmx.server.impl.XmxEmbeddedJettyLauncher</XMX-Server-Launcher-Class>
             </manifestEntries>
           </archive>
         </configuration>

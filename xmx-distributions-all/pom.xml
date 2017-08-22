@@ -52,9 +52,9 @@
 
                   <archive>
                     <manifestEntries>
-                      <Premain-Class>am.xmx.agent.XmxAgent</Premain-Class>
-                      <Agent-Class>am.xmx.agent.XmxAgent</Agent-Class>
-                      <Can-Retransform-Classes>am.xmx.agent.XmxAgent</Can-Retransform-Classes>
+                      <Premain-Class>com.gilecode.xmx.agent.XmxAgent</Premain-Class>
+                      <Agent-Class>com.gilecode.xmx.agent.XmxAgent</Agent-Class>
+                      <Can-Retransform-Classes>com.gilecode.xmx.agent.XmxAgent</Can-Retransform-Classes>
                       <Built-By>amogilev</Built-By>
                       <Implementation-Version>${project.version}</Implementation-Version>
                     </manifestEntries>
