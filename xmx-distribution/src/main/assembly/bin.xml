@@ -36,6 +36,21 @@
       </includes>
     </dependencySet>
   </dependencySets>
-  
-  <!-- TODO: readme, license etc. using filesets -->
+
+  <fileSets>
+    <fileSet>
+      <directory>${project.basedir}</directory>
+      <outputDirectory>/</outputDirectory>
+      <includes>
+        <include>README*</include>
+      </includes>
+    </fileSet>
+  </fileSets>
+  <files>
+    <file>
+      <source>${project.basedir}/../LICENSE-binary.txt</source>
+      <outputDirectory>/</outputDirectory>
+      <destName>LICENSE.txt</destName>
+    </file>
+  </files>
 </assembly>
