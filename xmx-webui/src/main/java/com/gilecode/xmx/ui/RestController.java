@@ -176,7 +176,7 @@ public class RestController {
 		}
 		model.addAttribute("details", updatedDetails);
 
-		return "redirect:/getObjectDetails?objectId=" + objectId;
+		return "redirect:/getObjectDetails";
 	}
 
 	// not used in web, but convenient for manual invocation, like
