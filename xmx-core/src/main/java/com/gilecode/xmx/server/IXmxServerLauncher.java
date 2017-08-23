@@ -11,7 +11,15 @@ import java.io.File;
  * @author Andrey Mogilev
  */
 public interface IXmxServerLauncher {
-	
+
+	/**
+	 * The webapp name which XMX UI shall have.
+	 * <p/>
+	 * It is used to suppress management of classes within this app. Make sure that
+	 * "display-name" in web.xml has the same value
+	 */
+	String APPNAME = "XMX Console";
+
 	/**
 	 * Launch the server and deploy the specified WAR application there.
 	 * 

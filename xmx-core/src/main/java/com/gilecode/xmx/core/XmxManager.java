@@ -703,6 +703,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		try {
 			// use classloader of xmx-core as parent
 			ClassLoader serverCL = new URLClassLoader(urls, XmxManager.class.getClassLoader());
+			appNameByLoader.put(serverCL, IXmxServerLauncher.APPNAME);
 			Class<? extends IXmxServerLauncher> launcherClass = 
 					Class.forName(launcherClassName, true, serverCL).asSubclass(IXmxServerLauncher.class);
 			launcher = launcherClass.getConstructor().newInstance();

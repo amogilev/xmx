@@ -5,6 +5,7 @@ package com.gilecode.xmx.cfg.impl;
 import com.gilecode.ucfg.OptionDescription;
 import com.gilecode.ucfg.SectionDescription;
 import com.gilecode.xmx.cfg.Properties;
+import com.gilecode.xmx.server.IXmxServerLauncher;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -79,8 +80,8 @@ public interface ConfigDefaults {
 	// Hidden (internal) options
 	//
 
-	SectionDescription INTERNAL_SECTION_XMX_WEBAPP = new SectionDescription("App=\"XMX Console\"", null,
-			new OptionDescription(Properties.APP_ENABLED, false));
+	SectionDescription INTERNAL_SECTION_XMX_WEBAPP = new SectionDescription("App=\"" + IXmxServerLauncher.APPNAME + "\"",
+			null, new OptionDescription(Properties.APP_ENABLED, false));
 
 	List<SectionDescription> HIDDEN_INTERNAL_SECTIONS = Collections.unmodifiableList(Arrays.asList(
 			INTERNAL_SECTION_XMX_WEBAPP));
