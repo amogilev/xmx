@@ -13,7 +13,7 @@
       <useProjectArtifact>false</useProjectArtifact>
       <outputDirectory>lib</outputDirectory>
       <excludes>
-        <exclude>am.xmx:*</exclude>
+        <exclude>com.gilecode.xmx:*</exclude>
       </excludes>
     </dependencySet>
     <dependencySet>
@@ -21,9 +21,9 @@
       <outputDirectory>lib</outputDirectory>
       <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
       <includes>
-        <include>am.xmx:xmx-boot:jar</include>
-        <include>am.xmx:xmx-core:jar</include>
-        <include>am.xmx:xmx-server-jetty:jar</include>
+        <include>com.gilecode.xmx:xmx-boot:jar</include>
+        <include>com.gilecode.xmx:xmx-core:jar</include>
+        <include>com.gilecode.xmx:xmx-server-jetty:jar</include>
       </includes>
     </dependencySet>
     <dependencySet>
@@ -31,8 +31,8 @@
       <outputDirectory>bin</outputDirectory>
       <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
       <includes>
-        <include>am.xmx:xmx-agent:jar</include>
-        <include>am.xmx:xmx-webui:war</include>
+        <include>com.gilecode.xmx:xmx-agent:jar</include>
+        <include>com.gilecode.xmx:xmx-webui:war</include>
       </includes>
     </dependencySet>
   </dependencySets>
@@ -40,7 +40,7 @@
   <fileSets>
     <fileSet>
       <directory>${project.basedir}</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory>.</outputDirectory>
       <includes>
         <include>README*</include>
       </includes>
@@ -49,7 +49,7 @@
   <files>
     <file>
       <source>${project.basedir}/../LICENSE-binary.txt</source>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory>.</outputDirectory>
       <destName>LICENSE.txt</destName>
     </file>
   </files>

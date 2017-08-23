@@ -13,14 +13,14 @@
       <useProjectArtifact>false</useProjectArtifact>
       <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
       <includes>
-        <include>am.xmx:xmx-distribution:zip</include>
+        <include>com.gilecode.xmx:xmx-distribution:zip</include>
       </includes>
     </dependencySet>
     <dependencySet>
       <useProjectArtifact>false</useProjectArtifact>
       <unpack>true</unpack>
       <includes>
-        <include>am.xmx:xmx-agent:jar</include>
+        <include>com.gilecode.xmx:xmx-agent:jar</include>
       </includes>
     </dependencySet>
   </dependencySets>

@@ -13,7 +13,7 @@
       <useProjectArtifact>false</useProjectArtifact>
       <unpack>true</unpack>
       <includes>
-        <include>am.xmx:xmx-webui:war</include>
+        <include>com.gilecode.xmx:xmx-webui:war</include>
       </includes>
     </dependencySet>
     <dependencySet>
@@ -21,7 +21,7 @@
       <outputDirectory>WEB-INF/classes/META-INF</outputDirectory>
       <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
       <includes>
-        <include>am.xmx:xmx-distribution:zip</include>
+        <include>com.gilecode.xmx:xmx-distribution:zip</include>
       </includes>
     </dependencySet>
   </dependencySets>
