@@ -59,9 +59,10 @@ public class XmxLoader {
 		StringBuilder sb = new StringBuilder(1024);
 		String prefix = "=[XMX]= ";
 		String newline = System.lineSeparator();
+		String implVersion = XmxLoader.class.getPackage().getImplementationVersion();
 
 		ConfigLoadStatus cfgStatus = config.getLoadStatus();
-		sb.append(prefix).append("XMX agent is started using configuration in ")
+		sb.append(prefix).append("XMX Agent ").append(implVersion).append(" is started using configuration in ")
 				.append(config.getConfigurationFile());
 		if (cfgStatus != ConfigLoadStatus.SUCCESS) {
 			sb.append(" (").append(cfgStatus).append(")");
