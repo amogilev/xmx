@@ -669,17 +669,21 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		final File uiWarFile = new File(xmxHomeDir, "bin" + File.separator + "xmx-webui.war");
 		File xmxLibDir = new File(xmxHomeDir, "lib");
 		
-		String serverImpl = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_IMPL).asString();
-		final String serverImplJarName = "xmx-server-" + serverImpl + ".jar";
-		
+		final String serverImpl = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_IMPL).asString();
+		final String serverImplJarPrefix = "xmx-server-" + serverImpl.toLowerCase(Locale.ENGLISH);
+
+		// TODO: use implVersion to select from multiple JARs, do it general way (here, XmxAgent, XmxProxy)
 		File[] serverImpls = xmxLibDir.listFiles(new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String name) {
-				return name.equalsIgnoreCase(serverImplJarName); 
+				name = name.toLowerCase(Locale.ENGLISH);
+				return name.startsWith(serverImplJarPrefix) && name.endsWith(".jar");
 			}
 		});
 		if (serverImpls == null || serverImpls.length == 0) {
-			throw new XmxRuntimeException("Missing file XMX_HOME/lib/" + serverImplJarName);
+			throw new XmxRuntimeException("Missing file XMX_HOME/lib/" + serverImplJarPrefix + ".jar");
+		} else if (serverImpls.length > 1) {
+			logger.warn("Multiple versions of " + serverImplJarPrefix + " JAR are available: {}", Arrays.asList(serverImpls));
 		}
 		
 		File implFile = serverImpls[0];

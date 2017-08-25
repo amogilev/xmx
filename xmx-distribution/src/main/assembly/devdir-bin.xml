@@ -17,7 +17,7 @@
     <dependencySet>
       <useProjectArtifact>false</useProjectArtifact>
       <outputDirectory>lib</outputDirectory>
-      <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+      <outputFileNameMapping>${artifact.artifactId}-${artifact.version}.${artifact.extension}</outputFileNameMapping>
       <includes>
         <include>com.gilecode.xmx:xmx-boot:jar</include>
         <include>com.gilecode.xmx:xmx-core:jar</include>

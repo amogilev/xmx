@@ -50,7 +50,7 @@ public class XmxProxy {
 		
 		// create xmxClassLoader from xmx-core.jar; dependencies loaded automatically by manifest's classpath
 		File xmxLibDir = homeDir == null ? null : new File(homeDir, "lib");
-		if (xmxLibDir == null || !xmxLibDir.isDirectory() || !new File(xmxLibDir, "xmx-core.jar").isFile()) {
+		if (xmxLibDir == null || !xmxLibDir.isDirectory()) {
 			logError("Could not find loadable XMX lib directory, XMX functionality is disabled");
 		} else {
 			// find xmx-core.jar, support optional version (like xmx-core-1.0.0.jar) 
