@@ -20,7 +20,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class TestUpdateXmxIniConfig {
-	
+
+	private static final long FILETIME_PRECISION_MS =
+			System.getProperty("os.name").startsWith("Windows") ? 1L : 1000L;
+
 	// tests that auto-created config is not updated at next run
 	@Test
 	public void testUpdateNotRequiredForAutoCreatedConfig() throws IOException {
@@ -169,15 +172,16 @@ public class TestUpdateXmxIniConfig {
 		
 		checkUpdateRequiredForLines(initialLines, expectedLines);
 	}
-	
+
 	private void checkUpdateNotRequiredForLines(List<String> lines) throws Exception {
+
 		Path tempIniFile = Files.createTempFile("testxmx", ".ini");
 		Files.write(tempIniFile,
 				lines,
 				Charset.defaultCharset());
 		FileTime modifiedTime = Files.getLastModifiedTime(tempIniFile);
-		Thread.sleep(10); // prevents tests completion at the same time quant
-		
+		Thread.sleep(FILETIME_PRECISION_MS);
+
 		try {
 			XmxIniConfig.load(tempIniFile.toFile(), true);
 			
@@ -200,7 +204,7 @@ public class TestUpdateXmxIniConfig {
 				initialLines,
 				Charset.defaultCharset());
 		FileTime modifiedTime = Files.getLastModifiedTime(tempIniFile);
-		Thread.sleep(10); // prevents tests completion at the same time quant
+		Thread.sleep(FILETIME_PRECISION_MS);
 		
 		try {
 			XmxIniConfig.load(tempIniFile.toFile(), true);
