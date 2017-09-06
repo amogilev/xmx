@@ -6,6 +6,8 @@ import com.gilecode.xmx.core.type.IMethodInfoService;
 import com.gilecode.xmx.service.IMapperService;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.service.XmxServiceRegistry;
+import com.gilecode.xmx.ui.service.IXmxUiService;
+import com.gilecode.xmx.ui.service.XmxUiService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,5 +27,10 @@ public class Config {
 	@Bean
 	public IMethodInfoService methodInfoService() {
 		return XmxServiceRegistry.getMethodInfoService();
+	}
+
+	@Bean
+	public IXmxUiService xmxUiService() {
+		return new XmxUiService(methodInfoService(), xmxService(), mapperService());
 	}
 }

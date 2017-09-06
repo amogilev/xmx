@@ -1,6 +1,6 @@
 // Copyright © 2017 Andrey Mogilev. All rights reserved.
 
-package com.gilecode.xmx.ui;
+package com.gilecode.xmx.ui.dto;
 
 import com.gilecode.xmx.dto.XmxClassInfo;
 import com.gilecode.xmx.dto.XmxObjectInfo;
