@@ -9,10 +9,7 @@ import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.IXmxConfig;
 import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.core.jmx.JmxSupport;
-import com.gilecode.xmx.dto.XmxClassInfo;
-import com.gilecode.xmx.dto.XmxObjectDetails;
-import com.gilecode.xmx.dto.XmxObjectInfo;
-import com.gilecode.xmx.dto.XmxRuntimeException;
+import com.gilecode.xmx.dto.*;
 import com.gilecode.xmx.server.IXmxServerLauncher;
 import com.gilecode.xmx.service.IXmxService;
 import org.objectweb.asm.ClassReader;
@@ -473,7 +470,64 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		
 		return result;
 	}
-	
+
+	public ManagedClassInfo findManagedClassInfo(Class<?> c) {
+		ClassLoader cl = c.getClassLoader();
+		String appName = obtainAppNameByLoader(cl);
+		ManagedAppInfo appInfo = appInfosByName.get(appName);
+		if (appInfo != null) {
+			ManagedClassLoaderWeakRef managedLoaderInfo = appInfo.findManagedClassLoaderInfo(cl);
+			if (managedLoaderInfo != null) {
+				Integer classId = managedLoaderInfo.getClassIdsByName().get(c.getName());
+				if (classId != null) {
+					return classesInfoById.get(classId);
+				}
+			}
+		}
+
+		return null;
+	}
+
+	@Override
+	public synchronized XmxClassDetails getClassDetails(Class<?> c) {
+		Integer classId;
+		List<Field> managedFields;
+		List<Method> managedMethods;
+
+		ManagedClassInfo mci = findManagedClassInfo(c);
+		if (mci != null) {
+			if (!mci.isInitialized()) {
+				initClassInfo(c, mci);
+			}
+			managedFields = mci.getManagedFields();
+			managedMethods = mci.getManagedMethods();
+			classId = mci.getId();
+		} else {
+			// unmanaged class
+			managedFields = getManagedFields(c);
+			managedMethods = getManagedMethods(c);
+			classId = null;
+		}
+		return getXmxClassDetails(classId, c.getName(), managedFields, managedMethods);
+	}
+
+	public XmxClassDetails getXmxClassDetails(Integer classId, String className,
+											  List<Field> managedFields, List<Method> managedMethods) {
+		// fill fields
+		Map<Integer, Field> fieldsById = new HashMap<>();
+		for (int fieldId = 0; fieldId < managedFields.size(); fieldId++) {
+			fieldsById.put(fieldId, managedFields.get(fieldId));
+		}
+
+		// fill methods
+		Map<Integer, Method> methodsById = new HashMap<>();
+		for (int methodId = 0; methodId < managedMethods.size(); methodId++) {
+			methodsById.put(methodId, managedMethods.get(methodId));
+		}
+
+		return new XmxClassDetails(classId, className, fieldsById, methodsById);
+	}
+
 	/**
 	 * Returns all 'live' objects info for the specified class ID, which may be obtained from classes info
 	 * return by {@link #findManagedClassInfos(String, String)}.
@@ -527,22 +581,11 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		}
 		
 		ManagedClassInfo classInfo = ref.classInfo;
+		XmxClassDetails classDetails = getXmxClassDetails(classInfo.getId(), classInfo.getClassName(),
+				classInfo.getManagedFields(), classInfo.getManagedMethods());
 
-		// fill fields
-		List<Field> managedFields = classInfo.getManagedFields();
-		Map<Integer, Field> fieldsById = new HashMap<>();
-		for (int fieldId = 0; fieldId < managedFields.size(); fieldId++) {
-			fieldsById.put(fieldId, managedFields.get(fieldId));
-		}
-		
-		// fill methods
-		List<Method> managedMethods = classInfo.getManagedMethods();
-		Map<Integer, Method> methodsById = new HashMap<>();
-		for (int methodId = 0; methodId < managedMethods.size(); methodId++) {
-			methodsById.put(methodId, managedMethods.get(methodId));
-		}
 		return new XmxObjectDetails(objectId, toDto(classInfo), obj,
-				fieldsById, methodsById);
+				classDetails.getManagedFields(), classDetails.getManagedMethods());
 	}
 
 	@Override

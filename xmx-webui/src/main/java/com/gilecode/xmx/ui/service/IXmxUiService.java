@@ -38,6 +38,8 @@ public interface IXmxUiService {
 	 */
 	ExtendedXmxObjectDetails getExtendedObjectDetails(int objectId) throws MissingObjectException;
 
+	ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath) throws MissingObjectException, RefPathSyntaxException;
+
 	XmxObjectTextRepresentation invokeObjectMethod(Integer objectId, int methodId, String[] argsArr)
 			throws MissingObjectException, Throwable;
 

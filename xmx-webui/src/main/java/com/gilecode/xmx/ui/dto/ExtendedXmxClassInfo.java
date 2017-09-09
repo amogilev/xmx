@@ -5,7 +5,7 @@ package com.gilecode.xmx.ui.dto;
 import com.gilecode.xmx.dto.XmxClassInfo;
 
 public class ExtendedXmxClassInfo extends XmxClassInfo {
-	public ExtendedXmxClassInfo(int id, String className) {
+	public ExtendedXmxClassInfo(Integer id, String className) {
 		super(id, className);
 	}
 

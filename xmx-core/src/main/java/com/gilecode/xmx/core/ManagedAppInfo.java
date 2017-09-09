@@ -71,24 +71,34 @@ public class ManagedAppInfo {
 	 * belong this app.
 	 */
 	public ManagedClassLoaderWeakRef getOrInitManagedClassLoaderInfo(ClassLoader cl, ReferenceQueue<ClassLoader> managedClassLoadersRefQueue) {
+		// at first, try to find using simple iterations
+		ManagedClassLoaderWeakRef ref = findManagedClassLoaderInfo(cl);
+		if (ref != null) {
+			return ref;
+		}
+
+		// if iteration fails, putIfAbsent approach will do getOrInit atomically
+		ManagedClassLoaderWeakRef candidate = new ManagedClassLoaderWeakRef(cl, managedClassLoadersRefQueue, this);
+		ref = classLoaderInfos.putIfAbsent(candidate, candidate);
+		
+		// null ref means that putIfAbsent actually put candidate, so it shall be used 
+		return ref == null ? candidate : ref;
+	}
+
+	public ManagedClassLoaderWeakRef findManagedClassLoaderInfo(ClassLoader cl) {
 		if (cl == null) {
 			// use special placeholder to represent bootstrap class loader
 			cl = ManagedClassLoaderWeakRef.NULL_CL;
 		}
-		
+
 		// at first, try simple iteration to prevent extraneous creation of weak references
 		for (ManagedClassLoaderWeakRef ref : classLoaderInfos.keySet()) {
 			if (ref.get() == cl) {
 				return ref;
 			}
 		}
-		
-		// if iteration fails, putIfAbsent approach will do getOrInit atomically
-		ManagedClassLoaderWeakRef candidate = new ManagedClassLoaderWeakRef(cl, managedClassLoadersRefQueue, this);
-		ManagedClassLoaderWeakRef ref = classLoaderInfos.putIfAbsent(candidate, candidate);
-		
-		// null ref means that putIfAbsent actually put candidate, so it shall be used 
-		return ref == null ? candidate : ref;
+
+		return null;
 	}
 
 	public void addManagedClassId(int classId) {

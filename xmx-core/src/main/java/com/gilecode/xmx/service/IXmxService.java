@@ -2,10 +2,7 @@
 
 package com.gilecode.xmx.service;
 
-import com.gilecode.xmx.dto.XmxClassInfo;
-import com.gilecode.xmx.dto.XmxObjectDetails;
-import com.gilecode.xmx.dto.XmxObjectInfo;
-import com.gilecode.xmx.dto.XmxRuntimeException;
+import com.gilecode.xmx.dto.*;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -31,6 +28,16 @@ public interface IXmxService {
 	 * @return matching classes information
 	 */
 	List<XmxClassInfo> findManagedClassInfos(String appNameOrNull, String classNamePatternOrNull) throws XmxRuntimeException;
+
+	/**
+	 * Returns detailed information about a class, not matter managed or not.
+	 * The returned information includes its fields/methods.
+	 *
+	 * @param c the class to obtain teh information about
+	 *
+	 * @return the detailed information about the class
+	 */
+	XmxClassDetails getClassDetails(Class<?> c);
 
 	/**
 	 * Returns all 'live' objects info for the specified class ID, which may be obtained from classes info

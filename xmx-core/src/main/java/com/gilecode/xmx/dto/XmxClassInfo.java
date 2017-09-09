@@ -3,32 +3,30 @@
 package com.gilecode.xmx.dto;
 
 /**
- * DTO information about the managed class.
+ * DTO XMX-related information about the class.
  */
 public class XmxClassInfo {
 	
 	/**
-	 * Unique ID of the class in XMX system 
+	 * Unique ID of the class in XMX system, or {@code null} for unmanaged classes
 	 */
-	private int id;
+	private Integer id;
 	
 	/**
 	 * Name of the class
 	 */
 	private String className;
 	
-	public XmxClassInfo(int id, String className) {
+	public XmxClassInfo(Integer id, String className) {
 		this.id = id;
 		this.className = className;
 	}
 
-	public int getId() {
+	public Integer getId() {
 		return id;
 	}
 
 	public String getClassName() {
 		return className;
 	}
-	
-
 }

@@ -3,10 +3,7 @@
 package com.gilecode.xmx.ui.service;
 
 import com.gilecode.xmx.core.type.IMethodInfoService;
-import com.gilecode.xmx.dto.XmxClassInfo;
-import com.gilecode.xmx.dto.XmxObjectDetails;
-import com.gilecode.xmx.dto.XmxObjectInfo;
-import com.gilecode.xmx.dto.XmxRuntimeException;
+import com.gilecode.xmx.dto.*;
 import com.gilecode.xmx.service.IMapperService;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.UIConstants;
@@ -103,12 +100,20 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	 *
 	 * @param objectId the unique object ID
 	 */
+	// FIXME: remove eventually
 	@Override
 	public ExtendedXmxObjectDetails getExtendedObjectDetails(int objectId) throws MissingObjectException {
-		XmxObjectDetails objectDetails = xmxService.getObjectDetails(objectId);
-		if (objectDetails == null) {
-			throw new MissingObjectException(objectId);
+		try {
+			return getExtendedObjectDetails(REFPATH_PREFIX + objectId);
+		} catch (RefPathSyntaxException e) {
+			logger.error("Unexpected", e);
+			throw new RuntimeException(e);
 		}
+	}
+
+	@Override
+	public ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath) throws MissingObjectException, RefPathSyntaxException {
+		XmxObjectDetails objectDetails = getObjectDetailsRefPath(null, refpath, 0);
 		Object obj = objectDetails.getValue();
 
 		List<String> classNames = new ArrayList<>();
@@ -159,9 +164,68 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			classNames.add(clazz.getName());
 			clazz = clazz.getSuperclass();
 		}
-		return new ExtendedXmxObjectDetails(objectId, objectDetails.getClassInfo(), obj,
+		return new ExtendedXmxObjectDetails(objectDetails.getObjectId(), objectDetails.getClassInfo(), obj,
 				toText(obj, OBJ_JSON_CHARS_LIMIT),
 				classNames, fieldsByClass, methodsByClass);
+	}
+
+	private Integer parseRefId(String path) throws RefPathSyntaxException {
+		if (path.startsWith(REFPATH_PREFIX)) {
+			String idStr = path.substring(REFPATH_PREFIX.length());
+			try {
+				return Integer.parseInt(idStr);
+			} catch (NumberFormatException e) {
+				throw new RefPathSyntaxException("Illegal refpath: integer ID expected after starting '" +
+						REFPATH_PREFIX  + "':  '" + path + "'", e);
+			}
+		} else {
+			throw new RefPathSyntaxException("Illegal refpath: shall start with '" + REFPATH_PREFIX +
+					"' followed by integer ID, but got '" + path + "'");
+		}
+	}
+
+	private XmxObjectDetails getObjectDetailsRefPath(Object source, String path, int level)
+			throws MissingObjectException, RefPathSyntaxException {
+		int i = path.indexOf('.');
+		String head, tail;
+		if (i > 0) {
+			head = path.substring(0, i);
+			tail = path.substring(i + 1);
+		} else {
+			head = path;
+			tail = null;
+		}
+		Object obj = null;
+		XmxObjectDetails objDetails = null;
+		if (level == 0) {
+			// expect path starts with ID like "$123"
+			Integer objectId = parseRefId(head);
+			objDetails = getXmxObjectDetails(objectId);
+			obj = objDetails.getValue();
+		} else {
+			// TODO: implement fields and arrays access
+			throw new UnsupportedOperationException("Not implemented yet");
+		}
+
+		if (tail != null) {
+			return getObjectDetailsRefPath(obj, tail, level + 1);
+		} else if (objDetails != null) {
+			return objDetails;
+		} else {
+			return getUnmanagedObjectDetails(obj);
+		}
+	}
+
+	private XmxObjectDetails getUnmanagedObjectDetails(Object obj) {
+		XmxClassDetails xmxClassDetails = xmxService.getClassDetails(obj.getClass());
+		// do not use details instead of ci (simple info) as it is to be returned to UI
+		XmxClassInfo ci = new XmxClassInfo(null, xmxClassDetails.getClassName());
+		return new XmxObjectDetails(ID_UNMANAGED, ci, obj,
+				xmxClassDetails.getManagedFields(), xmxClassDetails.getManagedMethods());
+	}
+
+	private XmxClassInfo getUnmanagedClassInfo(Class<?> c) {
+		return new XmxClassInfo(null, c.getName());
 	}
 
 	@Override
@@ -272,6 +336,14 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			throw new MissingObjectException(objectId);
 		}
 		return objInfo;
+	}
+
+	private XmxObjectDetails getXmxObjectDetails(Integer objectId) throws MissingObjectException {
+		final XmxObjectDetails objDetails = xmxService.getObjectDetails(objectId);
+		if (objDetails == null) {
+			throw new MissingObjectException(objectId);
+		}
+		return objDetails;
 	}
 
 	private ExtendedXmxObjectInfo toExtendedInfo(XmxObjectInfo info, long jsonCharsLimit) {

@@ -8,6 +8,7 @@ import com.gilecode.xmx.ui.dto.ExtendedXmxObjectInfo;
 import com.gilecode.xmx.ui.dto.XmxObjectTextRepresentation;
 import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.service.MissingObjectException;
+import com.gilecode.xmx.ui.service.RefPathSyntaxException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -63,6 +64,22 @@ public class RestController implements UIConstants {
 		model.addAttribute("objectId", objectId);
 		ExtendedXmxObjectDetails details = xmxUiService.getExtendedObjectDetails(objectId);
 		String className = details.getClassesNames().get(0);
+		model.addAttribute("refpath", REFPATH_PREFIX + objectId);
+		model.addAttribute("className", className);
+		model.addAttribute("details", details);
+		model.addAttribute("valKind", valKind);
+
+		return "objectDetails";
+	}
+
+	@RequestMapping(value = "getObjectDetails/{refpath}", method = RequestMethod.GET)
+	public String getObjectDetails(ModelMap model,
+               @PathVariable String refpath,
+               @RequestParam(required = false, defaultValue = "SMART") ValuesDisplayKind valKind)
+			throws MissingObjectException, RefPathSyntaxException {
+		ExtendedXmxObjectDetails details = xmxUiService.getExtendedObjectDetails(refpath);
+		String className = details.getClassesNames().get(0);
+		model.addAttribute("refpath", refpath);
 		model.addAttribute("className", className);
 		model.addAttribute("details", details);
 		model.addAttribute("valKind", valKind);
