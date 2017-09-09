@@ -72,7 +72,7 @@ public class RestController implements UIConstants {
 		return "objectDetails";
 	}
 
-	@RequestMapping(value = "getObjectDetails/{refpath}", method = RequestMethod.GET)
+	@RequestMapping(value = "getObjectDetails/{refpath:.+}", method = RequestMethod.GET)
 	public String getObjectDetails(ModelMap model,
                @PathVariable String refpath,
                @RequestParam(required = false, defaultValue = "SMART") ValuesDisplayKind valKind)

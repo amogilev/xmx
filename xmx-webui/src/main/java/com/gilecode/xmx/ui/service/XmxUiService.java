@@ -202,9 +202,19 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			Integer objectId = parseRefId(head);
 			objDetails = getXmxObjectDetails(objectId);
 			obj = objDetails.getValue();
+		} else if (Character.isDigit(head.charAt(0))) {
+			// TODO: implement arrays access
+			throw new UnsupportedOperationException("Array access is not implemented yet");
 		} else {
-			// TODO: implement fields and arrays access
-			throw new UnsupportedOperationException("Not implemented yet");
+			// expect head to indicate a field
+			Class<?> c = source.getClass();
+			Field f = getFieldByPath(c, head);
+			try {
+				f.setAccessible(true);
+				obj = f.get(source);
+			} catch (IllegalAccessException e) {
+				throw new RefPathSyntaxException("Field to get field '" + head + "' in class " + c + " for path=" + path);
+			}
 		}
 
 		if (tail != null) {
@@ -214,6 +224,50 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		} else {
 			return getUnmanagedObjectDetails(obj);
 		}
+	}
+
+	private Field getFieldByPath(Class<?> origClass, String fpath) throws RefPathSyntaxException {
+		Class<?> c = origClass;
+		int n = fpath.indexOf('^');
+		String fname;
+		int superLevel = 0;
+		if (n >= 0) {
+			fname = fpath.substring(0, n);
+			String levelStr = fpath.substring(n + 1);
+			try {
+				superLevel = Integer.parseInt(levelStr);
+			} catch (NumberFormatException e) {
+				throw new RefPathSyntaxException("Invalid refpath field part '" + fpath + "'", e);
+			}
+		} else {
+			fname = fpath;
+		}
+
+		Field f = null;
+		if (superLevel > 0) {
+			for (int i = 0; i < superLevel; i++) {
+				c = c.getSuperclass();
+				if (c == null) {
+					throw new RefPathSyntaxException("Invalid ^superLevel for refpath field part '" +
+							fpath + "' and class " + origClass);
+				}
+			}
+			try {
+				return c.getDeclaredField(fname);
+			} catch (NoSuchFieldException e) {
+				// give up
+			}
+		} else {
+			while (c != null) {
+				try {
+					return c.getDeclaredField(fname);
+				} catch (NoSuchFieldException e) {
+					// try search in superclass
+					c = c.getSuperclass();
+				}
+			}
+		}
+		throw new RefPathSyntaxException("Field '" + fpath + "' is not found in class " + origClass);
 	}
 
 	private XmxObjectDetails getUnmanagedObjectDetails(Object obj) {
