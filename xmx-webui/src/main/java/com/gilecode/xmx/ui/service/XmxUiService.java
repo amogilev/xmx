@@ -18,10 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.util.*;
 
 public class XmxUiService implements IXmxUiService, UIConstants {
@@ -195,6 +192,9 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			head = path;
 			tail = null;
 		}
+		if (level > 0 && source == null) {
+			throw new RefPathSyntaxException("Null object for path=" + path);
+		}
 		Object obj = null;
 		XmxObjectDetails objDetails = null;
 		if (level == 0) {
@@ -203,8 +203,15 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			objDetails = getXmxObjectDetails(objectId);
 			obj = objDetails.getValue();
 		} else if (Character.isDigit(head.charAt(0))) {
-			// TODO: implement arrays access
-			throw new UnsupportedOperationException("Array access is not implemented yet");
+			if (!source.getClass().isArray()) {
+				throw new RefPathSyntaxException("Expected an array, but got " + source.getClass() + " for path=" + path);
+			}
+			try {
+				int idx = Integer.parseInt(head);
+				obj = Array.get(source, idx);
+			} catch (NumberFormatException | IndexOutOfBoundsException e) {
+				throw new RefPathSyntaxException("Invalid array index '" + head + "' for path=" + path);
+			}
 		} else {
 			// expect head to indicate a field
 			Class<?> c = source.getClass();
@@ -213,7 +220,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				f.setAccessible(true);
 				obj = f.get(source);
 			} catch (IllegalAccessException e) {
-				throw new RefPathSyntaxException("Field to get field '" + head + "' in class " + c + " for path=" + path);
+				throw new RefPathSyntaxException("Failed to get field '" + head + "' in class " + c + " for path=" + path);
 			}
 		}
 
