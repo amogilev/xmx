@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -33,8 +34,10 @@ public class RestController implements UIConstants {
 	}
 
 	@ExceptionHandler(MissingObjectException.class)
-	public String missingObject() {
-		return "missingObject";
+	public ModelAndView missingObject(MissingObjectException ex) {
+		ModelAndView mav = new ModelAndView("missingObject");
+		mav.addObject("refpath", "$" + ex.getMissingObjectId());
+		return mav;
 	}
 
 	@RequestMapping(method = RequestMethod.GET)
@@ -49,7 +52,7 @@ public class RestController implements UIConstants {
 		Integer singletonId = xmxUiService.getManagedClassSingleInstanceId(classId);
 		if (singletonId != null) {
 			// fast path for singletons
-			 return "redirect:/getObjectDetails?objectId=" + singletonId;
+			 return "redirect:/getObjectDetails/$" + singletonId;
 		}
 		List<ExtendedXmxObjectInfo> extObjectsInfo = xmxUiService.getManagedClassInstancesInfo(classId);
 		model.addAttribute("className", className);
@@ -57,25 +60,10 @@ public class RestController implements UIConstants {
 		return "classObjects";
 	}
 
-	@RequestMapping(value = "getObjectDetails", method = RequestMethod.GET)
-	public String getObjectDetails(ModelMap model,
-               @RequestParam Integer objectId,
-               @RequestParam(required = false, defaultValue = "SMART") ValuesDisplayKind valKind) throws MissingObjectException {
-		model.addAttribute("objectId", objectId);
-		ExtendedXmxObjectDetails details = xmxUiService.getExtendedObjectDetails(objectId);
-		String className = details.getClassesNames().get(0);
-		model.addAttribute("refpath", REFPATH_PREFIX + objectId);
-		model.addAttribute("className", className);
-		model.addAttribute("details", details);
-		model.addAttribute("valKind", valKind);
-
-		return "objectDetails";
-	}
-
 	@RequestMapping(value = "getObjectDetails/{refpath:.+}", method = RequestMethod.GET)
 	public String getObjectDetails(ModelMap model,
-               @PathVariable String refpath,
-               @RequestParam(required = false, defaultValue = "SMART") ValuesDisplayKind valKind)
+				@PathVariable String refpath,
+				@RequestParam(required = false, defaultValue = "SMART") ValuesDisplayKind valKind)
 			throws MissingObjectException, RefPathSyntaxException {
 		ExtendedXmxObjectDetails details = xmxUiService.getExtendedObjectDetails(refpath);
 		String className = details.getClassesNames().get(0);
@@ -87,29 +75,29 @@ public class RestController implements UIConstants {
 		return "objectDetails";
 	}
 
-	@RequestMapping(value = "setObjectField", method = RequestMethod.GET)
-	public String handleSetObjectField(ModelMap model, @RequestParam Integer objectId,
-			@RequestParam Integer fieldId, @RequestParam String value) throws MissingObjectException {
-		model.addAttribute("objectId", objectId);
+	@RequestMapping(value = "setObjectField/{refpath:.+}", method = RequestMethod.GET)
+	public String handleSetObjectField(ModelMap model,
+				@PathVariable String refpath,
+				@RequestParam Integer fieldId, @RequestParam String value)
+			throws MissingObjectException, RefPathSyntaxException {
+		xmxUiService.setObjectField(refpath, fieldId, value);
 
-		xmxUiService.setObjectField(objectId, fieldId, value);
-
-		ExtendedXmxObjectDetails updatedDetails = xmxUiService.getExtendedObjectDetails(objectId);
+		ExtendedXmxObjectDetails updatedDetails = xmxUiService.getExtendedObjectDetails(refpath);
 		model.addAttribute("details", updatedDetails);
 
-		return "redirect:/getObjectDetails";
+		return "redirect:/getObjectDetails/" + refpath;
 	}
 
-	@RequestMapping(value = "invokeMethod", method = RequestMethod.POST)
+	@RequestMapping(value = "invokeMethod/{refpath:.+}", method = RequestMethod.POST)
 	public String handleInvokeObjectMethod(
 			ModelMap model,
-			@RequestParam int objectId,
+			@PathVariable String refpath,
 			@RequestParam int methodId,
 			@RequestParam(value = "arg", required = false) String[] argsArr) throws Throwable {
 
-		XmxObjectTextRepresentation resultText = xmxUiService.invokeObjectMethod(objectId, methodId, argsArr);
+		XmxObjectTextRepresentation resultText = xmxUiService.invokeObjectMethod(refpath, methodId, argsArr);
 
-		model.addAttribute("objectId", objectId);
+		model.addAttribute("refpath", refpath);
 		model.addAttribute("result", resultText);
 		return "methodResult";
 	}

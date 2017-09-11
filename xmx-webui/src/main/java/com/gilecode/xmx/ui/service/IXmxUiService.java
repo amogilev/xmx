@@ -40,10 +40,10 @@ public interface IXmxUiService {
 
 	ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath) throws MissingObjectException, RefPathSyntaxException;
 
-	XmxObjectTextRepresentation invokeObjectMethod(Integer objectId, int methodId, String[] argsArr)
-			throws MissingObjectException, Throwable;
+	XmxObjectTextRepresentation invokeObjectMethod(String refpath, int methodId, String[] argsArr)
+			throws MissingObjectException, RefPathSyntaxException, Throwable;
 
-	void setObjectField(Integer objectId, Integer fieldId, String value) throws MissingObjectException;
+	void setObjectField(String refpath, Integer fieldId, String value) throws MissingObjectException, RefPathSyntaxException;
 
 	void printAllObjectsReport(PrintWriter out);
 

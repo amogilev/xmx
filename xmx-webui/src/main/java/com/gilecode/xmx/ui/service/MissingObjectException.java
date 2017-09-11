@@ -12,12 +12,13 @@ public class MissingObjectException extends Exception {
 	/**
 	 * Optional ID of the missing object, if known.
 	 */
-	Integer missingObjectId;
-
-	public MissingObjectException() {
-	}
+	private Integer missingObjectId;
 
 	public MissingObjectException(Integer missingObjectId) {
 		this.missingObjectId = missingObjectId;
+	}
+
+	public Integer getMissingObjectId() {
+		return missingObjectId;
 	}
 }

@@ -10,7 +10,7 @@
 </head>
 <body>
 
-<h1>Object #${objectId} is missing. Probably it is already GC'ed</h1>
+<h1>Object ${refpath} is missing. Probably it is already GC'ed</h1>
 
 </body>
 </html>

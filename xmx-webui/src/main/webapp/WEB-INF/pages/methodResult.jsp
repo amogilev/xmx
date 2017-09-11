@@ -10,7 +10,7 @@
 </head>
 <body>
 
-<h1>Method invoked on object #${objectId}</h1>
+<h1>Method invoked on object ${refpath}</h1>
 
 <h2>Result:</h2>
 <table border="2">
@@ -23,9 +23,6 @@
         <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="${fn:escapeXml(result.jsonValue)}"/></td>
     </tr>
 </table>
-
-<h3><a href="${pageContext.request.contextPath}/getObjectDetails?objectId=${objectId}">Back to object details</a></h3>
-
 
 </body>
 </html>

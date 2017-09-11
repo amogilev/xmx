@@ -27,7 +27,7 @@
     </thead>
     <c:forEach items="${objects}" var="object">
         <tr>
-            <td>${object.objectId} (<a href="${pageContext.request.contextPath}/getObjectDetails?objectId=${object.objectId}">Details</a>)</td>
+            <td>${object.objectId} (<a href="${pageContext.request.contextPath}/getObjectDetails/$${object.objectId}">Details</a>)</td>
             <td class="supportsTruncationWarning">
                 <c:out value="${object.text.smartTextValue}"/>
                 <c:if test="${object.text.smartUsesJson && object.text.jsonTruncated}">

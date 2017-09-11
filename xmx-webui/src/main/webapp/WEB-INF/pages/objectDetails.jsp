@@ -11,29 +11,28 @@
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>XMX Object Details</title>
 
-<link href="./css/main.css" rel="stylesheet" type="text/css" />
+<link href="${pageContext.request.contextPath}/css/main.css" rel="stylesheet" type="text/css" />
 
 <script type="text/javascript">
 
-function changeValuesDisplay(newValKind) {
-    if ('${valKind}' != newValKind) {
-        window.location = "${pageContext.request.contextPath}/getObjectDetails?objectId=${objectId}&valKind=" + newValKind;
+    function changeValuesDisplay(newValKind) {
+        if ('${valKind}' != newValKind) {
+            window.location = "${pageContext.request.contextPath}/getObjectDetails/${refpath}?valKind=" + newValKind;
+        }
     }
-}
 
-function callSetField(fieldId) {
-		var value = document.getElementById("value_" + fieldId).value; 
-		window.location = "${pageContext.request.contextPath}/setObjectField?objectId=${objectId}&fieldId=" + fieldId + "&value=" + encodeURIComponent(value);
+    function callSetField(fieldId) {
+        var value = document.getElementById("value_" + fieldId).value;
+        window.location = "${pageContext.request.contextPath}/setObjectField/${refpath}?fieldId=" + fieldId + "&value=" + encodeURIComponent(value);
 	}
 
-    function invokeMethod(objId, methodId) {
+    function invokeMethod(methodId) {
         var inputs = document.getElementById("m" + methodId).getElementsByTagName("input");
         var form = document.createElement("form");
         form.method = 'POST';
-        form.action = 'invokeMethod';
+        form.action = '${pageContext.request.contextPath}/invokeMethod/${refpath}';
         form.style = 'display: none;';
         form.target = '_blank';
-        addFormData(form, 'objectId', objId);
         addFormData(form, 'methodId', methodId);
         for (var i = 0; i < inputs.length; i++) {
             var argInput = inputs[i];
@@ -52,15 +51,15 @@ function callSetField(fieldId) {
     }
 
     function loadFullJson(fieldId) {
-	    var url = "${pageContext.request.contextPath}/getFullJson?objectId=${objectId}" +
-            (fieldId === undefined ? "" : "&fieldId=" + fieldId);
+	    var url = "${pageContext.request.contextPath}/getFullJson/${refpath}" +
+            (fieldId === undefined ? "" : "?fieldId=" + fieldId);
         window.open(url, '_blank');
     }
 
 </script>
 </head>
 
-<h1>Details of object #${objectId} (${className})</h1>
+<h1>Details of object ${refpath} (${className})</h1>
 
 <table border="2">
     <tr>
@@ -164,19 +163,12 @@ function callSetField(fieldId) {
             )
         </td>
         <td>
-            <input type="button" onclick="invokeMethod(${objectId}, ${methodInfo.id});" value="Invoke"/>
+            <input type="button" onclick="invokeMethod(${methodInfo.id});" value="Invoke"/>
         </td>
     </tr>
   </c:forEach>
 </c:forEach>
 </table>
-
-<form id="frmInvMethod" action="/invokeMethod" method="post" style="display: none;">
-    <input type="text" name="objectId" value="18"/>
-    <input type="text" name="methodId" value="1"/>
-    <input type="text" name="args" value="123"/>
-    <input type="submit" value="Submit"/>
-</form>
 
 </body>
 </html>
