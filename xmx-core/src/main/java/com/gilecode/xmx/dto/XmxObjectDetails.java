@@ -14,9 +14,9 @@ import java.util.Map;
 public class XmxObjectDetails extends XmxObjectInfo {
 
 	/**
-	 * Lists of fields for object and its parents, mapped by the class name.
+	 * Fields for object and its parents, mapped by unique ID.
 	 */
-	final private Map<Integer, Field> managedFields;
+	final private Map<String, Field> managedFields;
 	
 	/**
 	 * Lists of methods for object and its parents.
@@ -24,14 +24,14 @@ public class XmxObjectDetails extends XmxObjectInfo {
 	final private Map<Integer, Method> managedMethods;
 
 	public XmxObjectDetails(int objectId, XmxClassInfo classInfo, Object value,
-							Map<Integer, Field> managedFields,
+							Map<String, Field> managedFields,
 							Map<Integer, Method> managedMethods) {
 		super(objectId, classInfo, value);
 		this.managedFields = managedFields;
 		this.managedMethods = managedMethods;
 	}
 
-	public Map<Integer, Field> getManagedFields() {
+	public Map<String, Field> getManagedFields() {
 		return managedFields;
 	}
 

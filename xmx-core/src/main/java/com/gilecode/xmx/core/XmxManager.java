@@ -280,7 +280,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		if (!info.isInitialized()) {
 			String appName = info.getAppInfo().getName();
 			List<Method> managedMethods = getManagedMethods(objClass);
-			List<Field> managedFields = getManagedFields(objClass);
+			Map<String, Field> managedFields = getManagedFields(objClass);
 
 			ModelMBeanInfoSupport jmxClassModel = null;
 			if (jmxServer != null) {
@@ -491,7 +491,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	@Override
 	public synchronized XmxClassDetails getClassDetails(Class<?> c) {
 		Integer classId;
-		List<Field> managedFields;
+		Map<String, Field> managedFields;
 		List<Method> managedMethods;
 
 		ManagedClassInfo mci = findManagedClassInfo(c);
@@ -512,20 +512,14 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	}
 
 	public XmxClassDetails getXmxClassDetails(Integer classId, String className,
-											  List<Field> managedFields, List<Method> managedMethods) {
-		// fill fields
-		Map<Integer, Field> fieldsById = new HashMap<>();
-		for (int fieldId = 0; fieldId < managedFields.size(); fieldId++) {
-			fieldsById.put(fieldId, managedFields.get(fieldId));
-		}
-
+											  Map<String, Field> managedFields, List<Method> managedMethods) {
 		// fill methods
 		Map<Integer, Method> methodsById = new HashMap<>();
 		for (int methodId = 0; methodId < managedMethods.size(); methodId++) {
 			methodsById.put(methodId, managedMethods.get(methodId));
 		}
 
-		return new XmxClassDetails(classId, className, fieldsById, methodsById);
+		return new XmxClassDetails(classId, className, managedFields, methodsById);
 	}
 
 	/**
@@ -599,12 +593,12 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	}
 	
 	@Override
-	public Field getObjectFieldById(int objectId, int fieldId) {
+	public Field getObjectField(int objectId, String fid) {
 		ManagedObjectWeakRef ref = objectsStorage.get(objectId);
 		if (ref == null) {
 			return null;
 		}
-		return ref.classInfo.getFieldById(fieldId);
+		return ref.classInfo.getField(fid);
 	}
 	
 	private ManagedClassInfo getManagedClassInfo(ManagedClassLoaderWeakRef loaderInfo, String className) {
@@ -636,9 +630,14 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		}
 		return methods;
 	}
-	
-	private List<Field> getManagedFields(Class<?> clazz) {
-		List<Field> fields = new ArrayList<>(20);
+
+	/**
+	 * Returns all managed fields, mapped by their unique ID (which is the field name with optional
+	 * '^superlevel' suffix in case of duplicated field names, i.e. hidden fields).
+	 */
+	private Map<String, Field> getManagedFields(Class<?> clazz) {
+		Map<String, Field> fields = new HashMap<>(16);
+		int superLevel = 0;
 		while (clazz != null) {
 			Field[] declaredFields = clazz.getDeclaredFields();
 			if (config.getSystemProperty(Properties.GLOBAL_SORT_FIELDS).asBool()) {
@@ -650,9 +649,12 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				// TODO: check if managed (e.g. by level or pattern)
 				// TODO: skip overridden methods
 				f.setAccessible(true);
-				fields.add(f);
+				String fname = f.getName();
+				String fid = fields.containsKey(fname) ? fname + "^" + superLevel : fname;
+				fields.put(fid, f);
 			}
 			clazz = clazz.getSuperclass();
+			superLevel++;
 		}
 		return fields;
 	}

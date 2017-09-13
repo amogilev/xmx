@@ -9,6 +9,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class ManagedClassInfo {
@@ -57,7 +58,7 @@ public class ManagedClassInfo {
 	 * List of managed fields. Index in the list is
 	 * equal to the internal field ID. 
 	 */
-	private List<Field> managedFields;
+	private Map<String, Field> managedFields;
 	
 	/**
 	 * JMX model for managed class instances, or {@code null}
@@ -84,8 +85,8 @@ public class ManagedClassInfo {
 		this.jmxObjectNamePart = jmxObjectNamePart;
 	}
 
-	public void init(List<Method> managedMethods, List<Field> managedFields, 
-			ModelMBeanInfoSupport jmxClassModel) {
+	public void init(List<Method> managedMethods, Map<String, Field> managedFields,
+					 ModelMBeanInfoSupport jmxClassModel) {
 		this.managedMethods = managedMethods;
 		this.managedFields = managedFields;
 		this.jmxClassModel = jmxClassModel;
@@ -143,7 +144,7 @@ public class ManagedClassInfo {
 		return managedMethods;
 	}
 
-	public List<Field> getManagedFields() {
+	public Map<String, Field> getManagedFields() {
 		return managedFields;
 	}
 
@@ -162,15 +163,16 @@ public class ManagedClassInfo {
 		return m;
 	}
 	
-	public Field getFieldById(int fieldId) {
-		List<Field> fields = managedFields;
+	public Field getField(String fid) {
+		Map<String, Field> fields = managedFields;
 		if (fields == null) {
 			throw new XmxRuntimeException("ClassInfo is not initialized for " + className);
 		}
-		if (fieldId < 0 || fieldId >= fields.size()) {
-			throw new XmxRuntimeException("Field not found in " + className + " by ID=" + fieldId);
+		Field field = fields.get(fid);
+		if (field == null) {
+			throw new XmxRuntimeException("Field not found in " + className + " by ID=" + fid);
 		}
-		return fields.get(fieldId);
+		return field;
 	}
 	
 	public boolean isDisabled() {

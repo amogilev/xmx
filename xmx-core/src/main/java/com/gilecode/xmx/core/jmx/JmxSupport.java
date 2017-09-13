@@ -15,6 +15,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,9 +24,10 @@ public class JmxSupport {
 
 	private final static Logger logger = LoggerFactory.getLogger(JmxSupport.class);
 
-	public static ModelMBeanInfoSupport createModelForClass(Class<?> objClass, String appName, 
-			List<Method> managedMethods, List<Field> managedFields,
-			IXmxPropertiesSource config) {
+	public static ModelMBeanInfoSupport createModelForClass(Class<?> objClass, String appName,
+															List<Method> managedMethods,
+															Map<String, Field> managedFields,
+															IXmxPropertiesSource config) {
 
 		// TODO: check if JMX is enabled for class
 		// TODO: check JMX visibility level, and separate fields/methods
@@ -65,19 +67,19 @@ public class JmxSupport {
 			}
 
 			ArrayList<ModelMBeanAttributeInfo> attributes = new ArrayList<>();
-			for (int fieldId = 0; fieldId < managedFields.size(); fieldId++) {
-				Field f = managedFields.get(fieldId);
+			for (Map.Entry<String, Field> fe : managedFields.entrySet()) {
+				String fid = fe.getKey();
+				Field f = fe.getValue();
 
 				Descriptor descr = new DescriptorSupport();
 				descr.setField("class", objClass.getName());
-				descr.setField("name", f.getName());
+				descr.setField("name", fid);
 				descr.setField("descriptorType", "attribute");
-				descr.setField("fieldId", fieldId);
 
 				String type = getJmxType(f.getType());
 
 				ModelMBeanAttributeInfo attrInfo = new ModelMBeanAttributeInfo(
-						f.getName(), 
+						fid,
 						type, 
 						f.toGenericString(), // description 
 						true, true, //isReadable, isWritable, 

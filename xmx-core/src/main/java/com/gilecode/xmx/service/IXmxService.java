@@ -77,15 +77,15 @@ public interface IXmxService {
 	Method getObjectMethodById(int objectId, int methodId) throws XmxRuntimeException;
 	
 	/**
-	 * Resolves and returns actual Field by internal field ID. 
+	 * Resolves and returns actual Field by internal unique ID
 	 *
 	 * @param objectId the internal ID of the object to which the field belongs
-	 * @param fieldId the internal field ID
-	 * 
+	 * @param fid the internal field ID
+	 *
 	 * @return the resolved {@link Field}
 	 * @throws XmxRuntimeException if the field cannot be resolved
 	 */
-	Field getObjectFieldById(int objectId, int fieldId) throws XmxRuntimeException;
+	Field getObjectField(int objectId, String fid) throws XmxRuntimeException;
 	
 	// TBC...
 }

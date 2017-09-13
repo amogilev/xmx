@@ -43,9 +43,9 @@ public interface IXmxUiService {
 	XmxObjectTextRepresentation invokeObjectMethod(String refpath, int methodId, String[] argsArr)
 			throws MissingObjectException, RefPathSyntaxException, Throwable;
 
-	void setObjectField(String refpath, Integer fieldId, String value) throws MissingObjectException, RefPathSyntaxException;
+	void setObjectField(String refpath, String fid, String value) throws MissingObjectException, RefPathSyntaxException;
 
 	void printAllObjectsReport(PrintWriter out);
 
-	void printFullObjectJson(int objectId, Integer fieldId, PrintWriter out) throws IOException;
+	void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException;
 }

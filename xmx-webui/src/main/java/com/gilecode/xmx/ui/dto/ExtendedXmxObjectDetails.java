@@ -16,7 +16,7 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 		/**
 		 * Field ID, unique within the managed object.
 		 */
-		private int id;
+		private String id;
 
 		/**
 		 * Field name.
@@ -28,14 +28,14 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 		 */
 		private XmxObjectTextRepresentation text;
 
-		public FieldInfo(int id, String name, XmxObjectTextRepresentation text) {
+		public FieldInfo(String fid, String name, XmxObjectTextRepresentation text) {
 			super();
-			this.id = id;
+			this.id = fid;
 			this.name = name;
 			this.text = text;
 		}
 
-		public int getId() {
+		public String getId() {
 			return id;
 		}
 

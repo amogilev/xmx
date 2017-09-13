@@ -21,9 +21,9 @@
         }
     }
 
-    function callSetField(fieldId) {
-        var value = document.getElementById("value_" + fieldId).value;
-        window.location = "${pageContext.request.contextPath}/setObjectField/${refpath}?fieldId=" + fieldId + "&value=" + encodeURIComponent(value);
+    function callSetField(fid) {
+        var value = document.getElementById("value_" + fid).value;
+        window.location = "${pageContext.request.contextPath}/setObjectField/${refpath}?fid=" + fid+ "&value=" + encodeURIComponent(value);
 	}
 
     function invokeMethod(methodId) {
@@ -50,9 +50,9 @@
         form.appendChild(input);
     }
 
-    function loadFullJson(fieldId) {
+    function loadFullJson(fid) {
 	    var url = "${pageContext.request.contextPath}/getFullJson/${refpath}" +
-            (fieldId === undefined ? "" : "?fieldId=" + fieldId);
+            (fid === undefined ? "" : "?fid=" + fid);
         window.open(url, '_blank');
     }
 
@@ -73,7 +73,7 @@
             <c:if test="${details.text.jsonTruncated}">
                 <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
                     <tr>
-                        <td><img src="./images/alert.red.png" alt="Warning!"/></td>
+                        <td><img src="/images/alert.red.png" alt="Warning!"/></td>
                         <td><input type="button" onclick="loadFullJson();" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
                     </tr>
                 </table>
@@ -122,12 +122,12 @@
         }"/>
         <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldValue)}"/></td>
         <td class="supportsTruncationWarning">
-            <input type="button" onclick="callSetField(${fieldInfo.id});" value="Set">
+            <input type="button" onclick="callSetField('${fieldInfo.id}');" value="Set">
             <c:if test="${truncated}">
                 <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
                     <tr>
-                        <td><img src="./images/alert.red.png" alt="Warning!"/></td>
-                        <td><input type="button" onclick="loadFullJson(${fieldInfo.id});" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
+                        <td><img src="/images/alert.red.png" alt="Warning!"/></td>
+                        <td><input type="button" onclick="loadFullJson('${fieldInfo.id}');" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
                     </tr>
                 </table>
             </c:if>

@@ -121,9 +121,9 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		Class<?> clazz = obj.getClass();
 
 		// fill fields
-		Map<Integer, Field> managedFields = objectDetails.getManagedFields();
-		for (Map.Entry<Integer, Field> e : managedFields.entrySet()) {
-			Integer fieldId = e.getKey();
+		Map<String, Field> managedFields = objectDetails.getManagedFields();
+		for (Map.Entry<String, Field> e : managedFields.entrySet()) {
+			String fid = e.getKey();
 			Field f = e.getValue();
 
 			String declaringClassName = f.getDeclaringClass().getName();
@@ -135,7 +135,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			}
 
 			XmxObjectTextRepresentation textValue = safeFieldToText(obj, f, OBJ_FIELDS_JSON_CHARS_LIMIT);
-			ExtendedXmxObjectDetails.FieldInfo fi = new ExtendedXmxObjectDetails.FieldInfo(fieldId, f.getName(), textValue);
+			ExtendedXmxObjectDetails.FieldInfo fi = new ExtendedXmxObjectDetails.FieldInfo(fid, f.getName(), textValue);
 			classFieldsInfo.add(fi);
 		}
 
@@ -215,7 +215,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		} else {
 			// expect head to indicate a field
 			Class<?> c = source.getClass();
-			Field f = getFieldByPath(c, head);
+			Field f = getField(c, head);
 			try {
 				f.setAccessible(true);
 				obj = f.get(source);
@@ -233,21 +233,21 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		}
 	}
 
-	private Field getFieldByPath(Class<?> origClass, String fpath) throws RefPathSyntaxException {
+	private Field getField(Class<?> origClass, String fid) throws RefPathSyntaxException {
 		Class<?> c = origClass;
-		int n = fpath.indexOf('^');
+		int n = fid.indexOf('^');
 		String fname;
 		int superLevel = 0;
 		if (n >= 0) {
-			fname = fpath.substring(0, n);
-			String levelStr = fpath.substring(n + 1);
+			fname = fid.substring(0, n);
+			String levelStr = fid.substring(n + 1);
 			try {
 				superLevel = Integer.parseInt(levelStr);
 			} catch (NumberFormatException e) {
-				throw new RefPathSyntaxException("Invalid refpath field part '" + fpath + "'", e);
+				throw new RefPathSyntaxException("Invalid refpath field part '" + fid + "'", e);
 			}
 		} else {
-			fname = fpath;
+			fname = fid;
 		}
 
 		if (superLevel > 0) {
@@ -255,7 +255,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				c = c.getSuperclass();
 				if (c == null) {
 					throw new RefPathSyntaxException("Invalid ^superLevel for refpath field part '" +
-							fpath + "' and class " + origClass);
+							fid + "' and class " + origClass);
 				}
 			}
 			try {
@@ -273,7 +273,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				}
 			}
 		}
-		throw new RefPathSyntaxException("Field '" + fpath + "' is not found in class " + origClass);
+		throw new RefPathSyntaxException("Field '" + fid + "' is not found in class " + origClass);
 	}
 
 	private XmxObjectDetails getUnmanagedObjectDetails(Object obj) {
@@ -315,15 +315,15 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public void setObjectField(String refpath, Integer fieldId, String value)
+	public void setObjectField(String refpath, String fid, String value)
 			throws MissingObjectException, RefPathSyntaxException {
 		XmxObjectDetails objectDetails = getObjectDetailsByRefPath(null, refpath, 0);
 		Object obj = objectDetails.getValue();
 
-		Field f = objectDetails.getManagedFields().get(fieldId);
+		Field f = objectDetails.getManagedFields().get(fid);
 		if (f == null) {
 			throw new XmxRuntimeException("Field not found in " + obj.getClass() +
-					" by ID=" + fieldId);
+					" by ID=" + fid);
 		}
 
 		Object deserializedValue = deserializeValue(value, f.getType(), obj);
@@ -360,17 +360,13 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public void printFullObjectJson(int objectId, Integer fieldId, PrintWriter out) throws IOException {
-		XmxObjectDetails objectDetails = xmxService.getObjectDetails(objectId);
-		if (objectDetails == null) {
-			out.println("Error: the object is missing!");
-			return;
-		}
+	public void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException {
+		XmxObjectDetails objectDetails = getObjectDetailsByRefPath(null, refpath, 0);
 		Object jsonSourceObject;
 		Object obj = objectDetails.getValue();
-		if (fieldId != null) {
-			Map<Integer, Field> managedFields = objectDetails.getManagedFields();
-			Field f = managedFields.get(fieldId);
+		if (fid != null) {
+			Map<String, Field> managedFields = objectDetails.getManagedFields();
+			Field f = managedFields.get(fid);
 			if (f == null) {
 				out.println("Error: the field is missing!");
 				return;

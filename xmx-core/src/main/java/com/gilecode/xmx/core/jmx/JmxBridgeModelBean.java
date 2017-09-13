@@ -7,7 +7,6 @@ import com.gilecode.xmx.dto.XmxRuntimeException;
 import com.gilecode.xmx.service.IXmxService;
 
 import javax.management.*;
-import javax.management.modelmbean.ModelMBeanAttributeInfo;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -56,7 +55,7 @@ class JmxBridgeModelBean implements DynamicMBean {
 		try {
 			Field f = getField(attr.getName());
 			f.set(obj, attr.getValue());
-		} catch (IllegalAccessException | MBeanException e) {
+		} catch (IllegalAccessException e) {
 			throw new RuntimeException("Failed to read field " + attr.getName() + ":" + e);
 		}
 	}
@@ -149,20 +148,8 @@ class JmxBridgeModelBean implements DynamicMBean {
 		return objectInfo.getValue();
 	}
 	
-	private Field getField(String name) throws RuntimeOperationsException, MBeanException {
-		ModelMBeanAttributeInfo foundAttr = mbeanInfo.getAttribute(name);
-		if (foundAttr == null) {
-			throw new XmxRuntimeException("Failed to find attribute: name=" + name);
-		}
-		
-		Descriptor descr = foundAttr.getDescriptor();
-		
-		Object fieldIdField = descr.getFieldValue("fieldId");
-		if (!(fieldIdField instanceof Integer)) {
-			throw new XmxRuntimeException("Missing fieldId in operation descriptor: " + descr);
-		}
-		int fieldId = (Integer)fieldIdField;
-		return xmxService.getObjectFieldById(objectId, fieldId);
+	private Field getField(String fid) throws RuntimeOperationsException {
+		return xmxService.getObjectField(objectId, fid);
 	}
 
 	private boolean signatureMatches(String[] signature, MBeanParameterInfo[] paramsInfo) {

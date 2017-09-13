@@ -33,7 +33,7 @@
                 <c:if test="${object.text.smartUsesJson && object.text.jsonTruncated}">
                     <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
                         <tr>
-                            <td><img src="./images/alert.red.png" alt="Warning!"/></td>
+                            <td><img src="/images/alert.red.png" alt="Warning!"/></td>
                             <td><input type="button" onclick="loadFullJson(${object.objectId});" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
                         </tr>
                     </table>

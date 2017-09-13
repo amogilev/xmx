@@ -78,9 +78,9 @@ public class RestController implements UIConstants {
 	@RequestMapping(value = "setObjectField/{refpath:.+}", method = RequestMethod.GET)
 	public String handleSetObjectField(ModelMap model,
 				@PathVariable String refpath,
-				@RequestParam Integer fieldId, @RequestParam String value)
+				@RequestParam String fid, @RequestParam String value)
 			throws MissingObjectException, RefPathSyntaxException {
-		xmxUiService.setObjectField(refpath, fieldId, value);
+		xmxUiService.setObjectField(refpath, fid, value);
 
 		ExtendedXmxObjectDetails updatedDetails = xmxUiService.getExtendedObjectDetails(refpath);
 		model.addAttribute("details", updatedDetails);
@@ -108,11 +108,12 @@ public class RestController implements UIConstants {
 		xmxUiService.printAllObjectsReport(resp.getWriter());
 	}
 
-	@RequestMapping(value = "getFullJson", method = RequestMethod.GET)
+	@RequestMapping(value = "getFullJson/{refpath:.+}", method = RequestMethod.GET)
 	@ResponseStatus(HttpStatus.OK)
 	public void loadFullJson(HttpServletResponse resp,
-							 @RequestParam(value = "objectId") int objectId,
-							 @RequestParam(value = "fieldId", required = false) Integer fieldId) throws IOException {
-		xmxUiService.printFullObjectJson(objectId, fieldId, resp.getWriter());
+							 @PathVariable String refpath,
+							 @RequestParam(value = "fid", required = false) String fid)
+			throws IOException, RefPathSyntaxException, MissingObjectException {
+		xmxUiService.printFullObjectJson(refpath, fid, resp.getWriter());
 	}
 }
