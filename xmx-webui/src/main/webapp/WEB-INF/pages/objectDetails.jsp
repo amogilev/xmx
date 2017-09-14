@@ -59,9 +59,17 @@
 </script>
 </head>
 
-<h1>Details of object ${refpath} (${className})</h1>
+<h1>Object Details</h1>
 
 <table border="2">
+    <tr>
+        <td><b>RefPath</b></td>
+        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${refpath}"/>"/></td>
+    </tr>
+    <tr>
+        <td><b>Class</b></td>
+        <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${className}"/>"/></td>
+    </tr>
     <tr>
         <td><b>toString()</b></td>
         <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${details.text.toStringValue}"/>"/></td>
@@ -112,7 +120,7 @@
     </tr>
   <c:forEach items="${entry.value}" var="fieldInfo">
     <tr>
-        <td>${fieldInfo.name}</td>
+        <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${fieldInfo.id}">${fieldInfo.name}</a></td>
         <c:set var="fieldValue" value="${
             valKind == 'SMART' ? fieldInfo.text.smartTextValue :
             valKind == 'JSON' ? fieldInfo.text.jsonValue : fieldInfo.text.toStringValue
