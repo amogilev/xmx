@@ -110,7 +110,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath) throws MissingObjectException, RefPathSyntaxException {
-		XmxObjectDetails objectDetails = getObjectDetailsByRefPath(null, refpath, 0);
+		XmxObjectDetails objectDetails = getObjectDetails(refpath);
 		Object obj = objectDetails.getValue();
 
 		List<String> classNames = new ArrayList<>();
@@ -173,12 +173,17 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				return Integer.parseInt(idStr);
 			} catch (NumberFormatException e) {
 				throw new RefPathSyntaxException("Illegal refpath: integer ID expected after starting '" +
-						REFPATH_PREFIX  + "':  '" + path + "'", e);
+						REFPATH_PREFIX + "':  '" + path + "'", e);
 			}
 		} else {
 			throw new RefPathSyntaxException("Illegal refpath: shall start with '" + REFPATH_PREFIX +
 					"' followed by integer ID, but got '" + path + "'");
 		}
+	}
+
+	private XmxObjectDetails getObjectDetails(String refpath)
+			throws MissingObjectException, RefPathSyntaxException {
+		return getObjectDetailsByRefPath(null, refpath, 0);
 	}
 
 	private XmxObjectDetails getObjectDetailsByRefPath(Object source, String path, int level)
@@ -286,7 +291,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public XmxObjectTextRepresentation invokeObjectMethod(String refpath, int methodId, String[] argsArr) throws Throwable {
-		XmxObjectDetails objectDetails = getObjectDetailsByRefPath(null, refpath, 0);
+		XmxObjectDetails objectDetails = getObjectDetails(refpath);
 		Object obj = objectDetails.getValue();
 
 		final Method m = objectDetails.getManagedMethods().get(methodId);
@@ -317,7 +322,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	@Override
 	public void setObjectField(String refpath, String fid, String value)
 			throws MissingObjectException, RefPathSyntaxException {
-		XmxObjectDetails objectDetails = getObjectDetailsByRefPath(null, refpath, 0);
+		XmxObjectDetails objectDetails = getObjectDetails(refpath);
 		Object obj = objectDetails.getValue();
 
 		Field f = objectDetails.getManagedFields().get(fid);
@@ -361,7 +366,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException {
-		XmxObjectDetails objectDetails = getObjectDetailsByRefPath(null, refpath, 0);
+		XmxObjectDetails objectDetails = getObjectDetails(refpath);
 		Object jsonSourceObject;
 		Object obj = objectDetails.getValue();
 		if (fid != null) {
@@ -424,7 +429,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	 *
 	 * @return the array of objects which may be used to invoke the method
 	 */
-	private Object[] translateArgs(String[] args, Method m, Object obj) {
+	private Object[] translateArgs(String[] args, Method m, Object obj) throws RefPathSyntaxException, MissingObjectException {
 		if (args == null) {
 			args = new String[0];
 		}
@@ -451,7 +456,12 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 
-	private Object deserializeValue(String value, Type formalType, Object contextObj) {
+	private Object deserializeValue(String value, Type formalType, Object contextObj)
+			throws RefPathSyntaxException, MissingObjectException {
+		if (value.startsWith("$")) {
+			// value is refpath of teh actual object
+			return getObjectDetails(value).getValue();
+		}
 		final ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
 		try {
 			ClassLoader clToUse = contextObj.getClass().getClassLoader();
