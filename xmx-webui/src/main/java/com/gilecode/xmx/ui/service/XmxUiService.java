@@ -110,6 +110,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath) throws MissingObjectException, RefPathSyntaxException {
+		// TODO: split to smaller methods
 		XmxObjectDetails objectDetails = getObjectDetails(refpath);
 		Object obj = objectDetails.getValue();
 
@@ -119,6 +120,20 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 
 		Class<?> clazz = obj.getClass();
+
+		boolean isArray = clazz.isArray();
+		ExtendedXmxObjectDetails.ArrayPageDetails arrayPage = null;
+		// TODO: pageStart, pageLength in params. Maybe another method?
+		int pageStart = 0, pageLength = 10;
+		if (isArray) {
+			Object[] objArr = (Object[]) obj;
+			pageLength = Math.min(pageLength, objArr.length);
+			XmxObjectTextRepresentation[] pageElements = new XmxObjectTextRepresentation[pageLength];
+			for (int i = 0; i < pageLength; i++) {
+				pageElements[i] = toText(objArr[pageStart + i], OBJ_FIELDS_JSON_CHARS_LIMIT);
+			}
+			arrayPage = new ExtendedXmxObjectDetails.ArrayPageDetails(objArr.length, pageStart, pageLength, pageElements);
+		}
 
 		// fill fields
 		Map<String, Field> managedFields = objectDetails.getManagedFields();
@@ -163,7 +178,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		}
 		return new ExtendedXmxObjectDetails(objectDetails.getObjectId(), objectDetails.getClassInfo(), obj,
 				toText(obj, OBJ_JSON_CHARS_LIMIT),
-				classNames, fieldsByClass, methodsByClass);
+				classNames, fieldsByClass, methodsByClass, arrayPage);
 	}
 
 	private Integer parseRefId(String path) throws RefPathSyntaxException {

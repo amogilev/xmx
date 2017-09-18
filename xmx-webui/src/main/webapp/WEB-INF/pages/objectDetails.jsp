@@ -90,7 +90,9 @@
     </tr>
 </table>
 
-<h2 style="display: inline-block">Fields</h2>
+<c:set var="elementsHeader" value="${details.array ? 'Array Elements' : 'Fields'}" />
+<c:set var="elementsColumn" value="${details.array ? 'Index' : 'Name'}" />
+<h2 style="display: inline-block">${elementsHeader}</h2>
 <span style="margin-left: 50px">
     (Display values as
     <form action="#" style="display: inline">
@@ -108,12 +110,40 @@
 <table border="2">
     <thead>
     <tr>
-        <td>Name</td>
+        <td>${elementsColumn}</td>
         <td>Value</td>
         <td></td>
     </tr>
     </thead>
-    
+
+<c:if test="${details.array}">
+    <c:forEach items="${details.arrayPage.pageElements}" var="val" varStatus="st">
+        <c:set var="elementIdx" value="${details.arrayPage.pageStart + st.index}"/>
+        <tr>
+            <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${elementIdx}">${elementIdx}</a></td>
+            <c:set var="elementValue" value="${
+                valKind == 'SMART' ? val.smartTextValue :
+                valKind == 'JSON' ? val.jsonValue : val.toStringValue
+            }"/>
+            <c:set var="truncated" value="${val.jsonTruncated &&
+                (valKind == 'JSON' || (valKind == 'SMART' && val.smartUsesJson))
+            }"/>
+            <td><input type="text" id="value_${elementIdx}" value="${fn:escapeXml(elementValue)}"/></td>
+            <td class="supportsTruncationWarning">
+                <input type="button" onclick="callSetField('${elementIdx}');" value="Set">
+                <c:if test="${truncated}">
+                    <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
+                        <tr>
+                            <td><img src="/images/alert.red.png" alt="Warning!"/></td>
+                            <td><input type="button" onclick="loadFullJson('${elementIdx}');" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
+                        </tr>
+                    </table>
+                </c:if>
+            </td>
+        </tr>
+    </c:forEach>
+</c:if>
+<c:if test="${not details.array}">
 <c:forEach items="${details.fieldsByClass}" var="entry">
     <tr>
         <td colspan="3"><b>${entry.key}</b></td> <%--className--%>
@@ -143,6 +173,7 @@
     </tr>
   </c:forEach>
 </c:forEach>
+</c:if>
 </table>
 
 <h2>Methods</h2>

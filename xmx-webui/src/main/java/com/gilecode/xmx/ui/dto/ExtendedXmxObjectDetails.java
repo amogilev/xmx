@@ -24,7 +24,7 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 		private String name;
 
 		/**
-		 * Field text in string representation.
+		 * The text representation of the field value.
 		 */
 		private XmxObjectTextRepresentation text;
 
@@ -115,15 +115,59 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 	 */
 	final private Map<String, List<MethodInfo>> methodsByClass;
 
+	/**
+	 * The current page of the array, only valid if this object is an array.
+	 */
+	final private ArrayPageDetails arrayPage;
+
+	public static class ArrayPageDetails {
+		/**
+		 * The array length
+		 */
+		final private int arrLength;
+
+		final private int pageStart;
+
+		final private int pageLength;
+
+		final private XmxObjectTextRepresentation[] pageElements;
+
+		public ArrayPageDetails(int arrLength, int pageStart, int pageLength, XmxObjectTextRepresentation[] pageElements) {
+			this.arrLength = arrLength;
+			this.pageStart = pageStart;
+			this.pageLength = pageLength;
+			this.pageElements = pageElements;
+		}
+
+		public int getArrLength() {
+			return arrLength;
+		}
+
+		public int getPageStart() {
+			return pageStart;
+		}
+
+		public int getPageLength() {
+			return pageLength;
+		}
+
+		public XmxObjectTextRepresentation[] getPageElements() {
+			return pageElements;
+		}
+	}
+
+
 	public ExtendedXmxObjectDetails(int objectId, XmxClassInfo classInfo, Object value,
 									XmxObjectTextRepresentation text,
 									List<String> classesNames,
 									Map<String, List<FieldInfo>> fieldsByClass,
-									Map<String, List<MethodInfo>> methodsByClass) {
+									Map<String, List<MethodInfo>> methodsByClass,
+									ArrayPageDetails arrayPage) {
 		super(objectId, classInfo, value, text);
 		this.classesNames = classesNames;
 		this.fieldsByClass = fieldsByClass;
 		this.methodsByClass = methodsByClass;
+		this.arrayPage = arrayPage;
 	}
 
 	public List<String> getClassesNames() {
@@ -136,6 +180,14 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 
 	public Map<String, List<MethodInfo>> getMethodsByClass() {
 		return methodsByClass;
+	}
+
+	public boolean isArray() {
+		return arrayPage != null;
+	}
+
+	public ArrayPageDetails getArrayPage() {
+		return arrayPage;
 	}
 }
 
