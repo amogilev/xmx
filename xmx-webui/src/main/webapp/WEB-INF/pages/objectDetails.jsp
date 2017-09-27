@@ -11,13 +11,50 @@
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>XMX Object Details</title>
 
-<link href="${pageContext.request.contextPath}/css/main.css" rel="stylesheet" type="text/css" />
+<c:url var="css" value="/css" />
+<c:url var="images" value="/images" />
+
+<link href="${css}/main.css" rel="stylesheet" type="text/css" />
+
+<c:url var="curUrl" value="" />
+<c:url var="curUrlWithoutValKind" value="">
+    <c:forEach var="p" items="${paramValues}">
+        <c:if test="${p.key != 'valKind'}">
+            <c:param name="${p.key}" value="${p.value}"/>
+        </c:if>
+    </c:forEach>
+</c:url>
+
 
 <script type="text/javascript">
 
-    function changeValuesDisplay(newValKind) {
-        if ('${valKind}' != newValKind) {
-            window.location = "${pageContext.request.contextPath}/getObjectDetails/${refpath}?valKind=" + newValKind;
+    <c:if test="${details.array}">
+    window.onload = function () {
+        var inPageNum = document.getElementById("inPageNum");
+        inPageNum.onkeydown = function (e) {
+            if (e.keyCode == 13) {
+                var pageNum = parseInt(inPageNum.value);
+                if (pageNum == inPageNum.value && pageNum >=0 && pageNum < ${details.arrayPage.totalPages}) {
+                    document.getElementById("inPageNum").value = pageNum;
+                    submitPageReload();
+                } else {
+                    alert("Invalid array elements page: " + inPageNum.value);
+                }
+            }
+        }
+    };
+    </c:if>
+
+    function submitPageReload() {
+        document.getElementById("frmPageNav").submit();
+    }
+
+    function setArrayPage(pageNum) {
+        var curPageNum = ${details.arrayPage.pageNum};
+        var maxPageNum = ${details.arrayPage.totalPages} - 1;
+        if (pageNum != curPageNum && pageNum >= 0 && pageNum <= maxPageNum) {
+            document.getElementById("inPageNum").value = pageNum;
+            submitPageReload();
         }
     }
 
@@ -58,6 +95,7 @@
 
 </script>
 </head>
+<body>
 
 <h1>Object Details</h1>
 
@@ -81,7 +119,7 @@
             <c:if test="${details.text.jsonTruncated}">
                 <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
                     <tr>
-                        <td><img src="/images/alert.red.png" alt="Warning!"/></td>
+                        <td><img src="${images}/alert.red.png" alt="Warning!"/></td>
                         <td><input type="button" onclick="loadFullJson();" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
                     </tr>
                 </table>
@@ -90,91 +128,103 @@
     </tr>
 </table>
 
-<c:set var="elementsHeader" value="${details.array ? 'Array Elements' : 'Fields'}" />
-<c:set var="elementsColumn" value="${details.array ? 'Index' : 'Name'}" />
-<h2 style="display: inline-block">${elementsHeader}</h2>
-<span style="margin-left: 50px">
-    (Display values as
-    <form action="#" style="display: inline">
-    	<c:set var="kinds" value="<%=com.gilecode.xmx.ui.ValuesDisplayKind.values()%>"/>
+<form id="frmPageNav" action="${curUrl}">
+
+    <c:set var="elementsHeader" value="${details.array ? 'Array Elements' : 'Fields'}" />
+    <c:set var="elementsColumn" value="${details.array ? 'Index' : 'Name'}" />
+    <h2 style="display: inline-block">${elementsHeader}</h2>
+    <span style="margin-left: 50px">
+        (Display values as
+        <c:set var="kinds" value="<%=com.gilecode.xmx.ui.ValuesDisplayKind.values()%>"/>
         <c:forEach var="k" items="${kinds}">
-            <label><input name="vdKind" type="radio" value="${k}"
-                          onchange="changeValuesDisplay('${k}');" <c:if test="${k==valKind}">checked="checked"</c:if>/>
+            <label><input name="valKind" type="radio" value="${k}"
+                          onchange="submitPageReload();" <c:if test="${k==valKind}">checked="checked"</c:if>/>
                     ${k.displayName}
             </label>
         </c:forEach>
-    </form>)
-</span>
-<br style="clear: left" />
+        )
+    </span>
+    <br style="clear: left" />
 
-<table border="2">
-    <thead>
-    <tr>
-        <td>${elementsColumn}</td>
-        <td>Value</td>
-        <td></td>
-    </tr>
-    </thead>
-
-<c:if test="${details.array}">
-    <c:forEach items="${details.arrayPage.pageElements}" var="val" varStatus="st">
-        <c:set var="elementIdx" value="${details.arrayPage.pageStart + st.index}"/>
+    <table border="2">
+        <thead>
         <tr>
-            <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${elementIdx}">${elementIdx}</a></td>
-            <c:set var="elementValue" value="${
-                valKind == 'SMART' ? val.smartTextValue :
-                valKind == 'JSON' ? val.jsonValue : val.toStringValue
+            <td>${elementsColumn}</td>
+            <td>Value</td>
+            <td></td>
+        </tr>
+        </thead>
+
+    <c:if test="${details.array}">
+        <c:forEach items="${details.arrayPage.pageElements}" var="val" varStatus="st">
+            <c:set var="elementIdx" value="${details.arrayPage.pageStart + st.index}"/>
+            <tr>
+                <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${elementIdx}">${elementIdx}</a></td>
+                <c:set var="elementValue" value="${
+                    valKind == 'SMART' ? val.smartTextValue :
+                    valKind == 'JSON' ? val.jsonValue : val.toStringValue
+                }"/>
+                <c:set var="truncated" value="${val.jsonTruncated &&
+                    (valKind == 'JSON' || (valKind == 'SMART' && val.smartUsesJson))
+                }"/>
+                <td><input type="text" id="value_${elementIdx}" value="${fn:escapeXml(elementValue)}"/></td>
+                <td class="supportsTruncationWarning">
+                    <input type="button" onclick="callSetField('${elementIdx}');" value="Set">
+                    <c:if test="${truncated}">
+                        <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
+                            <tr>
+                                <td><img src="/images/alert.red.png" alt="Warning!"/></td>
+                                <td><input type="button" onclick="loadFullJson('${elementIdx}');" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
+                            </tr>
+                        </table>
+                    </c:if>
+                </td>
+            </tr>
+        </c:forEach>
+    </c:if>
+    <c:if test="${not details.array}">
+    <c:forEach items="${details.fieldsByClass}" var="entry">
+        <tr>
+            <td colspan="3"><b>${entry.key}</b></td> <%--className--%>
+        </tr>
+      <c:forEach items="${entry.value}" var="fieldInfo">
+        <tr>
+            <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${fieldInfo.id}">${fieldInfo.name}</a></td>
+            <c:set var="fieldValue" value="${
+                valKind == 'SMART' ? fieldInfo.text.smartTextValue :
+                valKind == 'JSON' ? fieldInfo.text.jsonValue : fieldInfo.text.toStringValue
             }"/>
-            <c:set var="truncated" value="${val.jsonTruncated &&
-                (valKind == 'JSON' || (valKind == 'SMART' && val.smartUsesJson))
+            <c:set var="truncated" value="${fieldInfo.text.jsonTruncated &&
+                (valKind == 'JSON' || (valKind == 'SMART' && fieldInfo.text.smartUsesJson))
             }"/>
-            <td><input type="text" id="value_${elementIdx}" value="${fn:escapeXml(elementValue)}"/></td>
+            <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldValue)}"/></td>
             <td class="supportsTruncationWarning">
-                <input type="button" onclick="callSetField('${elementIdx}');" value="Set">
+                <input type="button" onclick="callSetField('${fieldInfo.id}');" value="Set">
                 <c:if test="${truncated}">
                     <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
                         <tr>
                             <td><img src="/images/alert.red.png" alt="Warning!"/></td>
-                            <td><input type="button" onclick="loadFullJson('${elementIdx}');" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
+                            <td><input type="button" onclick="loadFullJson('${fieldInfo.id}');" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
                         </tr>
                     </table>
                 </c:if>
             </td>
         </tr>
+      </c:forEach>
     </c:forEach>
-</c:if>
-<c:if test="${not details.array}">
-<c:forEach items="${details.fieldsByClass}" var="entry">
-    <tr>
-        <td colspan="3"><b>${entry.key}</b></td> <%--className--%>
-    </tr>
-  <c:forEach items="${entry.value}" var="fieldInfo">
-    <tr>
-        <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${fieldInfo.id}">${fieldInfo.name}</a></td>
-        <c:set var="fieldValue" value="${
-            valKind == 'SMART' ? fieldInfo.text.smartTextValue :
-            valKind == 'JSON' ? fieldInfo.text.jsonValue : fieldInfo.text.toStringValue
-        }"/>
-        <c:set var="truncated" value="${fieldInfo.text.jsonTruncated &&
-            (valKind == 'JSON' || (valKind == 'SMART' && fieldInfo.text.smartUsesJson))
-        }"/>
-        <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldValue)}"/></td>
-        <td class="supportsTruncationWarning">
-            <input type="button" onclick="callSetField('${fieldInfo.id}');" value="Set">
-            <c:if test="${truncated}">
-                <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
-                    <tr>
-                        <td><img src="/images/alert.red.png" alt="Warning!"/></td>
-                        <td><input type="button" onclick="loadFullJson('${fieldInfo.id}');" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
-                    </tr>
-                </table>
-            </c:if>
-        </td>
-    </tr>
-  </c:forEach>
-</c:forEach>
-</c:if>
-</table>
+    </c:if>
+    </table>
+    <c:if test="${details.array}">
+        <c:set var="ap" value="${details.arrayPage}"/>
+        <div id="arrPager" style="margin-top: 3px">
+            <c:set var="prevNavEnabled" value="${ap.pageNum > 0}" />
+            <c:set var="nextNavEnabled" value="${ap.pageNum < ap.totalPages - 1}" />
+            <span id="prevPage" class="${prevNavEnabled ? 'pageNav' : 'pageNavDisabled'}" onclick="setArrayPage(${ap.pageNum - 1});">&lt;&lt; </span>
+            Page <input type="text" name="arrPage" id="inPageNum" value="${ap.pageNum}" size="1"> of <span>${ap.totalPages}</span>
+            <span id="nextPage" class="${nextNavEnabled ? 'pageNav' : 'pageNavDisabled'}" onclick="setArrayPage(${ap.pageNum + 1});"> &gt;&gt;</span>
+        </div>
+    </c:if>
+</form>
 
 <h2>Methods</h2>
 <table border="2">

@@ -91,51 +91,50 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return extObjectsInfo;
 	}
 
-	/**
-	 * Obtains the details of the object by its ID, which includes all fields
-	 * and methods. If this object is already GC'ed, returns null.
-	 *
-	 * @param objectId the unique object ID
-	 */
-	// FIXME: remove eventually
 	@Override
-	public ExtendedXmxObjectDetails getExtendedObjectDetails(int objectId) throws MissingObjectException {
-		try {
-			return getExtendedObjectDetails(REFPATH_PREFIX + objectId);
-		} catch (RefPathSyntaxException e) {
-			logger.error("Unexpected", e);
-			throw new RuntimeException(e);
-		}
-	}
-
-	@Override
-	public ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath) throws MissingObjectException, RefPathSyntaxException {
-		// TODO: split to smaller methods
+	public ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException {
 		XmxObjectDetails objectDetails = getObjectDetails(refpath);
 		Object obj = objectDetails.getValue();
 
+		ExtendedXmxObjectDetails.ArrayPageDetails arrayPage = getArrayPageDetails(obj, arrPageNum);
+		Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fieldsByClass = fillFieldsInfoByClass(objectDetails);
+		Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> methodsByClass = fillMethodsInfoByClass(objectDetails);
+
 		List<String> classNames = new ArrayList<>();
-		Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fieldsByClass = new LinkedHashMap<>();
-		Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> methodsByClass = new LinkedHashMap<>();
-
-
 		Class<?> clazz = obj.getClass();
-
-		boolean isArray = clazz.isArray();
-		ExtendedXmxObjectDetails.ArrayPageDetails arrayPage = null;
-		// TODO: pageStart, pageLength in params. Maybe another method?
-		int pageStart = 0, pageLength = 10;
-		if (isArray) {
-			Object[] objArr = (Object[]) obj;
-			pageLength = Math.min(pageLength, objArr.length);
-			XmxObjectTextRepresentation[] pageElements = new XmxObjectTextRepresentation[pageLength];
-			for (int i = 0; i < pageLength; i++) {
-				pageElements[i] = toText(objArr[pageStart + i], OBJ_FIELDS_JSON_CHARS_LIMIT);
-			}
-			arrayPage = new ExtendedXmxObjectDetails.ArrayPageDetails(objArr.length, pageStart, pageLength, pageElements);
+		while (clazz != null) {
+			classNames.add(clazz.getName());
+			clazz = clazz.getSuperclass();
 		}
+		return new ExtendedXmxObjectDetails(objectDetails.getObjectId(), objectDetails.getClassInfo(), obj,
+				toText(obj, OBJ_JSON_CHARS_LIMIT),
+				classNames, fieldsByClass, methodsByClass, arrayPage);
+	}
 
-		// fill fields
+	private Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> fillMethodsInfoByClass(XmxObjectDetails objectDetails) {
+		Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> methodsByClass = new LinkedHashMap<>();
+		Map<Integer, Method> managedMethods = objectDetails.getManagedMethods();
+		for (Map.Entry<Integer, Method> e : managedMethods.entrySet()) {
+			Integer methodId = e.getKey();
+			Method m = e.getValue();
+			String declaringClassName = m.getDeclaringClass().getName();
+
+			List<ExtendedXmxObjectDetails.MethodInfo> classMethodsInfo = methodsByClass.get(declaringClassName);
+			if (classMethodsInfo == null) {
+				classMethodsInfo = new ArrayList<>();
+				methodsByClass.put(declaringClassName, classMethodsInfo);
+			}
+			String methodNameTypeSignature = methodInfoService.getMethodNameTypeSignature(m);
+			ExtendedXmxObjectDetails.MethodInfo mi = new ExtendedXmxObjectDetails.MethodInfo(methodId, m.getName(), methodNameTypeSignature,
+					methodInfoService.getMethodParameters(m));
+			classMethodsInfo.add(mi);
+		}
+		return methodsByClass;
+	}
+
+	private Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fillFieldsInfoByClass(XmxObjectDetails objectDetails) {
+		Object obj = objectDetails.getValue();
+		Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fieldsByClass = new LinkedHashMap<>();
 		Map<String, Field> managedFields = objectDetails.getManagedFields();
 		for (Map.Entry<String, Field> e : managedFields.entrySet()) {
 			String fid = e.getKey();
@@ -153,32 +152,22 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			ExtendedXmxObjectDetails.FieldInfo fi = new ExtendedXmxObjectDetails.FieldInfo(fid, f.getName(), textValue);
 			classFieldsInfo.add(fi);
 		}
+		return fieldsByClass;
+	}
 
-		// fill methods
-		Map<Integer, Method> managedMethods = objectDetails.getManagedMethods();
-		for (Map.Entry<Integer, Method> e : managedMethods.entrySet()) {
-			Integer methodId = e.getKey();
-			Method m = e.getValue();
-			String declaringClassName = m.getDeclaringClass().getName();
-
-			List<ExtendedXmxObjectDetails.MethodInfo> classMethodsInfo = methodsByClass.get(declaringClassName);
-			if (classMethodsInfo == null) {
-				classMethodsInfo = new ArrayList<>();
-				methodsByClass.put(declaringClassName, classMethodsInfo);
+	private ExtendedXmxObjectDetails.ArrayPageDetails getArrayPageDetails(Object obj, int arrPageNum) {
+		if (obj.getClass().isArray()) {
+			Object[] objArr = (Object[]) obj;
+			int pageNum = arrPageNum > 0 && arrPageNum * ARRAY_PAGE_LENGTH < objArr.length ? arrPageNum : 0;
+			int pageStart = ARRAY_PAGE_LENGTH * arrPageNum;
+			int pageLength = Math.min(ARRAY_PAGE_LENGTH, objArr.length - pageStart);
+			XmxObjectTextRepresentation[] pageElements = new XmxObjectTextRepresentation[pageLength];
+			for (int i = 0; i < pageLength; i++) {
+				pageElements[i] = toText(objArr[pageStart + i], OBJ_FIELDS_JSON_CHARS_LIMIT);
 			}
-			String methodNameTypeSignature = methodInfoService.getMethodNameTypeSignature(m);
-			ExtendedXmxObjectDetails.MethodInfo mi = new ExtendedXmxObjectDetails.MethodInfo(methodId, m.getName(), methodNameTypeSignature,
-					methodInfoService.getMethodParameters(m));
-			classMethodsInfo.add(mi);
+			return new ExtendedXmxObjectDetails.ArrayPageDetails(objArr.length, pageNum, pageElements);
 		}
-
-		while (clazz != null) {
-			classNames.add(clazz.getName());
-			clazz = clazz.getSuperclass();
-		}
-		return new ExtendedXmxObjectDetails(objectDetails.getObjectId(), objectDetails.getClassInfo(), obj,
-				toText(obj, OBJ_JSON_CHARS_LIMIT),
-				classNames, fieldsByClass, methodsByClass, arrayPage);
+		return null;
 	}
 
 	private Integer parseRefId(String path) throws RefPathSyntaxException {

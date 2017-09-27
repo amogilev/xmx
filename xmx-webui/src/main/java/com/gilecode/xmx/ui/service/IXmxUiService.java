@@ -31,14 +31,13 @@ public interface IXmxUiService {
 	List<ExtendedXmxObjectInfo> getManagedClassInstancesInfo(Integer classId);
 
 	/**
-	 * Obtains the details of the object by its ID, which includes all fields
+	 * Obtains the details of the object by its refpath, which includes all fields
 	 * and methods. If this object is already GC'ed, returns null.
 	 *
-	 * @param objectId the unique object ID
+	 * @param refpath the object refpath, like "$18.arrField.1"
+	 * @param arrPageNum if the object is array, specifies the page of the array elements to provide the details of
 	 */
-	ExtendedXmxObjectDetails getExtendedObjectDetails(int objectId) throws MissingObjectException;
-
-	ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath) throws MissingObjectException, RefPathSyntaxException;
+	ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException;
 
 	XmxObjectTextRepresentation invokeObjectMethod(String refpath, int methodId, String[] argsArr)
 			throws MissingObjectException, RefPathSyntaxException, Throwable;

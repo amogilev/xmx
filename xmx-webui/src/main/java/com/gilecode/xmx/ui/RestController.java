@@ -63,9 +63,10 @@ public class RestController implements UIConstants {
 	@RequestMapping(value = "getObjectDetails/{refpath:.+}", method = RequestMethod.GET)
 	public String getObjectDetails(ModelMap model,
 				@PathVariable String refpath,
-				@RequestParam(required = false, defaultValue = "SMART") ValuesDisplayKind valKind)
+				@RequestParam(required = false, defaultValue = "SMART") ValuesDisplayKind valKind,
+				@RequestParam(required = false, defaultValue = "0") int arrPage)
 			throws MissingObjectException, RefPathSyntaxException {
-		ExtendedXmxObjectDetails details = xmxUiService.getExtendedObjectDetails(refpath);
+		ExtendedXmxObjectDetails details = xmxUiService.getExtendedObjectDetails(refpath, arrPage);
 		String className = details.getClassesNames().get(0);
 		model.addAttribute("refpath", refpath);
 		model.addAttribute("className", className);
@@ -82,7 +83,7 @@ public class RestController implements UIConstants {
 			throws MissingObjectException, RefPathSyntaxException {
 		xmxUiService.setObjectField(refpath, fid, value);
 
-		ExtendedXmxObjectDetails updatedDetails = xmxUiService.getExtendedObjectDetails(refpath);
+		ExtendedXmxObjectDetails updatedDetails = xmxUiService.getExtendedObjectDetails(refpath, 0);
 		model.addAttribute("details", updatedDetails);
 
 		return "redirect:/getObjectDetails/" + refpath;

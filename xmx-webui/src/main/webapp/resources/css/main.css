@@ -9,3 +9,12 @@ table.truncationWarning {
     margin-left: 10px;
     display: inline;
 }
+
+span.pageNav {
+    cursor: pointer;
+    color: blue;
+}
+
+span.pageNavDisabled {
+    cursor: not-allowed;
+}

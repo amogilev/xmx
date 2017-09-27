@@ -7,6 +7,8 @@ import com.gilecode.xmx.dto.XmxClassInfo;
 import java.util.List;
 import java.util.Map;
 
+import static com.gilecode.xmx.ui.UIConstants.ARRAY_PAGE_LENGTH;
+
 public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 	/**
 	 * Information about a single field.
@@ -121,21 +123,25 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 	final private ArrayPageDetails arrayPage;
 
 	public static class ArrayPageDetails {
+
 		/**
 		 * The array length
 		 */
 		final private int arrLength;
 
-		final private int pageStart;
+		/**
+		 * The page number, starting from 0.
+		 */
+		final private int pageNum;
 
-		final private int pageLength;
-
+		/**
+		 * The current page of array elements
+		 */
 		final private XmxObjectTextRepresentation[] pageElements;
 
-		public ArrayPageDetails(int arrLength, int pageStart, int pageLength, XmxObjectTextRepresentation[] pageElements) {
+		public ArrayPageDetails(int arrLength, int pageNum, XmxObjectTextRepresentation[] pageElements) {
 			this.arrLength = arrLength;
-			this.pageStart = pageStart;
-			this.pageLength = pageLength;
+			this.pageNum = pageNum;
 			this.pageElements = pageElements;
 		}
 
@@ -143,12 +149,16 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 			return arrLength;
 		}
 
-		public int getPageStart() {
-			return pageStart;
+		public int getPageNum() {
+			return pageNum;
 		}
 
-		public int getPageLength() {
-			return pageLength;
+		public int getTotalPages() {
+			return 1 + (arrLength - 1) / ARRAY_PAGE_LENGTH;
+		}
+
+		public int getPageStart() {
+			return pageNum * ARRAY_PAGE_LENGTH;
 		}
 
 		public XmxObjectTextRepresentation[] getPageElements() {

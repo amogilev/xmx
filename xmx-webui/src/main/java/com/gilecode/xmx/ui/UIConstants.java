@@ -15,6 +15,9 @@ public interface UIConstants {
 
 	String REFPATH_PREFIX = "$";
 
+	// the number of array element to display in one page
+	int ARRAY_PAGE_LENGTH = 10;
+
 	// a special ID which means that an object or class is not actuallly managed, and
 	// the information about it is obtained using refpaths
 	// TODO: replace with nulls
