@@ -101,10 +101,14 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> methodsByClass = fillMethodsInfoByClass(objectDetails);
 
 		List<String> classNames = new ArrayList<>();
-		Class<?> clazz = obj.getClass();
-		while (clazz != null) {
-			classNames.add(clazz.getName());
-			clazz = clazz.getSuperclass();
+		if (obj != null) {
+			Class<?> clazz = obj.getClass();
+			while (clazz != null) {
+				classNames.add(clazz.getName());
+				clazz = clazz.getSuperclass();
+			}
+		} else {
+			classNames.add("null");
 		}
 		return new ExtendedXmxObjectDetails(objectDetails.getObjectId(), objectDetails.getClassInfo(), obj,
 				toText(obj, OBJ_JSON_CHARS_LIMIT),
@@ -135,28 +139,30 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	private Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fillFieldsInfoByClass(XmxObjectDetails objectDetails) {
 		Object obj = objectDetails.getValue();
 		Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fieldsByClass = new LinkedHashMap<>();
-		Map<String, Field> managedFields = objectDetails.getManagedFields();
-		for (Map.Entry<String, Field> e : managedFields.entrySet()) {
-			String fid = e.getKey();
-			Field f = e.getValue();
+		if (obj != null) {
+			Map<String, Field> managedFields = objectDetails.getManagedFields();
+			for (Map.Entry<String, Field> e : managedFields.entrySet()) {
+				String fid = e.getKey();
+				Field f = e.getValue();
 
-			String declaringClassName = f.getDeclaringClass().getName();
+				String declaringClassName = f.getDeclaringClass().getName();
 
-			List<ExtendedXmxObjectDetails.FieldInfo> classFieldsInfo = fieldsByClass.get(declaringClassName);
-			if (classFieldsInfo == null) {
-				classFieldsInfo = new ArrayList<>();
-				fieldsByClass.put(declaringClassName, classFieldsInfo);
+				List<ExtendedXmxObjectDetails.FieldInfo> classFieldsInfo = fieldsByClass.get(declaringClassName);
+				if (classFieldsInfo == null) {
+					classFieldsInfo = new ArrayList<>();
+					fieldsByClass.put(declaringClassName, classFieldsInfo);
+				}
+
+				XmxObjectTextRepresentation textValue = safeFieldToText(obj, f, OBJ_FIELDS_JSON_CHARS_LIMIT);
+				ExtendedXmxObjectDetails.FieldInfo fi = new ExtendedXmxObjectDetails.FieldInfo(fid, f.getName(), textValue);
+				classFieldsInfo.add(fi);
 			}
-
-			XmxObjectTextRepresentation textValue = safeFieldToText(obj, f, OBJ_FIELDS_JSON_CHARS_LIMIT);
-			ExtendedXmxObjectDetails.FieldInfo fi = new ExtendedXmxObjectDetails.FieldInfo(fid, f.getName(), textValue);
-			classFieldsInfo.add(fi);
 		}
 		return fieldsByClass;
 	}
 
 	private ExtendedXmxObjectDetails.ArrayPageDetails getArrayPageDetails(Object obj, int arrPageNum) {
-		if (obj.getClass().isArray()) {
+		if (obj != null && obj.getClass().isArray()) {
 			Object[] objArr = (Object[]) obj;
 			int pageNum = arrPageNum > 0 && arrPageNum * ARRAY_PAGE_LENGTH < objArr.length ? arrPageNum : 0;
 			int pageStart = ARRAY_PAGE_LENGTH * arrPageNum;
@@ -286,11 +292,17 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	private XmxObjectDetails getUnmanagedObjectDetails(Object obj) {
-		XmxClassDetails xmxClassDetails = xmxService.getClassDetails(obj.getClass());
-		// do not use details instead of ci (simple info) as it is to be returned to UI
-		XmxClassInfo ci = new XmxClassInfo(null, xmxClassDetails.getClassName());
-		return new XmxObjectDetails(ID_UNMANAGED, ci, obj,
-				xmxClassDetails.getManagedFields(), xmxClassDetails.getManagedMethods());
+		if (obj == null) {
+			XmxClassInfo ci = new XmxClassInfo(null, "null");
+			return new XmxObjectDetails(ID_UNMANAGED, ci, null,
+					Collections.<String, Field>emptyMap(), Collections.<Integer, Method>emptyMap());
+		} else {
+			XmxClassDetails xmxClassDetails = xmxService.getClassDetails(obj.getClass());
+			// do not use details instead of ci (simple info) as it is to be returned to UI
+			XmxClassInfo ci = new XmxClassInfo(null, xmxClassDetails.getClassName());
+			return new XmxObjectDetails(ID_UNMANAGED, ci, obj,
+					xmxClassDetails.getManagedFields(), xmxClassDetails.getManagedMethods());
+		}
 	}
 
 	@Override
