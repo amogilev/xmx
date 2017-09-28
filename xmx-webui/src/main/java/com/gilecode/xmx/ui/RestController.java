@@ -10,9 +10,11 @@ import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.service.MissingObjectException;
 import com.gilecode.xmx.ui.service.RefPathSyntaxException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.propertyeditors.StringArrayPropertyEditor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -116,5 +118,11 @@ public class RestController implements UIConstants {
 							 @RequestParam(value = "fid", required = false) String fid)
 			throws IOException, RefPathSyntaxException, MissingObjectException {
 		xmxUiService.printFullObjectJson(refpath, fid, resp.getWriter());
+	}
+
+	// prevents splitting String by commas for @RequestParams of type String[]
+	@InitBinder
+	public void initBinder(WebDataBinder binder) {
+		binder.registerCustomEditor(String[].class, new StringArrayPropertyEditor(null));
 	}
 }
