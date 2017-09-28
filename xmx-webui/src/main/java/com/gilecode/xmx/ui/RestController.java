@@ -76,12 +76,12 @@ public class RestController implements UIConstants {
 		return "objectDetails";
 	}
 
-	@RequestMapping(value = "setObjectField/{refpath:.+}", method = RequestMethod.GET)
+	@RequestMapping(value = "setObjectElement/{refpath:.+}", method = RequestMethod.GET)
 	public String handleSetObjectField(ModelMap model,
 				@PathVariable String refpath,
-				@RequestParam String fid, @RequestParam String value)
+				@RequestParam String elementId, @RequestParam String value)
 			throws MissingObjectException, RefPathSyntaxException {
-		xmxUiService.setObjectField(refpath, fid, value);
+		xmxUiService.setObjectFieldOrElement(refpath, elementId, value);
 
 		ExtendedXmxObjectDetails updatedDetails = xmxUiService.getExtendedObjectDetails(refpath, 0);
 		model.addAttribute("details", updatedDetails);

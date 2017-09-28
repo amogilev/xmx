@@ -42,7 +42,16 @@ public interface IXmxUiService {
 	XmxObjectTextRepresentation invokeObjectMethod(String refpath, int methodId, String[] argsArr)
 			throws MissingObjectException, RefPathSyntaxException, Throwable;
 
-	void setObjectField(String refpath, String fid, String value) throws MissingObjectException, RefPathSyntaxException;
+	/**
+	 * Sets the object's field or array's element to the value specified by the string representation.
+	 * @param refpath the object refpath, like "$18.arrField.1"
+	 * @param elementId the ID of the element to set: either field name (with optional "superclass" suffix), or
+	 *                     array element's number
+	 * @param value the string (usually JSON) representation of the value to set
+	 * @throws MissingObjectException if a managed object is missing now
+	 * @throws RefPathSyntaxException if refpath is not valid
+	 */
+	void setObjectFieldOrElement(String refpath, String elementId, String value) throws MissingObjectException, RefPathSyntaxException;
 
 	void printAllObjectsReport(PrintWriter out);
 

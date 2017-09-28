@@ -18,7 +18,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class XmxUiService implements IXmxUiService, UIConstants {
@@ -336,22 +339,37 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public void setObjectField(String refpath, String fid, String value)
+	public void setObjectFieldOrElement(String refpath, String elementId, String value)
 			throws MissingObjectException, RefPathSyntaxException {
 		XmxObjectDetails objectDetails = getObjectDetails(refpath);
 		Object obj = objectDetails.getValue();
 
-		Field f = objectDetails.getManagedFields().get(fid);
-		if (f == null) {
-			throw new XmxRuntimeException("Field not found in " + obj.getClass() +
-					" by ID=" + fid);
-		}
+		Class<?> objClass = obj.getClass();
+		if (objClass.isArray()) {
+			Class<?> componentType = objClass.getComponentType();
+			Object deserializedValue = deserializeValue(value, componentType, obj);
+			try {
+				int idx = Integer.parseInt(elementId);
+				Array.set(obj, idx, deserializedValue);
+			} catch (NumberFormatException | IndexOutOfBoundsException e) {
+				throw new RefPathSyntaxException("Invalid array index '" + elementId + "' for path=" + refpath);
+			} catch (Exception e) {
+				// e.g. catches IllegalArgumentException for wrong component type
+				throw new XmxRuntimeException("Failed to set array element", e);
+			}
+		} else {
+			Field f = objectDetails.getManagedFields().get(elementId);
+			if (f == null) {
+				throw new XmxRuntimeException("Field not found in " + objClass +
+						" by ID=" + elementId);
+			}
 
-		Object deserializedValue = deserializeValue(value, f.getType(), obj);
-		try {
-			f.set(obj, deserializedValue);
-		} catch (Exception e) {
-			throw new XmxRuntimeException("Failed to set field", e);
+			Object deserializedValue = deserializeValue(value, f.getType(), obj);
+			try {
+				f.set(obj, deserializedValue);
+			} catch (Exception e) {
+				throw new XmxRuntimeException("Failed to set field", e);
+			}
 		}
 	}
 
@@ -472,10 +490,10 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 
-	private Object deserializeValue(String value, Type formalType, Object contextObj)
+	private Object deserializeValue(String value, Class<?> formalType, Object contextObj)
 			throws RefPathSyntaxException, MissingObjectException {
 		if (value.startsWith("$")) {
-			// value is refpath of teh actual object
+			// value is refpath of the actual object
 			return getObjectDetails(value).getValue();
 		}
 		final ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();

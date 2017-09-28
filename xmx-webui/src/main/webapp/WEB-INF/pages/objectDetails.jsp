@@ -17,14 +17,6 @@
 <link href="${css}/main.css" rel="stylesheet" type="text/css" />
 
 <c:url var="curUrl" value="" />
-<c:url var="curUrlWithoutValKind" value="">
-    <c:forEach var="p" items="${paramValues}">
-        <c:if test="${p.key != 'valKind'}">
-            <c:param name="${p.key}" value="${p.value}"/>
-        </c:if>
-    </c:forEach>
-</c:url>
-
 
 <script type="text/javascript">
 
@@ -43,11 +35,6 @@
             }
         }
     };
-    </c:if>
-
-    function submitPageReload() {
-        document.getElementById("frmPageNav").submit();
-    }
 
     function setArrayPage(pageNum) {
         var curPageNum = ${details.arrayPage.pageNum};
@@ -57,10 +44,15 @@
             submitPageReload();
         }
     }
+    </c:if>
 
-    function callSetField(fid) {
-        var value = document.getElementById("value_" + fid).value;
-        window.location = "${pageContext.request.contextPath}/setObjectField/${refpath}?fid=" + fid+ "&value=" + encodeURIComponent(value);
+    function submitPageReload() {
+        document.getElementById("frmPageNav").submit();
+    }
+
+    function callSetElement(eid) {
+        var value = document.getElementById("value_" + eid).value;
+        window.location = "${pageContext.request.contextPath}/setObjectElement/${refpath}?elementId=" + eid+ "&value=" + encodeURIComponent(value);
 	}
 
     function invokeMethod(methodId) {
@@ -169,7 +161,7 @@
                 }"/>
                 <td><input type="text" id="value_${elementIdx}" value="${fn:escapeXml(elementValue)}"/></td>
                 <td class="supportsTruncationWarning">
-                    <input type="button" onclick="callSetField('${elementIdx}');" value="Set">
+                    <input type="button" onclick="callSetElement('${elementIdx}');" value="Set">
                     <c:if test="${truncated}">
                         <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
                             <tr>
@@ -199,7 +191,7 @@
             }"/>
             <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldValue)}"/></td>
             <td class="supportsTruncationWarning">
-                <input type="button" onclick="callSetField('${fieldInfo.id}');" value="Set">
+                <input type="button" onclick="callSetElement('${fieldInfo.id}');" value="Set">
                 <c:if test="${truncated}">
                     <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
                         <tr>
