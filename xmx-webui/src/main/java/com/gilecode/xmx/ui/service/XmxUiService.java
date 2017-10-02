@@ -96,7 +96,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException {
-		XmxObjectDetails objectDetails = getObjectDetails(refpath);
+		XmxObjectDetails objectDetails = findObject(refpath).foundObjectDetails;
 		Object obj = objectDetails.getValue();
 
 		ExtendedXmxObjectDetails.ArrayPageDetails arrayPage = getArrayPageDetails(obj, arrPageNum);
@@ -194,12 +194,51 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		}
 	}
 
-	private XmxObjectDetails getObjectDetails(String refpath)
-			throws MissingObjectException, RefPathSyntaxException {
-		return getObjectDetailsByRefPath(null, refpath, 0);
+	static class SearchObjectResult {
+		/**
+		 * The details of the root (managed) object; e.g. for a refpath "$17.a" it will
+		 * be the details of the managed object with ID=17.
+		 */
+		XmxObjectDetails rootObjectDetails;
+
+		/**
+		 * The details of the object found by the original refpath.
+		 */
+		XmxObjectDetails foundObjectDetails;
+
+		public SearchObjectResult(XmxObjectDetails rootObjectDetails, XmxObjectDetails foundObjectDetails) {
+			this.rootObjectDetails = rootObjectDetails;
+			this.foundObjectDetails = foundObjectDetails;
+		}
 	}
 
-	private XmxObjectDetails getObjectDetailsByRefPath(Object source, String path, int level)
+	static class SearchObjectContext {
+		/**
+		 * The original refpath for an object being searched.
+		 */
+		String refpath;
+
+		/**
+		 * The details of the root (managed) object; e.g. for a refpath "$17.a" it will
+		 * be the details of the managed object with ID=17.
+		 */
+		XmxObjectDetails rootObjectDetails;
+
+
+		public SearchObjectContext(String refpath) {
+			this.refpath = refpath;
+		}
+	}
+
+
+	private SearchObjectResult findObject(String refpath)
+			throws MissingObjectException, RefPathSyntaxException {
+		SearchObjectContext ctx = new SearchObjectContext(refpath);
+		XmxObjectDetails foundObjectDetails = getObjectDetailsByRefPath(null, refpath, 0, ctx);
+		return new SearchObjectResult(ctx.rootObjectDetails, foundObjectDetails);
+	}
+
+	private XmxObjectDetails getObjectDetailsByRefPath(Object source, String path, int level, SearchObjectContext ctx)
 			throws MissingObjectException, RefPathSyntaxException {
 		int i = path.indexOf('.');
 		String head, tail;
@@ -218,7 +257,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		if (level == 0) {
 			// expect path starts with ID like "$123"
 			Integer objectId = parseRefId(head);
-			objDetails = getXmxObjectDetails(objectId);
+			objDetails = ctx.rootObjectDetails = getXmxObjectDetails(objectId);
 			obj = objDetails.getValue();
 		} else if (Character.isDigit(head.charAt(0))) {
 			if (!source.getClass().isArray()) {
@@ -243,7 +282,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		}
 
 		if (tail != null) {
-			return getObjectDetailsByRefPath(obj, tail, level + 1);
+			return getObjectDetailsByRefPath(obj, tail, level + 1, ctx);
 		} else if (objDetails != null) {
 			return objDetails;
 		} else {
@@ -310,7 +349,8 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public XmxObjectTextRepresentation invokeObjectMethod(String refpath, int methodId, String[] argsArr) throws Throwable {
-		XmxObjectDetails objectDetails = getObjectDetails(refpath);
+		SearchObjectResult searchResult = findObject(refpath);
+		XmxObjectDetails objectDetails = searchResult.foundObjectDetails;
 		Object obj = objectDetails.getValue();
 
 		final Method m = objectDetails.getManagedMethods().get(methodId);
@@ -322,11 +362,12 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 		// set context class loader to enable functionality which depends on it, like JNDI
 		ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
-		Thread.currentThread().setContextClassLoader(obj.getClass().getClassLoader());
+		Thread.currentThread().setContextClassLoader(chooseContextClassLoader(searchResult));
 
 		XmxObjectTextRepresentation resultText;
 		try {
-			Object result = m.invoke(obj, translateArgs(argsArr, m, obj));
+			Object[] args = translateArgs(argsArr, m, chooseContextClassLoader(searchResult));
+			Object result = m.invoke(obj, args);
 			resultText = toText(result, 0);
 		} catch (InvocationTargetException e) {
 			// re-throw cause
@@ -338,16 +379,43 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return resultText;
 	}
 
+	/**
+	 * Choose the most specific class loader from class loaders of the root and the found object.
+	 * The resulting class loader will be used as the context class loader for de-serializing
+	 * the JSON values related to the found object (e.g. new field value or a method argument)
+	 * <p/>
+	 * Note that it is not enough to just get the class loader of the found object, as it may be a List of
+	 * custom objects, so its class loader is a system one.
+	 * <p/>
+	 * In future, it may be changed to a Set of class loaders for all intermediate objects traversed during
+	 * the search.
+	 */
+	private ClassLoader chooseContextClassLoader(SearchObjectResult result) {
+		// prefer CL of "found" object; use "root" CL only if the found object is null, or its CL is bootstrap or system
+		ClassLoader rootObjectCL = result.rootObjectDetails.getValue().getClass().getClassLoader();
+		if (result.foundObjectDetails.getValue() == null || result.foundObjectDetails == result.rootObjectDetails) {
+			return rootObjectCL;
+		}
+		ClassLoader foundObjectCL = result.foundObjectDetails.getValue().getClass().getClassLoader();
+
+		if (foundObjectCL == null || foundObjectCL == ClassLoader.getSystemClassLoader()) {
+			return rootObjectCL;
+		} else {
+			return foundObjectCL;
+		}
+	}
+
 	@Override
 	public void setObjectFieldOrElement(String refpath, String elementId, String value)
 			throws MissingObjectException, RefPathSyntaxException {
-		XmxObjectDetails objectDetails = getObjectDetails(refpath);
+		SearchObjectResult searchResult = findObject(refpath);
+		XmxObjectDetails objectDetails = searchResult.foundObjectDetails;
 		Object obj = objectDetails.getValue();
 
 		Class<?> objClass = obj.getClass();
 		if (objClass.isArray()) {
 			Class<?> componentType = objClass.getComponentType();
-			Object deserializedValue = deserializeValue(value, componentType, obj);
+			Object deserializedValue = deserializeValue(value, componentType, chooseContextClassLoader(searchResult));
 			try {
 				int idx = Integer.parseInt(elementId);
 				Array.set(obj, idx, deserializedValue);
@@ -364,7 +432,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 						" by ID=" + elementId);
 			}
 
-			Object deserializedValue = deserializeValue(value, f.getType(), obj);
+			Object deserializedValue = deserializeValue(value, f.getType(), chooseContextClassLoader(searchResult));
 			try {
 				f.set(obj, deserializedValue);
 			} catch (Exception e) {
@@ -400,7 +468,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException {
-		XmxObjectDetails objectDetails = getObjectDetails(refpath);
+		XmxObjectDetails objectDetails = findObject(refpath).foundObjectDetails;
 		Object jsonSourceObject;
 		Object obj = objectDetails.getValue();
 		if (fid != null) {
@@ -459,11 +527,11 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	 *
 	 * @param args the arguments as Strings
 	 * @param m the method to be invoked with the arguments
-	 * @param obj the object which method is invoked; used to obtain class loader to use
+	 * @param contextCL the context class loader to be used for de-serialization
 	 *
 	 * @return the array of objects which may be used to invoke the method
 	 */
-	private Object[] translateArgs(String[] args, Method m, Object obj) throws RefPathSyntaxException, MissingObjectException {
+	private Object[] translateArgs(String[] args, Method m, ClassLoader contextCL) throws RefPathSyntaxException, MissingObjectException {
 		if (args == null) {
 			args = new String[0];
 		}
@@ -475,7 +543,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		Object[] methodArgs = new Object[parameterTypes.length];
 		for (int i = 0; i < args.length; i++) {
 			Class<?> type = parameterTypes[i];
-			methodArgs[i] = deserializeValue(args[i], type, obj);
+			methodArgs[i] = deserializeValue(args[i], type, contextCL);
 		}
 		return methodArgs;
 	}
@@ -490,18 +558,15 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 
-	private Object deserializeValue(String value, Class<?> formalType, Object contextObj)
+	private Object deserializeValue(String value, Class<?> formalType, ClassLoader contextCL)
 			throws RefPathSyntaxException, MissingObjectException {
 		if (value.startsWith("$")) {
 			// value is refpath of the actual object
-			return getObjectDetails(value).getValue();
+			return findObject(value).foundObjectDetails.getValue();
 		}
 		final ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
 		try {
-			ClassLoader clToUse = contextObj.getClass().getClassLoader();
-			// TODO: if setting through refschain will be implemented, then we'll probably need to use the classloader of
-			//       the first object. Or maybe multiple class loaders... (svc -> Object[] -> SpecialObj)
-			Thread.currentThread().setContextClassLoader(clToUse);
+			Thread.currentThread().setContextClassLoader(contextCL);
 			return jsonMapper.fromJson(value, formalType);
 		} catch (Exception e) {
 			throw new XmxRuntimeException("Failed to deserialize the value; class=" + formalType + "; value=" + value, e);
