@@ -39,6 +39,21 @@ public interface IXmxUiService {
 	 */
 	ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException;
 
+	/**
+	 * Searches an object by refpath, i.e. either managed object (for refpaths like "$23"), or an object traversed
+	 * from the managed objects using "getField" or "getArrayElement" parts of the refpath.
+	 *
+	 * @param refpath the path to an object which starts with a managed object ID, followed by field specifiers or
+	 *                array element indexes, separated with '.', e.g. "$23.myArrField.0"
+	 *
+	 * @return a search result which consists of object details for the root and the found objects
+	 *
+	 * @throws MissingObjectException if a managed object is not found by ID
+	 * @throws RefPathSyntaxException if a refpath is incorrect, i.e. has bad syntax or an sub-object cannot be extracted
+	 * 	using "getField" ot "getArrayElement" specifiers
+	 */
+	SearchObjectResult findObject(String refpath) throws MissingObjectException, RefPathSyntaxException;
+
 	XmxObjectTextRepresentation invokeObjectMethod(String refpath, int methodId, String[] argsArr)
 			throws MissingObjectException, RefPathSyntaxException, Throwable;
 

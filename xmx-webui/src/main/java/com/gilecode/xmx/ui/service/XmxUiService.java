@@ -194,101 +194,71 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		}
 	}
 
-	static class SearchObjectResult {
-		/**
-		 * The details of the root (managed) object; e.g. for a refpath "$17.a" it will
-		 * be the details of the managed object with ID=17.
-		 */
-		XmxObjectDetails rootObjectDetails;
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public SearchObjectResult findObject(String refpath) throws MissingObjectException, RefPathSyntaxException {
+		String[] refpathParts = refpath.split("\\.");
 
-		/**
-		 * The details of the object found by the original refpath.
-		 */
-		XmxObjectDetails foundObjectDetails;
-
-		public SearchObjectResult(XmxObjectDetails rootObjectDetails, XmxObjectDetails foundObjectDetails) {
-			this.rootObjectDetails = rootObjectDetails;
-			this.foundObjectDetails = foundObjectDetails;
+		// expect path starts with ID like "$123"
+		Integer objectId = parseRefId(refpathParts[0]);
+		XmxObjectDetails rootObjectDetails = getXmxObjectDetails(objectId);
+		if (refpathParts.length == 1) {
+			return new SearchObjectResult(rootObjectDetails, rootObjectDetails);
 		}
+
+		Object curObj = rootObjectDetails.getValue();
+		for (int curLevel = 1; curLevel < refpathParts.length; curLevel++) {
+			curObj = getNextLevelElement(refpathParts, curObj, curLevel);
+		}
+		XmxObjectDetails foundObjectDetails = getUnmanagedObjectDetails(curObj);
+		return new SearchObjectResult(rootObjectDetails, foundObjectDetails);
 	}
 
-	static class SearchObjectContext {
-		/**
-		 * The original refpath for an object being searched.
-		 */
-		String refpath;
-
-		/**
-		 * The details of the root (managed) object; e.g. for a refpath "$17.a" it will
-		 * be the details of the managed object with ID=17.
-		 */
-		XmxObjectDetails rootObjectDetails;
-
-
-		public SearchObjectContext(String refpath) {
-			this.refpath = refpath;
+	private Object getNextLevelElement(String[] refpathParts, Object source, int level) throws RefPathSyntaxException {
+		String pathPart = refpathParts[level];
+		if (source == null) {
+			throw new RefPathSyntaxException("Null object for path=" + buildPath(refpathParts, level));
 		}
-	}
-
-
-	private SearchObjectResult findObject(String refpath)
-			throws MissingObjectException, RefPathSyntaxException {
-		SearchObjectContext ctx = new SearchObjectContext(refpath);
-		XmxObjectDetails foundObjectDetails = getObjectDetailsByRefPath(null, refpath, 0, ctx);
-		return new SearchObjectResult(ctx.rootObjectDetails, foundObjectDetails);
-	}
-
-	private XmxObjectDetails getObjectDetailsByRefPath(Object source, String path, int level, SearchObjectContext ctx)
-			throws MissingObjectException, RefPathSyntaxException {
-		int i = path.indexOf('.');
-		String head, tail;
-		if (i > 0) {
-			head = path.substring(0, i);
-			tail = path.substring(i + 1);
-		} else {
-			head = path;
-			tail = null;
-		}
-		if (level > 0 && source == null) {
-			throw new RefPathSyntaxException("Null object for path=" + path);
-		}
-		Object obj;
-		XmxObjectDetails objDetails = null;
-		if (level == 0) {
-			// expect path starts with ID like "$123"
-			Integer objectId = parseRefId(head);
-			objDetails = ctx.rootObjectDetails = getXmxObjectDetails(objectId);
-			obj = objDetails.getValue();
-		} else if (Character.isDigit(head.charAt(0))) {
+		if (Character.isDigit(pathPart.charAt(0))) {
 			if (!source.getClass().isArray()) {
-				throw new RefPathSyntaxException("Expected an array, but got " + source.getClass() + " for path=" + path);
+				throw new RefPathSyntaxException("Expected an array, but got " + source.getClass() +
+						" for path=" + buildPath(refpathParts, level));
 			}
 			try {
-				int idx = Integer.parseInt(head);
-				obj = Array.get(source, idx);
+				int idx = Integer.parseInt(pathPart);
+				source = Array.get(source, idx);
 			} catch (NumberFormatException | IndexOutOfBoundsException e) {
-				throw new RefPathSyntaxException("Invalid array index '" + head + "' for path=" + path);
+				throw new RefPathSyntaxException("Invalid array index '" + pathPart +
+						"' for path=" + buildPath(refpathParts, level));
 			}
 		} else {
-			// expect head to indicate a field
+			// expect a path part to indicate a field
 			Class<?> c = source.getClass();
-			Field f = getField(c, head);
+			Field f = getField(c, pathPart);
 			try {
 				f.setAccessible(true);
-				obj = f.get(source);
+				source = f.get(source);
 			} catch (IllegalAccessException e) {
-				throw new RefPathSyntaxException("Failed to get field '" + head + "' in class " + c + " for path=" + path);
+				throw new RefPathSyntaxException("Failed to get field '" + pathPart + "' in class " + c +
+						" for path=" + buildPath(refpathParts, level));
 			}
 		}
-
-		if (tail != null) {
-			return getObjectDetailsByRefPath(obj, tail, level + 1, ctx);
-		} else if (objDetails != null) {
-			return objDetails;
-		} else {
-			return getUnmanagedObjectDetails(obj);
-		}
+		return source;
 	}
+
+	private String buildPath(String[] refpathParts, int curLevel) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i <= curLevel; i++) {
+			sb.append(refpathParts[i]);
+			if (i != curLevel) {
+				sb.append('.');
+			}
+		}
+		return sb.toString();
+	}
+
 
 	private Field getField(Class<?> origClass, String fid) throws RefPathSyntaxException {
 		Class<?> c = origClass;
