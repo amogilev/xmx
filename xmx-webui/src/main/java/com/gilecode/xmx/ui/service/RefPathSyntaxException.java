@@ -7,11 +7,19 @@ package com.gilecode.xmx.ui.service;
  */
 public class RefPathSyntaxException extends Exception {
 
-	public RefPathSyntaxException(String message, Throwable cause) {
+	private final String refpath;
+
+	public RefPathSyntaxException(String message, String refpath, Throwable cause) {
 		super(message, cause);
+		this.refpath = refpath;
 	}
 
-	public RefPathSyntaxException(String message) {
+	public RefPathSyntaxException(String message, String refpath) {
 		super(message);
+		this.refpath = refpath;
+	}
+
+	public String getRefpath() {
+		return refpath;
 	}
 }

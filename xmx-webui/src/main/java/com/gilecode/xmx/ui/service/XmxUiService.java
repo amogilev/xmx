@@ -186,11 +186,11 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				return Integer.parseInt(idStr);
 			} catch (NumberFormatException e) {
 				throw new RefPathSyntaxException("Illegal refpath: integer ID expected after starting '" +
-						REFPATH_PREFIX + "':  '" + path + "'", e);
+						REFPATH_PREFIX + "'", path, e);
 			}
 		} else {
 			throw new RefPathSyntaxException("Illegal refpath: shall start with '" + REFPATH_PREFIX +
-					"' followed by integer ID, but got '" + path + "'");
+					"' followed by integer ID", path);
 		}
 	}
 
@@ -219,30 +219,29 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	private Object getNextLevelElement(String[] refpathParts, Object source, int level) throws RefPathSyntaxException {
 		String pathPart = refpathParts[level];
 		if (source == null) {
-			throw new RefPathSyntaxException("Null object for path=" + buildPath(refpathParts, level));
+			throw new RefPathSyntaxException("Null object for path", buildPath(refpathParts, level));
 		}
 		if (Character.isDigit(pathPart.charAt(0))) {
 			if (!source.getClass().isArray()) {
-				throw new RefPathSyntaxException("Expected an array, but got " + source.getClass() +
-						" for path=" + buildPath(refpathParts, level));
+				throw new RefPathSyntaxException("Expected an array, but got " + source.getClass(),
+						buildPath(refpathParts, level));
 			}
 			try {
 				int idx = Integer.parseInt(pathPart);
 				source = Array.get(source, idx);
 			} catch (NumberFormatException | IndexOutOfBoundsException e) {
-				throw new RefPathSyntaxException("Invalid array index '" + pathPart +
-						"' for path=" + buildPath(refpathParts, level));
+				throw new RefPathSyntaxException("Invalid array index '" + pathPart + "'", buildPath(refpathParts, level));
 			}
 		} else {
 			// expect a path part to indicate a field
 			Class<?> c = source.getClass();
-			Field f = getField(c, pathPart);
+			Field f = getField(c, pathPart, buildPath(refpathParts, level));
 			try {
 				f.setAccessible(true);
 				source = f.get(source);
 			} catch (IllegalAccessException e) {
-				throw new RefPathSyntaxException("Failed to get field '" + pathPart + "' in class " + c +
-						" for path=" + buildPath(refpathParts, level));
+				throw new RefPathSyntaxException("Failed to get field '" + pathPart + "' in class " + c,
+						buildPath(refpathParts, level));
 			}
 		}
 		return source;
@@ -259,8 +258,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return sb.toString();
 	}
 
-
-	private Field getField(Class<?> origClass, String fid) throws RefPathSyntaxException {
+	private Field getField(Class<?> origClass, String fid, String refpath) throws RefPathSyntaxException {
 		Class<?> c = origClass;
 		int n = fid.indexOf('^');
 		String fname;
@@ -271,7 +269,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			try {
 				superLevel = Integer.parseInt(levelStr);
 			} catch (NumberFormatException e) {
-				throw new RefPathSyntaxException("Invalid refpath field part '" + fid + "'", e);
+				throw new RefPathSyntaxException("Invalid refpath field part '" + fid + "'", refpath);
 			}
 		} else {
 			fname = fid;
@@ -282,7 +280,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				c = c.getSuperclass();
 				if (c == null) {
 					throw new RefPathSyntaxException("Invalid ^superLevel for refpath field part '" +
-							fid + "' and class " + origClass);
+							fid + "' and class " + origClass, refpath);
 				}
 			}
 			try {
@@ -300,7 +298,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				}
 			}
 		}
-		throw new RefPathSyntaxException("Field '" + fid + "' is not found in class " + origClass);
+		throw new RefPathSyntaxException("Field '" + fid + "' is not found in " + origClass, refpath);
 	}
 
 	private XmxObjectDetails getUnmanagedObjectDetails(Object obj) {
@@ -390,7 +388,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				int idx = Integer.parseInt(elementId);
 				Array.set(obj, idx, deserializedValue);
 			} catch (NumberFormatException | IndexOutOfBoundsException e) {
-				throw new RefPathSyntaxException("Invalid array index '" + elementId + "' for path=" + refpath);
+				throw new RefPathSyntaxException("Invalid array index '" + elementId + "'", refpath);
 			} catch (Exception e) {
 				// e.g. catches IllegalArgumentException for wrong component type
 				throw new XmxRuntimeException("Failed to set array element", e);

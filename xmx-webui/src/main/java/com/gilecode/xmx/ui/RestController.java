@@ -42,6 +42,14 @@ public class RestController implements UIConstants {
 		return mav;
 	}
 
+	@ExceptionHandler(RefPathSyntaxException.class)
+	public ModelAndView badRefpath(RefPathSyntaxException ex) {
+		ModelAndView mav = new ModelAndView("badRefpath");
+		mav.addObject("refpath", ex.getRefpath());
+		mav.addObject("cause", ex.getMessage());
+		return mav;
+	}
+
 	@RequestMapping(method = RequestMethod.GET)
 	public String handleGetAppsAndClasses(ModelMap model) {
 		Map<String, Collection<ExtendedXmxClassInfo>> appsClassesMap = xmxUiService.getAppsAndClasses();
