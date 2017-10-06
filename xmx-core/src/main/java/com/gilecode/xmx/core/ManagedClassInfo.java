@@ -2,13 +2,10 @@
 
 package com.gilecode.xmx.core;
 
-import com.gilecode.xmx.dto.XmxRuntimeException;
-
 import javax.management.modelmbean.ModelMBeanInfoSupport;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,7 +49,7 @@ public class ManagedClassInfo {
 	 * List of managed methods. Index in the list is
 	 * equal to the internal method ID. 
 	 */
-	private List<Method> managedMethods;
+	private Map<Integer, Method> managedMethods;
 	
 	/**
 	 * List of managed fields. Index in the list is
@@ -85,7 +82,7 @@ public class ManagedClassInfo {
 		this.jmxObjectNamePart = jmxObjectNamePart;
 	}
 
-	public void init(List<Method> managedMethods, Map<String, Field> managedFields,
+	public void init(Map<Integer, Method> managedMethods, Map<String, Field> managedFields,
 					 ModelMBeanInfoSupport jmxClassModel) {
 		this.managedMethods = managedMethods;
 		this.managedFields = managedFields;
@@ -140,7 +137,7 @@ public class ManagedClassInfo {
 		return jmxObjectNamePart;
 	}
 	
-	public List<Method> getManagedMethods() {
+	public Map<Integer, Method> getManagedMethods() {
 		return managedMethods;
 	}
 
@@ -148,33 +145,6 @@ public class ManagedClassInfo {
 		return managedFields;
 	}
 
-	public Method getMethodById(int methodId) {
-		List<Method> methods = managedMethods;
-		if (methods == null) {
-			throw new XmxRuntimeException("ClassInfo is not initialized for " + className);
-		}
-		if (methodId < 0 || methodId >= methods.size()) {
-			throw new XmxRuntimeException("Method not found in " + className + " by ID=" + methodId);
-		}
-		Method m = methods.get(methodId);
-		if (!m.isAccessible()) {
-			m.setAccessible(true);
-		}
-		return m;
-	}
-	
-	public Field getField(String fid) {
-		Map<String, Field> fields = managedFields;
-		if (fields == null) {
-			throw new XmxRuntimeException("ClassInfo is not initialized for " + className);
-		}
-		Field field = fields.get(fid);
-		if (field == null) {
-			throw new XmxRuntimeException("Field not found in " + className + " by ID=" + fid);
-		}
-		return field;
-	}
-	
 	public boolean isDisabled() {
 		return disabledByMaxInstances;
 	}

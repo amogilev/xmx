@@ -2,7 +2,7 @@
 
 package com.gilecode.xmx.core.jmx;
 
-import com.gilecode.xmx.dto.XmxObjectInfo;
+import com.gilecode.xmx.dto.XmxObjectDetails;
 import com.gilecode.xmx.dto.XmxRuntimeException;
 import com.gilecode.xmx.service.IXmxService;
 
@@ -36,10 +36,11 @@ class JmxBridgeModelBean implements DynamicMBean {
 	public Object getAttribute(String name)
 			throws AttributeNotFoundException, MBeanException,
 			ReflectionException {
-		
-		Object obj = getObject();
-		Field f = getField(name);
-		
+
+		XmxObjectDetails objectDetails = getObjectDetails();
+		Object obj = objectDetails.getValue();
+		Field f = getField(objectDetails, name);
+
 		try {
 			return f.get(obj);
 		} catch (IllegalAccessException e) {
@@ -49,11 +50,12 @@ class JmxBridgeModelBean implements DynamicMBean {
 
 	@Override
 	public void setAttribute(Attribute attr) throws RuntimeException {
-		
-		Object obj = getObject();
+
+		XmxObjectDetails objectDetails = getObjectDetails();
+		Object obj = objectDetails.getValue();
+		Field f = getField(objectDetails, attr.getName());
 		
 		try {
-			Field f = getField(attr.getName());
 			f.set(obj, attr.getValue());
 		} catch (IllegalAccessException e) {
 			throw new RuntimeException("Failed to read field " + attr.getName() + ":" + e);
@@ -97,9 +99,10 @@ class JmxBridgeModelBean implements DynamicMBean {
 	@Override
 	public Object invoke(String actionName, Object[] params, String[] signature)
 			throws MBeanException, ReflectionException {
-		
-		Object obj = getObject();
-		
+
+		XmxObjectDetails objectDetails = getObjectDetails();
+		Object obj = objectDetails.getValue();
+
 		MBeanOperationInfo foundOp = null;
 		for (MBeanOperationInfo op : mbeanInfo.getOperations()) {
 			if (actionName.equals(op.getName()) && signatureMatches(signature, op.getSignature())) {
@@ -120,7 +123,8 @@ class JmxBridgeModelBean implements DynamicMBean {
 			throw new XmxRuntimeException("Missing methodId in operation descriptor: " + descr);
 		}
 		int methodId = (Integer)methodIdField;
-		Method m = xmxService.getObjectMethodById(objectId, methodId);
+		Method m = objectDetails.getManagedMethods().get(methodId);
+		m.setAccessible(true);
 
 		// set context class loader to enable functionality which depends on it, like JNDI
 		ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
@@ -140,16 +144,20 @@ class JmxBridgeModelBean implements DynamicMBean {
 		}
 	}
 
-	private Object getObject() {
-		XmxObjectInfo objectInfo = xmxService.getManagedObject(objectId);
-		if (objectInfo == null) {
+	private XmxObjectDetails getObjectDetails() {
+		XmxObjectDetails objectDetails = xmxService.getObjectDetails(objectId);
+		if (objectDetails == null) {
 			throw new XmxRuntimeException("Object not found. It may be already GC'ed: objectId=" + objectId);
 		}
-		return objectInfo.getValue();
+		return objectDetails;
 	}
 	
-	private Field getField(String fid) throws RuntimeOperationsException {
-		return xmxService.getObjectField(objectId, fid);
+	private Field getField(XmxObjectDetails objectDetails, String fid) throws RuntimeOperationsException {
+		Field f = objectDetails.getManagedFields().get(fid);
+		if (f == null) {
+			throw new XmxRuntimeException("Field not found in " + objectDetails.getClassInfo().getClassName() + " by ID=" + fid);
+		}
+		return f;
 	}
 
 	private boolean signatureMatches(String[] signature, MBeanParameterInfo[] paramsInfo) {

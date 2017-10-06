@@ -12,6 +12,7 @@ import com.gilecode.xmx.core.jmx.JmxSupport;
 import com.gilecode.xmx.dto.*;
 import com.gilecode.xmx.server.IXmxServerLauncher;
 import com.gilecode.xmx.service.IXmxService;
+import com.gilecode.xmx.util.ImmutableIntListAsMap;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -279,7 +280,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	private void initClassInfo(Class<?> objClass, ManagedClassInfo info) {
 		if (!info.isInitialized()) {
 			String appName = info.getAppInfo().getName();
-			List<Method> managedMethods = getManagedMethods(objClass);
+			Map<Integer, Method> managedMethods = getManagedMethods(objClass);
 			Map<String, Field> managedFields = getManagedFields(objClass);
 
 			ModelMBeanInfoSupport jmxClassModel = null;
@@ -492,7 +493,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	public synchronized XmxClassDetails getClassDetails(Class<?> c) {
 		Integer classId;
 		Map<String, Field> managedFields;
-		List<Method> managedMethods;
+		Map<Integer, Method> managedMethods;
 
 		ManagedClassInfo mci = findManagedClassInfo(c);
 		if (mci != null) {
@@ -508,18 +509,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			managedMethods = getManagedMethods(c);
 			classId = null;
 		}
-		return getXmxClassDetails(classId, c.getName(), managedFields, managedMethods);
-	}
-
-	public XmxClassDetails getXmxClassDetails(Integer classId, String className,
-											  Map<String, Field> managedFields, List<Method> managedMethods) {
-		// fill methods
-		Map<Integer, Method> methodsById = new HashMap<>();
-		for (int methodId = 0; methodId < managedMethods.size(); methodId++) {
-			methodsById.put(methodId, managedMethods.get(methodId));
-		}
-
-		return new XmxClassDetails(classId, className, managedFields, methodsById);
+		return new XmxClassDetails(classId, c.getName(), managedFields, managedMethods);
 	}
 
 	/**
@@ -575,32 +565,12 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		}
 		
 		ManagedClassInfo classInfo = ref.classInfo;
-		XmxClassDetails classDetails = getXmxClassDetails(classInfo.getId(), classInfo.getClassName(),
-				classInfo.getManagedFields(), classInfo.getManagedMethods());
+		XmxClassDetails classDetails = new XmxClassDetails(classInfo.getId(), classInfo.getClassName(), classInfo.getManagedFields(), classInfo.getManagedMethods());
 
 		return new XmxObjectDetails(objectId, toDto(classInfo), obj,
 				classDetails.getManagedFields(), classDetails.getManagedMethods());
 	}
 
-	@Override
-	public Method getObjectMethodById(int objectId, int methodId)
-			throws XmxRuntimeException {
-		ManagedObjectWeakRef ref = objectsStorage.get(objectId);
-		if (ref == null) {
-			return null;
-		}
-		return ref.classInfo.getMethodById(methodId);
-	}
-	
-	@Override
-	public Field getObjectField(int objectId, String fid) {
-		ManagedObjectWeakRef ref = objectsStorage.get(objectId);
-		if (ref == null) {
-			return null;
-		}
-		return ref.classInfo.getField(fid);
-	}
-	
 	private ManagedClassInfo getManagedClassInfo(ManagedClassLoaderWeakRef loaderInfo, String className) {
 		Integer classId = loaderInfo.getClassIdsByName().get(className);
 		
@@ -613,7 +583,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		return classInfo;
 	}
 	
-	private List<Method> getManagedMethods(Class<?> clazz) {
+	private Map<Integer, Method> getManagedMethods(Class<?> clazz) {
 		List<Method> methods = new ArrayList<>(20);
 		while (clazz != null) {
 			Method[] declaredMethods = clazz.getDeclaredMethods();
@@ -628,7 +598,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			}
 			clazz = clazz.getSuperclass();
 		}
-		return methods;
+		return new ImmutableIntListAsMap<>(methods);
 	}
 
 	/**

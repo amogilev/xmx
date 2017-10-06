@@ -25,7 +25,7 @@ public class JmxSupport {
 	private final static Logger logger = LoggerFactory.getLogger(JmxSupport.class);
 
 	public static ModelMBeanInfoSupport createModelForClass(Class<?> objClass, String appName,
-															List<Method> managedMethods,
+															Map<Integer, Method> managedMethods,
 															Map<String, Field> managedFields,
 															IXmxPropertiesSource config) {
 
@@ -34,8 +34,9 @@ public class JmxSupport {
 
 		try {
 			ArrayList<ModelMBeanOperationInfo> operations = new ArrayList<>();
-			for (int methodId = 0; methodId < managedMethods.size(); methodId++) {
-				Method m = managedMethods.get(methodId);
+			for (Map.Entry<Integer, Method> e : managedMethods.entrySet()) {
+				Integer methodId = e.getKey();
+				Method m = e.getValue();
 
 				// TODO: remove getters/setters (put to attributes instead?)
 				Descriptor descr = new DescriptorSupport();
