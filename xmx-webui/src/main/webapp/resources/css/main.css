@@ -18,3 +18,13 @@ span.pageNav {
 span.pageNavDisabled {
     cursor: not-allowed;
 }
+
+span.label-with-tip {
+    cursor: help;
+    border-bottom: 1px dotted blue;
+    font-weight: bold;
+}
+
+i.icon-question-circle-o {
+    cursor: help;
+}

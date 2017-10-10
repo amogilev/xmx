@@ -15,6 +15,7 @@
 <c:url var="images" value="/images" />
 
 <link href="${css}/main.css" rel="stylesheet" type="text/css" />
+<link href="${css}/xmx-icons.css" rel="stylesheet" type="text/css" />
 
 <c:url var="curUrl" value="" />
 
@@ -93,7 +94,7 @@
 
 <table border="2">
     <tr>
-        <td><b>RefPath</b></td>
+        <td><span class="label-with-tip" title="<fmt:message key='refpath.tooltip'/>">RefPath</span></td>
         <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${refpath}"/>"/></td>
     </tr>
     <tr>
@@ -143,7 +144,7 @@
         <tr>
             <td>${elementsColumn}</td>
             <td>Value</td>
-            <td></td>
+            <td style="text-align: center"><i title="<fmt:message key='input.field.tooltip'/>" class="icon-question-circle-o"></i></td>
         </tr>
         </thead>
 
@@ -224,7 +225,7 @@
     <tr>
         <td>Name</td>
         <td>Signature</td>
-        <td></td>
+        <td style="text-align: center"><i title="<fmt:message key='input.method.tooltip'/>" class="icon-question-circle-o"></i></td>
     </tr>
     </thead>
     

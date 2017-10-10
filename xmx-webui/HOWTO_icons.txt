@@ -1,0 +1,28 @@
+- Go to http://fontello.com/
+- Upload config.json below
+- Select and add new icons
+- Update .css and font files
+
+=== config.json ===
+{
+  "name": "xmx-icons",
+  "css_prefix_text": "icon-",
+  "css_use_suffix": false,
+  "hinting": true,
+  "units_per_em": 1000,
+  "ascent": 850,
+  "glyphs": [
+    {
+      "uid": "9c9f0a69d4abbeb5ff9d779df7679356",
+      "css": "question-circle-o",
+      "code": 62108,
+      "src": "fontawesome"
+    },
+    {
+      "uid": "b035c28eba2b35c6ffe92aee8b0df507",
+      "css": "attention-circled",
+      "code": 59392,
+      "src": "fontawesome"
+    }
+  ]
+}
