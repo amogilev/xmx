@@ -594,7 +594,9 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			for (Method m : declaredMethods) {
 				// TODO: check if managed (e.g. by level or pattern)
 				// TODO: skip overridden methods
-				methods.add(m);
+				if (!m.isSynthetic()) {
+					methods.add(m);
+				}
 			}
 			clazz = clazz.getSuperclass();
 		}
