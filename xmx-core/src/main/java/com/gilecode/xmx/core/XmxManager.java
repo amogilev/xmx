@@ -606,7 +606,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	 * '^superlevel' suffix in case of duplicated field names, i.e. hidden fields).
 	 */
 	private Map<String, Field> getManagedFields(Class<?> clazz) {
-		Map<String, Field> fields = new HashMap<>(16);
+		Map<String, Field> fields = new LinkedHashMap<>(16);
 		int superLevel = 0;
 		while (clazz != null) {
 			Field[] declaredFields = clazz.getDeclaredFields();
