@@ -66,7 +66,7 @@ public class XmxProxy {
 			} else {
 				try {
 					URL[] urls = new URL[]{coreImpls[0].toURI().toURL()};
-					ClassLoader xmxClassLoader = new URLClassLoader(urls, XmxProxy.class.getClassLoader());
+					ClassLoader xmxClassLoader = new URLClassLoader(urls, ClassLoader.getSystemClassLoader());
 
 					Class<?> xmxLoaderClass =
 							Class.forName("com.gilecode.xmx.core.XmxLoader", true, xmxClassLoader);
