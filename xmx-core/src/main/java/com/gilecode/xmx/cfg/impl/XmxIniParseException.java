@@ -5,7 +5,7 @@ package com.gilecode.xmx.cfg.impl;
 @SuppressWarnings("serial")
 public class XmxIniParseException extends RuntimeException {
 
-	XmxIniParseException(String message) {
+	public XmxIniParseException(String message) {
 		super(message);
 	}
 

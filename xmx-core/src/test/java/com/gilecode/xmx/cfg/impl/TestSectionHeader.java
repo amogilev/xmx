@@ -5,7 +5,7 @@ package com.gilecode.xmx.cfg.impl;
 import com.gilecode.xmx.cfg.CfgEntityLevel;
 import org.junit.Test;
 
-import static com.gilecode.xmx.cfg.impl.PatternsSupport.parse;
+import static com.gilecode.xmx.cfg.pattern.PatternsSupport.parse;
 import static org.junit.Assert.*;
 
 public class TestSectionHeader {

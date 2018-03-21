@@ -2,6 +2,8 @@
 
 package com.gilecode.xmx.cfg.impl;
 
+import com.gilecode.xmx.cfg.pattern.PatternsSupport;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;

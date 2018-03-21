@@ -1,7 +1,11 @@
-// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
+// Copyright © 2018 Andrey Mogilev. All rights reserved.
 
-package com.gilecode.xmx.cfg.impl;
+package com.gilecode.xmx.cfg.pattern;
 
+import com.gilecode.xmx.cfg.impl.XmxIniParseException;
+import com.gilecode.xmx.cfg.pattern.impl.MethodPatternParser;
+
+import java.lang.reflect.Method;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -24,7 +28,8 @@ import java.util.regex.PatternSyntaxException;
 public class PatternsSupport {
 	
 //	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[\\w\\*\\|]*$");
-	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[\\*\\|\\. \\p{javaJavaIdentifierPart}]*$");
+	// FIXME why space is here??
+	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[*|. \\p{javaJavaIdentifierPart}]*$");
 	
 	public static Pattern parse(String patternValue) throws XmxIniParseException {
 		patternValue = patternValue.trim();
@@ -49,7 +54,7 @@ public class PatternsSupport {
 		throw new XmxIniParseException("Unrecognized pattern type: " + patternValue);
 	}
 	
-	static String unquote(String patternValue) {
+	public static String unquote(String patternValue) {
 		if (patternValue.startsWith("\"") && patternValue.endsWith("\"") && patternValue.length() > 1) {
 			String str = patternValue.substring(1, patternValue.length() - 1);
 			return str.replace("\"\"", "\"");
@@ -60,5 +65,27 @@ public class PatternsSupport {
 
 	public static boolean matches(String patternValue, String name) {
 		return parse(patternValue).matcher(name).matches();
+	}
+
+	public static IMethodMatcher parseMethodPattern(String patternValue) throws XmxIniParseException {
+		String[] patterns = patternValue.split("\\|");
+		if (patterns.length == 1) {
+			return new MethodPatternParser(patterns[0]).getMatcher();
+		}
+		final IMethodMatcher[] orMatchers = new IMethodMatcher[patterns.length];
+		for (int i = 0; i < patterns.length; i++) {
+			orMatchers[i] = new MethodPatternParser(patterns[i]).getMatcher();
+		}
+		return new IMethodMatcher() {
+			@Override
+			public boolean matches(Method m) {
+				for (IMethodMatcher orMatcher : orMatchers) {
+					if (orMatcher.matches(m)) {
+						return true;
+					}
+				}
+				return false;
+			}
+		};
 	}
 }

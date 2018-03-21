@@ -1,10 +1,11 @@
-// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
+// Copyright © 2018 Andrey Mogilev. All rights reserved.
 
-package com.gilecode.xmx.cfg.impl;
+package com.gilecode.xmx.cfg.pattern;
 
+import com.gilecode.xmx.cfg.impl.XmxIniParseException;
 import org.junit.Test;
 
-import static com.gilecode.xmx.cfg.impl.PatternsSupport.*;
+import static com.gilecode.xmx.cfg.pattern.PatternsSupport.*;
 import static org.junit.Assert.*;
 
 public class TestPatternsSupport {

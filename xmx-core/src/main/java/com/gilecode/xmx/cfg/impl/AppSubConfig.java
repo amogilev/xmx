@@ -5,6 +5,7 @@ package com.gilecode.xmx.cfg.impl;
 import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.cfg.PropertyValue;
+import com.gilecode.xmx.cfg.pattern.PatternsSupport;
 
 import java.util.List;
 
