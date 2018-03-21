@@ -29,6 +29,11 @@
     </dependency>
     <dependency>
       <groupId>com.gilecode.yagson</groupId>
+      <artifactId>j9-reflection-utils</artifactId>
+      <version>1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.gilecode.yagson</groupId>
       <artifactId>yagson</artifactId>
       <version>0.3.1</version>
     </dependency>

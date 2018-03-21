@@ -3,6 +3,8 @@
 package com.gilecode.xmx.core;
 
 
+import com.gilecode.reflection.ReflectionAccessUtils;
+import com.gilecode.reflection.ReflectionAccessor;
 import com.gilecode.specr.SpeculativeProcessorFactory;
 import com.gilecode.xmx.boot.IXmxBootService;
 import com.gilecode.xmx.cfg.IAppPropertiesSource;
@@ -46,6 +48,8 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	private static final int UI_START_DELAY = 10000;
 
 	private static final String LAUNCHER_CLASS_ATTR = "XMX-Server-Launcher-Class";
+
+	private static final ReflectionAccessor reflAccessor = ReflectionAccessUtils.getReflectionAccessor();
 
 	private final IXmxConfig config;
 	private MBeanServer jmxServer;
@@ -620,7 +624,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			for (Field f : declaredFields) {
 				// TODO: check if managed (e.g. by level or pattern)
 				// TODO: skip overridden methods
-				f.setAccessible(true);
+				reflAccessor.makeAccessible(f);
 				String fname = f.getName();
 				String fid = fields.containsKey(fname) ? fname + "^" + superLevel : fname;
 				fields.put(fid, f);

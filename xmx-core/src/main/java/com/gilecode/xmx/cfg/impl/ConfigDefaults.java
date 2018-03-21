@@ -23,7 +23,7 @@ public interface ConfigDefaults {
 			"Lines starting with \"#!\" specify the default options of the current XMX",
 			"version and are updated automatically. In order to change a default option,",
 			"please uncomment it and modify the value, or just override on a separate",
-			"line. Either way, the modified option will perist even in a case of XMX",
+			"line. Either way, the modified option will persist even in a case of XMX",
 			"updates. However, if there are several sections with the same name, they",
 			"may be split together.",
 			"In case of major updates, it is recommended to compare the changed",

@@ -2,6 +2,8 @@
 
 package com.gilecode.xmx.ui.service;
 
+import com.gilecode.reflection.ReflectionAccessUtils;
+import com.gilecode.reflection.ReflectionAccessor;
 import com.gilecode.xmx.core.type.IMethodInfoService;
 import com.gilecode.xmx.dto.*;
 import com.gilecode.xmx.service.IMapperService;
@@ -30,6 +32,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	private final static Logger logger = LoggerFactory.getLogger(XmxUiService.class);
 
 	private static YaGson jsonMapper = new YaGson();
+	private static final ReflectionAccessor reflAccessor = ReflectionAccessUtils.getReflectionAccessor();
 
 	private IMethodInfoService methodInfoService;
 	private IXmxService xmxService;
@@ -237,7 +240,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			Class<?> c = source.getClass();
 			Field f = getField(c, pathPart, buildPath(refpathParts, level));
 			try {
-				f.setAccessible(true);
+				reflAccessor.makeAccessible(f);
 				source = f.get(source);
 			} catch (IllegalAccessException e) {
 				throw new RefPathSyntaxException("Failed to get field '" + pathPart + "' in class " + c,
@@ -326,7 +329,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			throw new XmxRuntimeException("Method not found in " + obj.getClass() +
 					" by ID=" + methodId);
 		}
-		m.setAccessible(true);
+		reflAccessor.makeAccessible(m);
 
 		// set context class loader to enable functionality which depends on it, like JNDI
 		ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();

@@ -2,6 +2,8 @@
 
 package com.gilecode.xmx.core.jmx;
 
+import com.gilecode.reflection.ReflectionAccessUtils;
+import com.gilecode.reflection.ReflectionAccessor;
 import com.gilecode.xmx.dto.XmxObjectDetails;
 import com.gilecode.xmx.dto.XmxRuntimeException;
 import com.gilecode.xmx.service.IXmxService;
@@ -25,6 +27,7 @@ class JmxBridgeModelBean implements DynamicMBean {
 	private final int objectId;
 	private final ModelMBeanInfoSupport mbeanInfo;
 	private final IXmxService xmxService;
+	private static final ReflectionAccessor reflAccessor = ReflectionAccessUtils.getReflectionAccessor();
 
 	public JmxBridgeModelBean(int objectId, ModelMBeanInfoSupport mbeanInfo, IXmxService xmxService) {
 		this.objectId = objectId;
@@ -124,7 +127,7 @@ class JmxBridgeModelBean implements DynamicMBean {
 		}
 		int methodId = (Integer)methodIdField;
 		Method m = objectDetails.getManagedMethods().get(methodId);
-		m.setAccessible(true);
+		reflAccessor.makeAccessible(m);
 
 		// set context class loader to enable functionality which depends on it, like JNDI
 		ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
