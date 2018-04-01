@@ -28,3 +28,11 @@ span.label-with-tip {
 i.icon-question-circle-o {
     cursor: help;
 }
+
+a.static {
+    font-style: italic;
+}
+
+td.static {
+    font-style: italic;
+}

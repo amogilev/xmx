@@ -4,6 +4,7 @@ package com.gilecode.xmx.ui.dto;
 
 import com.gilecode.xmx.dto.XmxClassInfo;
 
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
 
@@ -18,22 +19,28 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 		/**
 		 * Field ID, unique within the managed object.
 		 */
-		private String id;
+		private final String id;
 
 		/**
 		 * Field name.
 		 */
-		private String name;
+		private final String name;
+
+		/**
+		 * Field modifiers
+		 */
+		private final int modifiers;
 
 		/**
 		 * The text representation of the field value.
 		 */
-		private XmxObjectTextRepresentation text;
+		private final XmxObjectTextRepresentation text;
 
-		public FieldInfo(String fid, String name, XmxObjectTextRepresentation text) {
+		public FieldInfo(String fid, String name, int modifiers, XmxObjectTextRepresentation text) {
 			super();
 			this.id = fid;
 			this.name = name;
+			this.modifiers = modifiers;
 			this.text = text;
 		}
 
@@ -48,6 +55,10 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 		public XmxObjectTextRepresentation getText() {
 			return text;
 		}
+
+		public boolean isStaticField() {
+			return (modifiers & Modifier.STATIC) != 0;
+		}
 	}
 
 	/**
@@ -58,26 +69,33 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 		/**
 		 * Method ID, unique within the managed object.
 		 */
-		private int id;
+		private final int id;
 
 		/**
 		 * Simple method name. Several methods with same name may exist.
 		 */
-		private String name;
+		private final String name;
 
 		/**
 		 * Method signature, return type and name. Really is a part of signature before ()
 		 */
-		private String nameTypeSignature;
+		private final String nameTypeSignature;
 
-		private String[] parameters;
+		private final String[] parameters;
 
-		public MethodInfo(int id, String name, String nameTypeSignature, String[] parameters) {
+		/**
+		 * Method modifiers
+		 */
+		private final int modifiers;
+
+		public MethodInfo(int id, String name, String nameTypeSignature, String[] parameters,
+						  int modifiers) {
 			super();
 			this.id = id;
 			this.name = name;
 			this.nameTypeSignature = nameTypeSignature;
 			this.parameters = parameters;
+			this.modifiers = modifiers;
 		}
 
 		public int getId() {
@@ -94,6 +112,10 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 
 		public String[] getParameters() {
 			return parameters;
+		}
+
+		public boolean isStaticMethod() {
+			return (modifiers & Modifier.STATIC) != 0;
 		}
 	}
 

@@ -182,7 +182,8 @@
         </tr>
       <c:forEach items="${entry.value}" var="fieldInfo">
         <tr>
-            <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${fieldInfo.id}">${fieldInfo.name}</a></td>
+            <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${fieldInfo.id}"
+                class="${fieldInfo.staticField ? 'static' : ''}">${fieldInfo.name}</a></td>
             <c:set var="fieldValue" value="${
                 valKind == 'SMART' ? fieldInfo.text.smartTextValue :
                 valKind == 'JSON' ? fieldInfo.text.jsonValue : fieldInfo.text.toStringValue
@@ -235,7 +236,7 @@
     </tr>
   <c:forEach items="${entry.value}" var="methodInfo">
     <tr>
-        <td>${methodInfo.name}</td>
+        <td class="${methodInfo.staticMethod ? 'static' : ''}">${methodInfo.name}</td>
         <td id="m${methodInfo.id}">
             ${methodInfo.nameTypeSignature}(
             <c:forEach items="${methodInfo.parameters}" var="p" varStatus="status">

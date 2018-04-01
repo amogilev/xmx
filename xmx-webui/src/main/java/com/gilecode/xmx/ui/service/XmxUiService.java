@@ -136,7 +136,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			}
 			String methodNameTypeSignature = methodInfoService.getMethodNameTypeSignature(m);
 			ExtendedXmxObjectDetails.MethodInfo mi = new ExtendedXmxObjectDetails.MethodInfo(methodId, m.getName(), methodNameTypeSignature,
-					methodInfoService.getMethodParameters(m));
+					methodInfoService.getMethodParameters(m), m.getModifiers());
 			classMethodsInfo.add(mi);
 		}
 		return methodsByClass;
@@ -160,7 +160,8 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				}
 
 				XmxObjectTextRepresentation textValue = safeFieldToText(obj, f, OBJ_FIELDS_JSON_CHARS_LIMIT);
-				ExtendedXmxObjectDetails.FieldInfo fi = new ExtendedXmxObjectDetails.FieldInfo(fid, f.getName(), textValue);
+				ExtendedXmxObjectDetails.FieldInfo fi = new ExtendedXmxObjectDetails.FieldInfo(fid, f.getName(),
+						f.getModifiers(), textValue);
 				classFieldsInfo.add(fi);
 			}
 		}
