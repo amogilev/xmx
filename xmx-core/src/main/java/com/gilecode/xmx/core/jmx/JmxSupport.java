@@ -3,7 +3,7 @@
 package com.gilecode.xmx.core.jmx;
 
 import com.gilecode.xmx.cfg.IXmxPropertiesSource;
-import com.gilecode.xmx.core.ManagedClassInfo;
+import com.gilecode.xmx.core.XmxClassManager;
 import com.gilecode.xmx.service.IXmxService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,7 +170,7 @@ public class JmxSupport {
 	}
 
 	public static ObjectName registerBean(IXmxService xmxService, MBeanServer jmxServer, int objectId,
-										  ManagedClassInfo classInfo, boolean singleton) {
+	                                      XmxClassManager classInfo, boolean singleton) {
 
 		if (classInfo.getJmxClassModel() == null || classInfo.getJmxObjectNamePart() == null) {
 			return null;
@@ -191,7 +191,7 @@ public class JmxSupport {
 		}
 	}
 
-	public static ObjectName makeObjectName(int objectId, ManagedClassInfo classInfo, boolean singleton) {
+	public static ObjectName makeObjectName(int objectId, XmxClassManager classInfo, boolean singleton) {
 		try {
 			// add id for non-singletons
 			ObjectName objectName = new ObjectName(classInfo.getJmxObjectNamePart() + 

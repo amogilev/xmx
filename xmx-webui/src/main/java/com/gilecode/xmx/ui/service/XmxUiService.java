@@ -5,7 +5,9 @@ package com.gilecode.xmx.ui.service;
 import com.gilecode.reflection.ReflectionAccessUtils;
 import com.gilecode.reflection.ReflectionAccessor;
 import com.gilecode.xmx.core.type.IMethodInfoService;
-import com.gilecode.xmx.dto.*;
+import com.gilecode.xmx.dto.XmxClassInfo;
+import com.gilecode.xmx.dto.XmxObjectInfo;
+import com.gilecode.xmx.dto.XmxRuntimeException;
 import com.gilecode.xmx.service.IMapperService;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.UIConstants;
@@ -63,7 +65,8 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 					for (XmxClassInfo managedClassInfo : managedClassInfos) {
 						ExtendedXmxClassInfo extendedXmxClassInfo = new ExtendedXmxClassInfo(
 								managedClassInfo.getId(),
-								managedClassInfo.getClassName());
+								managedClassInfo.getClassName(),
+								managedClassInfo.getMembersLookup());
 						extendedXmxClassInfo.setNumberOfObjects(CollectionUtils.size(
 								xmxService.getManagedObjects(extendedXmxClassInfo.getId()))
 						);
@@ -99,12 +102,12 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException {
-		XmxObjectDetails objectDetails = findObject(refpath).foundObjectDetails;
-		Object obj = objectDetails.getValue();
+		XmxObjectInfo objectInfo = findObject(refpath).foundObjectInfo;
+		Object obj = objectInfo.getValue();
 
 		ExtendedXmxObjectDetails.ArrayPageDetails arrayPage = getArrayPageDetails(obj, arrPageNum);
-		Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fieldsByClass = fillFieldsInfoByClass(objectDetails);
-		Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> methodsByClass = fillMethodsInfoByClass(objectDetails);
+		Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fieldsByClass = fillFieldsInfoByClass(objectInfo);
+		Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> methodsByClass = fillMethodsInfoByClass(objectInfo);
 
 		List<String> classNames = new ArrayList<>();
 		if (obj != null) {
@@ -116,14 +119,14 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		} else {
 			classNames.add("null");
 		}
-		return new ExtendedXmxObjectDetails(objectDetails.getObjectId(), objectDetails.getClassInfo(), obj,
+		return new ExtendedXmxObjectDetails(objectInfo.getObjectId(), objectInfo.getClassInfo(), obj,
 				toText(obj, OBJ_JSON_CHARS_LIMIT),
 				classNames, fieldsByClass, methodsByClass, arrayPage);
 	}
 
-	private Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> fillMethodsInfoByClass(XmxObjectDetails objectDetails) {
+	private Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> fillMethodsInfoByClass(XmxObjectInfo objectInfo) {
 		Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> methodsByClass = new LinkedHashMap<>();
-		Map<Integer, Method> managedMethods = objectDetails.getManagedMethods();
+		Map<Integer, Method> managedMethods = objectInfo.getMembersLookup().listManagedMethods();
 		for (Map.Entry<Integer, Method> e : managedMethods.entrySet()) {
 			Integer methodId = e.getKey();
 			Method m = e.getValue();
@@ -142,14 +145,15 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return methodsByClass;
 	}
 
-	private Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fillFieldsInfoByClass(XmxObjectDetails objectDetails) {
-		Object obj = objectDetails.getValue();
+	private Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fillFieldsInfoByClass(XmxObjectInfo objectInfo) {
+		Object obj = objectInfo.getValue();
 		Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fieldsByClass = new LinkedHashMap<>();
 		if (obj != null) {
-			Map<String, Field> managedFields = objectDetails.getManagedFields();
+			Map<String, Field> managedFields = objectInfo.getMembersLookup().listManagedFields();
 			for (Map.Entry<String, Field> e : managedFields.entrySet()) {
 				String fid = e.getKey();
 				Field f = e.getValue();
+				reflAccessor.makeAccessible(f);
 
 				String declaringClassName = f.getDeclaringClass().getName();
 
@@ -207,17 +211,17 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 		// expect path starts with ID like "$123"
 		Integer objectId = parseRefId(refpathParts[0]);
-		XmxObjectDetails rootObjectDetails = getXmxObjectDetails(objectId);
+		XmxObjectInfo rootObjectInfo = getXmxObject(objectId);
 		if (refpathParts.length == 1) {
-			return new SearchObjectResult(rootObjectDetails, rootObjectDetails);
+			return new SearchObjectResult(rootObjectInfo.getValue(), rootObjectInfo);
 		}
 
-		Object curObj = rootObjectDetails.getValue();
+		Object curObj = rootObjectInfo.getValue();
 		for (int curLevel = 1; curLevel < refpathParts.length; curLevel++) {
 			curObj = getNextLevelElement(refpathParts, curObj, curLevel);
 		}
-		XmxObjectDetails foundObjectDetails = getUnmanagedObjectDetails(curObj);
-		return new SearchObjectResult(rootObjectDetails, foundObjectDetails);
+		XmxObjectInfo foundObjectInfo = getUnmanagedObjectInfo(curObj);
+		return new SearchObjectResult(rootObjectInfo.getValue(), foundObjectInfo);
 	}
 
 	private Object getNextLevelElement(String[] refpathParts, Object source, int level) throws RefPathSyntaxException {
@@ -305,27 +309,23 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		throw new RefPathSyntaxException("Field '" + fid + "' is not found in " + origClass, refpath);
 	}
 
-	private XmxObjectDetails getUnmanagedObjectDetails(Object obj) {
+	private XmxObjectInfo getUnmanagedObjectInfo(Object obj) {
+		XmxClassInfo ci;
 		if (obj == null) {
-			XmxClassInfo ci = new XmxClassInfo(null, "null");
-			return new XmxObjectDetails(ID_UNMANAGED, ci, null,
-					Collections.<String, Field>emptyMap(), Collections.<Integer, Method>emptyMap());
+			ci = new XmxClassInfo(null, "null", new EmptyMembersLookup());
 		} else {
-			XmxClassDetails xmxClassDetails = xmxService.getClassDetails(obj.getClass());
-			// do not use details instead of ci (simple info) as it is to be returned to UI
-			XmxClassInfo ci = new XmxClassInfo(null, xmxClassDetails.getClassName());
-			return new XmxObjectDetails(ID_UNMANAGED, ci, obj,
-					xmxClassDetails.getManagedFields(), xmxClassDetails.getManagedMethods());
+			ci = xmxService.getClassInfo(obj.getClass());
 		}
+		return new XmxObjectInfo(ID_UNMANAGED, ci, obj);
 	}
 
 	@Override
 	public XmxObjectTextRepresentation invokeObjectMethod(String refpath, int methodId, String[] argsArr) throws Throwable {
 		SearchObjectResult searchResult = findObject(refpath);
-		XmxObjectDetails objectDetails = searchResult.foundObjectDetails;
-		Object obj = objectDetails.getValue();
+		XmxObjectInfo objectInfo = searchResult.foundObjectInfo;
+		Object obj = objectInfo.getValue();
 
-		final Method m = objectDetails.getManagedMethods().get(methodId);
+		final Method m = objectInfo.getMembersLookup().getManagedMethod(methodId);
 		if (m == null) {
 			throw new XmxRuntimeException("Method not found in " + obj.getClass() +
 					" by ID=" + methodId);
@@ -364,11 +364,11 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	 */
 	private ClassLoader chooseContextClassLoader(SearchObjectResult result) {
 		// prefer CL of "found" object; use "root" CL only if the found object is null, or its CL is bootstrap or system
-		ClassLoader rootObjectCL = result.rootObjectDetails.getValue().getClass().getClassLoader();
-		if (result.foundObjectDetails.getValue() == null || result.foundObjectDetails == result.rootObjectDetails) {
+		ClassLoader rootObjectCL = result.rootObject.getClass().getClassLoader();
+		if (result.foundObjectInfo.getValue() == null || result.foundObjectInfo.getValue() == result.rootObject) {
 			return rootObjectCL;
 		}
-		ClassLoader foundObjectCL = result.foundObjectDetails.getValue().getClass().getClassLoader();
+		ClassLoader foundObjectCL = result.foundObjectInfo.getValue().getClass().getClassLoader();
 
 		if (foundObjectCL == null || foundObjectCL == ClassLoader.getSystemClassLoader()) {
 			return rootObjectCL;
@@ -381,8 +381,8 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	public void setObjectFieldOrElement(String refpath, String elementId, String value)
 			throws MissingObjectException, RefPathSyntaxException {
 		SearchObjectResult searchResult = findObject(refpath);
-		XmxObjectDetails objectDetails = searchResult.foundObjectDetails;
-		Object obj = objectDetails.getValue();
+		XmxObjectInfo objectInfo = searchResult.foundObjectInfo;
+		Object obj = objectInfo.getValue();
 
 		Class<?> objClass = obj.getClass();
 		if (objClass.isArray()) {
@@ -398,11 +398,12 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				throw new XmxRuntimeException("Failed to set array element", e);
 			}
 		} else {
-			Field f = objectDetails.getManagedFields().get(elementId);
+			Field f = objectInfo.getMembersLookup().getManagedField(elementId);
 			if (f == null) {
 				throw new XmxRuntimeException("Field not found in " + objClass +
 						" by ID=" + elementId);
 			}
+			reflAccessor.makeAccessible(f);
 
 			Object deserializedValue = deserializeValue(value, f.getType(), chooseContextClassLoader(searchResult));
 			try {
@@ -440,16 +441,16 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException {
-		XmxObjectDetails objectDetails = findObject(refpath).foundObjectDetails;
+		XmxObjectInfo objectInfo = findObject(refpath).foundObjectInfo;
 		Object jsonSourceObject;
-		Object obj = objectDetails.getValue();
+		Object obj = objectInfo.getValue();
 		if (fid != null) {
-			Map<String, Field> managedFields = objectDetails.getManagedFields();
-			Field f = managedFields.get(fid);
+			Field f = objectInfo.getMembersLookup().getManagedField(fid);
 			if (f == null) {
 				out.println("Error: the field is missing!");
 				return;
 			}
+			reflAccessor.makeAccessible(f);
 			try {
 				jsonSourceObject = f.get(obj);
 			} catch (Exception e) {
@@ -463,12 +464,12 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		jsonMapper.toJson(jsonSourceObject, out);
 	}
 
-	private XmxObjectDetails getXmxObjectDetails(Integer objectId) throws MissingObjectException {
-		final XmxObjectDetails objDetails = xmxService.getObjectDetails(objectId);
-		if (objDetails == null) {
+	private XmxObjectInfo getXmxObject(Integer objectId) throws MissingObjectException {
+		final XmxObjectInfo objInfo = xmxService.getManagedObject(objectId);
+		if (objInfo == null) {
 			throw new MissingObjectException(objectId);
 		}
-		return objDetails;
+		return objInfo;
 	}
 
 	private ExtendedXmxObjectInfo toExtendedInfo(XmxObjectInfo info, long jsonCharsLimit) {
@@ -534,7 +535,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			throws RefPathSyntaxException, MissingObjectException {
 		if (value.startsWith("$")) {
 			// value is refpath of the actual object
-			return findObject(value).foundObjectDetails.getValue();
+			return findObject(value).foundObjectInfo.getValue();
 		}
 		final ClassLoader prevContextClassLoader = Thread.currentThread().getContextClassLoader();
 		try {

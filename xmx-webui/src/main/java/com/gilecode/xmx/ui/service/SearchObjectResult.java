@@ -2,7 +2,7 @@
 
 package com.gilecode.xmx.ui.service;
 
-import com.gilecode.xmx.dto.XmxObjectDetails;
+import com.gilecode.xmx.dto.XmxObjectInfo;
 
 /**
  * A search result returned by {@link IXmxUiService#findObject(String)}
@@ -10,18 +10,18 @@ import com.gilecode.xmx.dto.XmxObjectDetails;
 class SearchObjectResult {
 
 	/**
-	 * The details of the root (managed) object; e.g. for a refpath "$17.a" it will
-	 * be the details of the managed object with ID=17.
+	 * The root (managed) object found for a given refpath.
+	 * For example, for a refpath "$17.a" it will be the managed object with ID=17.
 	 */
-	XmxObjectDetails rootObjectDetails;
+	final Object rootObject;
 
 	/**
-	 * The details of the object found by the original refpath.
+	 * The details of the object found by a given refpath.
 	 */
-	XmxObjectDetails foundObjectDetails;
+	final XmxObjectInfo foundObjectInfo;
 
-	public SearchObjectResult(XmxObjectDetails rootObjectDetails, XmxObjectDetails foundObjectDetails) {
-		this.rootObjectDetails = rootObjectDetails;
-		this.foundObjectDetails = foundObjectDetails;
+	public SearchObjectResult(Object rootObject, XmxObjectInfo foundObjectInfo) {
+		this.rootObject = rootObject;
+		this.foundObjectInfo = foundObjectInfo;
 	}
 }

@@ -3,10 +3,12 @@
 package com.gilecode.xmx.ui.dto;
 
 import com.gilecode.xmx.dto.XmxClassInfo;
+import com.gilecode.xmx.service.IXmxClassMembersLookup;
 
 public class ExtendedXmxClassInfo extends XmxClassInfo {
-	public ExtendedXmxClassInfo(Integer id, String className) {
-		super(id, className);
+
+	public ExtendedXmxClassInfo(Integer id, String className, IXmxClassMembersLookup membersLookup) {
+		super(id, className, membersLookup);
 	}
 
 	/**

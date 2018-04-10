@@ -2,6 +2,8 @@
 
 package com.gilecode.xmx.dto;
 
+import com.gilecode.xmx.service.IXmxClassMembersLookup;
+
 /**
  * A base information about the object managed in XMX system.
  */
@@ -38,5 +40,9 @@ public class XmxObjectInfo {
 
 	public Object getValue() {
 		return value;
+	}
+
+	public IXmxClassMembersLookup getMembersLookup() {
+		return classInfo.getMembersLookup();
 	}
 }

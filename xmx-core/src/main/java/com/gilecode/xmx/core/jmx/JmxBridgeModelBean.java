@@ -4,7 +4,7 @@ package com.gilecode.xmx.core.jmx;
 
 import com.gilecode.reflection.ReflectionAccessUtils;
 import com.gilecode.reflection.ReflectionAccessor;
-import com.gilecode.xmx.dto.XmxObjectDetails;
+import com.gilecode.xmx.dto.XmxObjectInfo;
 import com.gilecode.xmx.dto.XmxRuntimeException;
 import com.gilecode.xmx.service.IXmxService;
 
@@ -36,13 +36,11 @@ class JmxBridgeModelBean implements DynamicMBean {
 	}
 
 	@Override
-	public Object getAttribute(String name)
-			throws AttributeNotFoundException, MBeanException,
-			ReflectionException {
+	public Object getAttribute(String name) {
 
-		XmxObjectDetails objectDetails = getObjectDetails();
-		Object obj = objectDetails.getValue();
-		Field f = getField(objectDetails, name);
+		XmxObjectInfo objectInfo = getObjectInfo();
+		Object obj = objectInfo.getValue();
+		Field f = getField(objectInfo, name);
 
 		try {
 			return f.get(obj);
@@ -54,9 +52,9 @@ class JmxBridgeModelBean implements DynamicMBean {
 	@Override
 	public void setAttribute(Attribute attr) throws RuntimeException {
 
-		XmxObjectDetails objectDetails = getObjectDetails();
-		Object obj = objectDetails.getValue();
-		Field f = getField(objectDetails, attr.getName());
+		XmxObjectInfo objectInfo = getObjectInfo();
+		Object obj = objectInfo.getValue();
+		Field f = getField(objectInfo, attr.getName());
 		
 		try {
 			f.set(obj, attr.getValue());
@@ -69,11 +67,7 @@ class JmxBridgeModelBean implements DynamicMBean {
 	public AttributeList getAttributes(String[] attrNames) {
         AttributeList responseList = new AttributeList(attrNames.length);
         for (String name : attrNames) {
-            try {
-				responseList.add(new Attribute(name, getAttribute(name)));
-			} catch (AttributeNotFoundException | MBeanException | ReflectionException e) {
-				throw new RuntimeException(e);
-			}
+	        responseList.add(new Attribute(name, getAttribute(name)));
         }
         
         return responseList;
@@ -100,11 +94,10 @@ class JmxBridgeModelBean implements DynamicMBean {
 	}
 
 	@Override
-	public Object invoke(String actionName, Object[] params, String[] signature)
-			throws MBeanException, ReflectionException {
+	public Object invoke(String actionName, Object[] params, String[] signature) {
 
-		XmxObjectDetails objectDetails = getObjectDetails();
-		Object obj = objectDetails.getValue();
+		XmxObjectInfo objectInfo = getObjectInfo();
+		Object obj = objectInfo.getValue();
 
 		MBeanOperationInfo foundOp = null;
 		for (MBeanOperationInfo op : mbeanInfo.getOperations()) {
@@ -126,7 +119,7 @@ class JmxBridgeModelBean implements DynamicMBean {
 			throw new XmxRuntimeException("Missing methodId in operation descriptor: " + descr);
 		}
 		int methodId = (Integer)methodIdField;
-		Method m = objectDetails.getManagedMethods().get(methodId);
+		Method m = objectInfo.getMembersLookup().getManagedMethod(methodId);
 		reflAccessor.makeAccessible(m);
 
 		// set context class loader to enable functionality which depends on it, like JNDI
@@ -147,19 +140,20 @@ class JmxBridgeModelBean implements DynamicMBean {
 		}
 	}
 
-	private XmxObjectDetails getObjectDetails() {
-		XmxObjectDetails objectDetails = xmxService.getObjectDetails(objectId);
-		if (objectDetails == null) {
+	private XmxObjectInfo getObjectInfo() {
+		XmxObjectInfo objectInfo = xmxService.getManagedObject(objectId);
+		if (objectInfo == null) {
 			throw new XmxRuntimeException("Object not found. It may be already GC'ed: objectId=" + objectId);
 		}
-		return objectDetails;
+		return objectInfo;
 	}
 	
-	private Field getField(XmxObjectDetails objectDetails, String fid) throws RuntimeOperationsException {
-		Field f = objectDetails.getManagedFields().get(fid);
+	private Field getField(XmxObjectInfo objectInfo, String fid) throws RuntimeOperationsException {
+		Field f = objectInfo.getMembersLookup().getManagedField(fid);
 		if (f == null) {
-			throw new XmxRuntimeException("Field not found in " + objectDetails.getClassInfo().getClassName() + " by ID=" + fid);
+			throw new XmxRuntimeException("Field not found in " + objectInfo.getClassInfo().getClassName() + " by ID=" + fid);
 		}
+		reflAccessor.makeAccessible(f);
 		return f;
 	}
 

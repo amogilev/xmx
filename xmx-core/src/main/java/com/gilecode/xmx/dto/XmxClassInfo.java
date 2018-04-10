@@ -2,6 +2,8 @@
 
 package com.gilecode.xmx.dto;
 
+import com.gilecode.xmx.service.IXmxClassMembersLookup;
+
 /**
  * DTO XMX-related information about the class.
  */
@@ -10,16 +12,22 @@ public class XmxClassInfo {
 	/**
 	 * Unique ID of the class in XMX system, or {@code null} for unmanaged classes
 	 */
-	private Integer id;
+	private final Integer id;
 	
 	/**
 	 * Name of the class
 	 */
-	private String className;
-	
-	public XmxClassInfo(Integer id, String className) {
+	private final String className;
+
+	/**
+	 * Members lookup
+	 */
+	private final IXmxClassMembersLookup membersLookup;
+
+	public XmxClassInfo(Integer id, String className, IXmxClassMembersLookup membersLookup) {
 		this.id = id;
 		this.className = className;
+		this.membersLookup = membersLookup;
 	}
 
 	public Integer getId() {
@@ -28,5 +36,9 @@ public class XmxClassInfo {
 
 	public String getClassName() {
 		return className;
+	}
+
+	public IXmxClassMembersLookup getMembersLookup() {
+		return membersLookup;
 	}
 }
