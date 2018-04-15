@@ -126,9 +126,9 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	private Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> fillMethodsInfoByClass(XmxObjectInfo objectInfo) {
 		Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> methodsByClass = new LinkedHashMap<>();
-		Map<Integer, Method> managedMethods = objectInfo.getMembersLookup().listManagedMethods();
-		for (Map.Entry<Integer, Method> e : managedMethods.entrySet()) {
-			Integer methodId = e.getKey();
+		Map<String, Method> managedMethods = objectInfo.getMembersLookup().listManagedMethods();
+		for (Map.Entry<String, Method> e : managedMethods.entrySet()) {
+			String methodId = e.getKey();
 			Method m = e.getValue();
 			String declaringClassName = m.getDeclaringClass().getName();
 
@@ -320,7 +320,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public XmxObjectTextRepresentation invokeObjectMethod(String refpath, int methodId, String[] argsArr) throws Throwable {
+	public XmxObjectTextRepresentation invokeObjectMethod(String refpath, String methodId, String[] argsArr) throws Throwable {
 		SearchObjectResult searchResult = findObject(refpath);
 		XmxObjectInfo objectInfo = searchResult.foundObjectInfo;
 		Object obj = objectInfo.getValue();

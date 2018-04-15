@@ -17,7 +17,7 @@ class EmptyMembersLookup implements IXmxClassMembersLookup {
 	}
 
 	@Override
-	public Map<Integer, Method> listManagedMethods() {
+	public Map<String, Method> listManagedMethods() {
 		return Collections.emptyMap();
 	}
 
@@ -27,7 +27,7 @@ class EmptyMembersLookup implements IXmxClassMembersLookup {
 	}
 
 	@Override
-	public Method getManagedMethod(Integer mid) {
+	public Method getManagedMethod(String mid) {
 		return null;
 	}
 }

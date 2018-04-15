@@ -115,10 +115,10 @@ class JmxBridgeModelBean implements DynamicMBean {
 		Descriptor descr = foundOp.getDescriptor();
 		
 		Object methodIdField = descr.getFieldValue("methodId");
-		if (!(methodIdField instanceof Integer)) {
+		if (!(methodIdField instanceof String)) {
 			throw new XmxRuntimeException("Missing methodId in operation descriptor: " + descr);
 		}
-		int methodId = (Integer)methodIdField;
+		String methodId = (String) methodIdField;
 		Method m = objectInfo.getMembersLookup().getManagedMethod(methodId);
 		reflAccessor.makeAccessible(m);
 

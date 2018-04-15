@@ -5,7 +5,7 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jstl/fmt" %>
 <fmt:setBundle basename="messages"/>
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
@@ -240,13 +240,13 @@
         <td id="m${methodInfo.id}">
             ${methodInfo.nameTypeSignature}(
             <c:forEach items="${methodInfo.parameters}" var="p" varStatus="status">
-                <input type="text" id="m${methodInfo.id}_p${status.index}" value="${p}"/>
+                <input type="text" value="${p}"/>
                 <c:if test="${not status.last}">,</c:if>
             </c:forEach>
             )
         </td>
         <td>
-            <input type="button" onclick="invokeMethod(${methodInfo.id});" value="Invoke"/>
+            <input type="button" onclick="invokeMethod('${methodInfo.id}');" value="Invoke"/>
         </td>
     </tr>
   </c:forEach>

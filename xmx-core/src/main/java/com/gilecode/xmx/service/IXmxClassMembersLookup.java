@@ -16,7 +16,7 @@ public interface IXmxClassMembersLookup {
 	/**
 	 * Lists of methods for object and its parents.
 	 */
-	Map<Integer, Method> listManagedMethods();
+	Map<String, Method> listManagedMethods();
 
 	/**
 	 * Get a field by ID which was previously returned as a key by {@link #listManagedFields()}
@@ -26,5 +26,5 @@ public interface IXmxClassMembersLookup {
 	/**
 	 * Get a method by ID which was previously returned as a key by {@link #listManagedMethods()}
 	 */
-	Method getManagedMethod(Integer mid);
+	Method getManagedMethod(String mid);
 }

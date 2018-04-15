@@ -69,7 +69,7 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 		/**
 		 * Method ID, unique within the managed object.
 		 */
-		private final int id;
+		private final String id;
 
 		/**
 		 * Simple method name. Several methods with same name may exist.
@@ -88,7 +88,7 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 		 */
 		private final int modifiers;
 
-		public MethodInfo(int id, String name, String nameTypeSignature, String[] parameters,
+		public MethodInfo(String id, String name, String nameTypeSignature, String[] parameters,
 						  int modifiers) {
 			super();
 			this.id = id;
@@ -98,7 +98,7 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 			this.modifiers = modifiers;
 		}
 
-		public int getId() {
+		public String getId() {
 			return id;
 		}
 

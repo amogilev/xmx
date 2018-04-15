@@ -5,8 +5,9 @@ package com.gilecode.xmx.core;
 import com.gilecode.xmx.cfg.IXmxConfig;
 import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.core.jmx.JmxSupport;
+import com.gilecode.xmx.service.ISignatureService;
 import com.gilecode.xmx.service.IXmxClassMembersLookup;
-import com.gilecode.xmx.util.ImmutableIntListAsMap;
+import com.gilecode.xmx.service.SignatureService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +21,8 @@ import java.util.*;
 public class XmxClassManager {
 
 	private static final Logger logger = LoggerFactory.getLogger(XmxClassManager.class);
+
+	static final ISignatureService signatureService = new SignatureService();
 
 	/**
 	 * Unique ID of the class in XMX system, or {@code 0} for unmanaged classes
@@ -81,7 +84,7 @@ public class XmxClassManager {
 	 * Cached list of managed methods mapped by unique IDs.
 	 */
 	// volatile // not actually required, as Map values are always the same
-	private Reference<Map<Integer, Method>> cachedManagedMethodsRef;
+	private Reference<Map<String, Method>> cachedManagedMethodsRef;
 
 	/**
 	 * Cached list of managed methods mapped by unique IDs.
@@ -166,8 +169,8 @@ public class XmxClassManager {
 		return clazz;
 	}
 
-	public Map<Integer, Method> getManagedMethods() {
-		Map<Integer, Method> managedMethods = getCachedManagedMethods();
+	public Map<String, Method> getManagedMethods() {
+		Map<String, Method> managedMethods = getCachedManagedMethods();
 		if (managedMethods == null) {
 			managedMethods = buildManagedMethodsList();
 			setCachedManagedMethods(managedMethods);
@@ -237,12 +240,12 @@ public class XmxClassManager {
 				+ "]";
 	}
 
-	Map<Integer, Method> getCachedManagedMethods() {
-		final Reference<Map<Integer, Method>> ref = this.cachedManagedMethodsRef;
+	Map<String, Method> getCachedManagedMethods() {
+		final Reference<Map<String, Method>> ref = this.cachedManagedMethodsRef;
 		return ref == null ? null : ref.get();
 	}
 
-	private void setCachedManagedMethods(Map<Integer, Method> managedMethods) {
+	private void setCachedManagedMethods(Map<String, Method> managedMethods) {
 		cachedManagedMethodsRef = new WeakReference<>(managedMethods);
 	}
 
@@ -255,8 +258,8 @@ public class XmxClassManager {
 		cachedManagedFieldsRef = new WeakReference<>(managedFields);
 	}
 
-	private Map<Integer, Method> buildManagedMethodsList() {
-		List<Method> methods = new ArrayList<>(20);
+	private Map<String, Method> buildManagedMethodsList() {
+		Map<String, Method> methods = new LinkedHashMap<>(32);
 		Class<?> c = clazz;
 		while (c != null) {
 			Method[] declaredMethods = c.getDeclaredMethods();
@@ -268,12 +271,12 @@ public class XmxClassManager {
 				// TODO: check if managed (e.g. by level or pattern)
 				// TODO: skip overridden methods
 				if (!m.isSynthetic()) {
-					methods.add(m);
+					methods.put(signatureService.getMethodSignature(m), m);
 				}
 			}
 			c = c.getSuperclass();
 		}
-		return new ImmutableIntListAsMap<>(methods);
+		return methods;
 	}
 
 	/**
@@ -316,7 +319,7 @@ public class XmxClassManager {
 		}
 
 		@Override
-		public Map<Integer, Method> listManagedMethods() {
+		public Map<String, Method> listManagedMethods() {
 			return getManagedMethods();
 		}
 
@@ -360,16 +363,18 @@ public class XmxClassManager {
 		}
 
 		@Override
-		public Method getManagedMethod(Integer mid) {
-			return listManagedMethods().get(mid);
-			// TODO use parse after switch to msign as ID
-//				Map<Integer, Method> managedMethods = getCachedManagedMethods();
-//				if (managedMethods != null) {
-//					return managedMethods.get(mid);
-//				} else {
-//					// parse and find in class
-//					return null;
-//				}
+		public Method getManagedMethod(String mid) {
+			Map<String, Method> managedMethods = getCachedManagedMethods();
+			if (managedMethods != null) {
+				return managedMethods.get(mid);
+			} else {
+				// parse and find in class
+				try {
+					return signatureService.findMethodBySignature(clazz.getClassLoader(), mid);
+				} catch (ClassNotFoundException | NoSuchMethodException e) {
+					return null;
+				}
+			}
 		}
 	}
 }

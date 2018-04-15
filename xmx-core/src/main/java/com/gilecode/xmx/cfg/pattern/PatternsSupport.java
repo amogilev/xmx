@@ -28,7 +28,6 @@ import java.util.regex.PatternSyntaxException;
 public class PatternsSupport {
 	
 //	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[\\w\\*\\|]*$");
-	// FIXME why space is here??
 	private static final Pattern SIMPLE_PATTERN_OR_LITERAL = Pattern.compile("^[*|. \\p{javaJavaIdentifierPart}]*$");
 	
 	public static Pattern parse(String patternValue) throws XmxIniParseException {

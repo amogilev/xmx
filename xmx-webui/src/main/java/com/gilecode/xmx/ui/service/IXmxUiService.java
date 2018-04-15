@@ -54,7 +54,7 @@ public interface IXmxUiService {
 	 */
 	SearchObjectResult findObject(String refpath) throws MissingObjectException, RefPathSyntaxException;
 
-	XmxObjectTextRepresentation invokeObjectMethod(String refpath, int methodId, String[] argsArr)
+	XmxObjectTextRepresentation invokeObjectMethod(String refpath, String methodId, String[] argsArr)
 			throws MissingObjectException, RefPathSyntaxException, Throwable;
 
 	/**

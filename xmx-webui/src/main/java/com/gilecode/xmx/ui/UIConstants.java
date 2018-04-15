@@ -20,7 +20,6 @@ public interface UIConstants {
 
 	// a special ID which means that an object or class is not actuallly managed, and
 	// the information about it is obtained using refpaths
-	// TODO: replace with nulls
-	int ID_UNMANAGED = -1;
+	int ID_UNMANAGED = 0;
 
 }

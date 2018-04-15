@@ -103,7 +103,7 @@ public class RestController implements UIConstants {
 	public String handleInvokeObjectMethod(
 			ModelMap model,
 			@PathVariable String refpath,
-			@RequestParam int methodId,
+			@RequestParam String methodId,
 			@RequestParam(value = "arg", required = false) String[] argsArr) throws Throwable {
 
 		XmxObjectTextRepresentation resultText = xmxUiService.invokeObjectMethod(refpath, methodId, argsArr);
