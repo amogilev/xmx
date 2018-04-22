@@ -35,7 +35,7 @@
     <dependency>
       <groupId>com.gilecode.yagson</groupId>
       <artifactId>yagson</artifactId>
-      <version>0.3.1</version>
+      <version>0.4</version>
     </dependency>
     <dependency>
       <groupId>org.ini4j</groupId>
