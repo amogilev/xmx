@@ -22,4 +22,6 @@ public interface UIConstants {
 	// the information about it is obtained using refpaths
 	int ID_UNMANAGED = 0;
 
+	String ATTR_SESSION_ID = "sid";
+
 }

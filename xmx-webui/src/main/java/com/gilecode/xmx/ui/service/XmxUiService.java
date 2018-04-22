@@ -35,6 +35,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	private static YaGson jsonMapper = new YaGson();
 	private static final ReflectionAccessor reflAccessor = ReflectionAccessUtils.getReflectionAccessor();
+	private static final String sessionId = initSessionId();
 
 	private IMethodInfoService methodInfoService;
 	private IXmxService xmxService;
@@ -552,5 +553,14 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return new XmxObjectTextRepresentation(mapperService.safeToString(obj),
 				mapperService.safeToJson(obj, jsonCharsLimit), jsonCharsLimit,
 				obj == null || hasDeclaredToString(obj.getClass()));
+	}
+
+	private static String initSessionId() {
+		return Long.toHexString(System.currentTimeMillis() & 0xFFFFFFFFL);
+	}
+
+	@Override
+	public String getCurrentSessionId() {
+		return sessionId;
 	}
 }

@@ -53,7 +53,8 @@
 
     function callSetElement(eid) {
         var value = document.getElementById("value_" + eid).value;
-        window.location = "${pageContext.request.contextPath}/setObjectElement/${refpath}?elementId=" + eid+ "&value=" + encodeURIComponent(value);
+        window.location = "${pageContext.request.contextPath}/setObjectElement/${refpath}?elementId=" + eid +
+            "&value=" + encodeURIComponent(value) + "&sid=${sid}";
 	}
 
     function invokeMethod(methodId) {
@@ -68,6 +69,7 @@
             var argInput = inputs[i];
             addFormData(form, 'arg', argInput.value);
         }
+        addFormData(form, "sid", "${sid}");
         document.body.appendChild(form);
         form.submit();
     }
@@ -81,8 +83,8 @@
     }
 
     function loadFullJson(fid) {
-	    var url = "${pageContext.request.contextPath}/getFullJson/${refpath}" +
-            (fid === undefined ? "" : "?fid=" + fid);
+	    var url = "${pageContext.request.contextPath}/getFullJson/${refpath}?sid=${sid}" +
+            (fid === undefined ? "" : "&fid=" + fid);
         window.open(url, '_blank');
     }
 
@@ -122,6 +124,7 @@
 </table>
 
 <form id="frmPageNav" action="${curUrl}">
+    <input type="hidden" name="sid" value="${sid}" />
 
     <c:set var="elementsHeader" value="${details.array ? 'Array Elements' : 'Fields'}" />
     <c:set var="elementsColumn" value="${details.array ? 'Index' : 'Name'}" />
@@ -152,7 +155,7 @@
         <c:forEach items="${details.arrayPage.pageElements}" var="val" varStatus="st">
             <c:set var="elementIdx" value="${details.arrayPage.pageStart + st.index}"/>
             <tr>
-                <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${elementIdx}">${elementIdx}</a></td>
+                <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${elementIdx}?sid=${sid}">${elementIdx}</a></td>
                 <c:set var="elementValue" value="${
                     valKind == 'SMART' ? val.smartTextValue :
                     valKind == 'JSON' ? val.jsonValue : val.toStringValue
@@ -182,7 +185,7 @@
         </tr>
       <c:forEach items="${entry.value}" var="fieldInfo">
         <tr>
-            <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${fieldInfo.id}"
+            <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${fieldInfo.id}?sid=${sid}"
                 class="${fieldInfo.staticField ? 'static' : ''}">${fieldInfo.name}</a></td>
             <c:set var="fieldValue" value="${
                 valKind == 'SMART' ? fieldInfo.text.smartTextValue :

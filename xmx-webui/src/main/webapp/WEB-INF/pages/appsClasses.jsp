@@ -17,7 +17,7 @@
         <c:forEach items="${entry.value}" var="classInfo">
             <tr>
                 <td>${classInfo.className}</td>
-                <td>${classInfo.numberOfObjects} (<a href="${pageContext.request.contextPath}/getClassObjects?classId=${classInfo.id}&className=${classInfo.className}">Look</a>)</td>
+                <td>${classInfo.numberOfObjects} (<a href="${pageContext.request.contextPath}/getClassObjects?classId=${classInfo.id}&className=${classInfo.className}&sid=${sid}">Look</a>)</td>
             </tr>
         </c:forEach>
     </c:forEach>

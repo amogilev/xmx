@@ -71,4 +71,6 @@ public interface IXmxUiService {
 	void printAllObjectsReport(PrintWriter out);
 
 	void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException;
+
+	String getCurrentSessionId();
 }

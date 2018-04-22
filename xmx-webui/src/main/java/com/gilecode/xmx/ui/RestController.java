@@ -9,6 +9,7 @@ import com.gilecode.xmx.ui.dto.XmxObjectTextRepresentation;
 import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.service.MissingObjectException;
 import com.gilecode.xmx.ui.service.RefPathSyntaxException;
+import com.gilecode.xmx.ui.service.XmxSessionExpiredException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.propertyeditors.StringArrayPropertyEditor;
 import org.springframework.http.HttpStatus;
@@ -50,38 +51,56 @@ public class RestController implements UIConstants {
 		return mav;
 	}
 
+	@ExceptionHandler(XmxSessionExpiredException.class)
+	public String sessionExpired(XmxSessionExpiredException ex) {
+		return "errSessionExpired";
+	}
+
+	void checkSessionId(String sid) {
+		if (!xmxUiService.getCurrentSessionId().equals(sid)) {
+			throw new XmxSessionExpiredException();
+		}
+	}
+
 	@RequestMapping(method = RequestMethod.GET)
 	public String handleGetAppsAndClasses(ModelMap model) {
 		Map<String, Collection<ExtendedXmxClassInfo>> appsClassesMap = xmxUiService.getAppsAndClasses();
 		model.addAttribute("managedAppsClassesMap", appsClassesMap);
+		model.addAttribute(ATTR_SESSION_ID, xmxUiService.getCurrentSessionId());
 		return "appsClasses";
 	}
 
 	@RequestMapping(value = "getClassObjects", method = RequestMethod.GET)
-	public String handleGetClassObjects(ModelMap model, @RequestParam Integer classId, @RequestParam String className) {
+	public String handleGetClassObjects(ModelMap model, @RequestParam Integer classId, @RequestParam String className,
+	                                    @RequestParam(ATTR_SESSION_ID) String sessionId) {
+		checkSessionId(sessionId);
 		Integer singletonId = xmxUiService.getManagedClassSingleInstanceId(classId);
 		if (singletonId != null) {
 			// fast path for singletons
-			 return "redirect:/getObjectDetails/$" + singletonId;
+			return "redirect:/getObjectDetails/$" + singletonId + "?" + ATTR_SESSION_ID + "=" + sessionId;
 		}
 		List<ExtendedXmxObjectInfo> extObjectsInfo = xmxUiService.getManagedClassInstancesInfo(classId);
 		model.addAttribute("className", className);
 		model.addAttribute("objects", extObjectsInfo);
+		model.addAttribute(ATTR_SESSION_ID, sessionId);
 		return "classObjects";
 	}
 
 	@RequestMapping(value = "getObjectDetails/{refpath:.+}", method = RequestMethod.GET)
 	public String getObjectDetails(ModelMap model,
 				@PathVariable String refpath,
+				@RequestParam(ATTR_SESSION_ID) String sessionId,
 				@RequestParam(required = false, defaultValue = "SMART") ValuesDisplayKind valKind,
 				@RequestParam(required = false, defaultValue = "0") int arrPage)
 			throws MissingObjectException, RefPathSyntaxException {
+		checkSessionId(sessionId);
 		ExtendedXmxObjectDetails details = xmxUiService.getExtendedObjectDetails(refpath, arrPage);
 		String className = details.getClassesNames().get(0);
 		model.addAttribute("refpath", refpath);
 		model.addAttribute("className", className);
 		model.addAttribute("details", details);
 		model.addAttribute("valKind", valKind);
+		model.addAttribute(ATTR_SESSION_ID, sessionId);
 
 		return "objectDetails";
 	}
@@ -89,14 +108,17 @@ public class RestController implements UIConstants {
 	@RequestMapping(value = "setObjectElement/{refpath:.+}", method = RequestMethod.GET)
 	public String handleSetObjectField(ModelMap model,
 				@PathVariable String refpath,
-				@RequestParam String elementId, @RequestParam String value)
+				@RequestParam String elementId, @RequestParam String value,
+				@RequestParam(ATTR_SESSION_ID) String sessionId)
 			throws MissingObjectException, RefPathSyntaxException {
+
+		checkSessionId(sessionId);
 		xmxUiService.setObjectFieldOrElement(refpath, elementId, value);
 
 		ExtendedXmxObjectDetails updatedDetails = xmxUiService.getExtendedObjectDetails(refpath, 0);
 		model.addAttribute("details", updatedDetails);
 
-		return "redirect:/getObjectDetails/" + refpath;
+		return "redirect:/getObjectDetails/" + refpath + "?" + ATTR_SESSION_ID + "=" + sessionId;
 	}
 
 	@RequestMapping(value = "invokeMethod/{refpath:.+}", method = RequestMethod.POST)
@@ -104,8 +126,10 @@ public class RestController implements UIConstants {
 			ModelMap model,
 			@PathVariable String refpath,
 			@RequestParam String methodId,
-			@RequestParam(value = "arg", required = false) String[] argsArr) throws Throwable {
+			@RequestParam(value = "arg", required = false) String[] argsArr,
+			@RequestParam(ATTR_SESSION_ID) String sessionId) throws Throwable {
 
+		checkSessionId(sessionId);
 		XmxObjectTextRepresentation resultText = xmxUiService.invokeObjectMethod(refpath, methodId, argsArr);
 
 		model.addAttribute("refpath", refpath);
@@ -123,8 +147,10 @@ public class RestController implements UIConstants {
 	@ResponseStatus(HttpStatus.OK)
 	public void loadFullJson(HttpServletResponse resp,
 							 @PathVariable String refpath,
+							 @RequestParam(ATTR_SESSION_ID) String sessionId,
 							 @RequestParam(value = "fid", required = false) String fid)
 			throws IOException, RefPathSyntaxException, MissingObjectException {
+		checkSessionId(sessionId);
 		xmxUiService.printFullObjectJson(refpath, fid, resp.getWriter());
 	}
 
