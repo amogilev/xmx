@@ -1,5 +1,6 @@
+<%@ page import="com.gilecode.xmx.ui.dto.ExtendedObjectInfoDto" %>
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
-    pageEncoding="ISO-8859-1"%>
+         pageEncoding="ISO-8859-1"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jstl/fmt" %>
@@ -19,7 +20,17 @@
 
 <c:url var="curUrl" value="" />
 
-<script type="text/javascript">
+<%
+    String permaRefPath = ((ExtendedObjectInfoDto)request.getAttribute("details")).getPermaRefPath();
+    if (permaRefPath != null) {
+        pageContext.setAttribute("permaUrl", pageContext.getServletContext().getContextPath() +
+                "/getObjectDetails/" + java.net.URLEncoder.encode(permaRefPath, "UTF-8") + "?sid=");
+    }
+    String refpath = (String) request.getAttribute("refpath");
+    pageContext.setAttribute("refpathEnc", java.net.URLEncoder.encode(refpath, "UTF-8"));
+%>
+
+    <script type="text/javascript">
 
     <c:if test="${details.array}">
     window.onload = function () {
@@ -53,7 +64,7 @@
 
     function callSetElement(eid) {
         var value = document.getElementById("value_" + eid).value;
-        window.location = "${pageContext.request.contextPath}/setObjectElement/${refpath}?elementId=" + eid +
+        window.location = "${pageContext.request.contextPath}/setObjectElement/${refpathEnc}?elementId=" + eid +
             "&value=" + encodeURIComponent(value) + "&sid=${sid}";
 	}
 
@@ -61,7 +72,7 @@
         var inputs = document.getElementById("m" + methodId).getElementsByTagName("input");
         var form = document.createElement("form");
         form.method = 'POST';
-        form.action = '${pageContext.request.contextPath}/invokeMethod/${refpath}';
+        form.action = '${pageContext.request.contextPath}/invokeMethod/${refpathEnc}';
         form.style = 'display: none;';
         form.target = '_blank';
         addFormData(form, 'methodId', methodId);
@@ -83,7 +94,7 @@
     }
 
     function loadFullJson(fid) {
-	    var url = "${pageContext.request.contextPath}/getFullJson/${refpath}?sid=${sid}" +
+	    var url = "${pageContext.request.contextPath}/getFullJson/${refpathEnc}?sid=${sid}" +
             (fid === undefined ? "" : "&fid=" + fid);
         window.open(url, '_blank');
     }
@@ -99,6 +110,14 @@
         <td><span class="label-with-tip" title="<fmt:message key='refpath.tooltip'/>">RefPath</span></td>
         <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${refpath}"/>"/></td>
     </tr>
+<c:if test="${details.permaRefPath != null}">
+    <tr>
+        <td><span class="label-with-tip" title="<fmt:message key='permaLink.tooltip'/>">PermaLink</span></td>
+        <td width="90%">
+            <a href="${permaUrl}"><c:out value="${details.permaRefPath}"/></a>
+        </td>
+    </tr>
+</c:if>
     <tr>
         <td><b>Class</b></td>
         <td width="90%"><input style="width: 99%" type="text" readonly="readonly" value="<c:out value="${className}"/>"/></td>
@@ -155,7 +174,7 @@
         <c:forEach items="${details.arrayPage.pageElements}" var="val" varStatus="st">
             <c:set var="elementIdx" value="${details.arrayPage.pageStart + st.index}"/>
             <tr>
-                <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${elementIdx}?sid=${sid}">${elementIdx}</a></td>
+                <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpathEnc}.${elementIdx}?sid=${sid}">${elementIdx}</a></td>
                 <c:set var="elementValue" value="${
                     valKind == 'SMART' ? val.smartTextValue :
                     valKind == 'JSON' ? val.jsonValue : val.toStringValue
@@ -185,7 +204,7 @@
         </tr>
       <c:forEach items="${entry.value}" var="fieldInfo">
         <tr>
-            <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpath}.${fieldInfo.id}?sid=${sid}"
+            <td><a href="${pageContext.request.contextPath}/getObjectDetails/${refpathEnc}.${fieldInfo.id}?sid=${sid}"
                 class="${fieldInfo.staticField ? 'static' : ''}">${fieldInfo.name}</a></td>
             <c:set var="fieldValue" value="${
                 valKind == 'SMART' ? fieldInfo.text.smartTextValue :

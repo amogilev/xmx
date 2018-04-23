@@ -9,6 +9,7 @@ import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.IXmxConfig;
 import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.core.jmx.JmxSupport;
+import com.gilecode.xmx.model.NotSingletonException;
 import com.gilecode.xmx.model.XmxClassInfo;
 import com.gilecode.xmx.model.XmxObjectInfo;
 import com.gilecode.xmx.model.XmxRuntimeException;
@@ -154,15 +155,15 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				while (true) {
 					try {
 						ManagedClassLoaderWeakRef loaderInfo = (ManagedClassLoaderWeakRef) managedClassLoadersRefQueue.remove();
+						loaderInfo.getAppInfo().unregisterLoaderClasses(loaderInfo);
+
 						Collection<Integer> classIdsToRemove = loaderInfo.getClassIdsByName().values();
 						classesInfoById.keySet().removeAll(classIdsToRemove);
-						loaderInfo.getAppInfo().removeManagedClassIds(classIdsToRemove);
 						if (logger.isDebugEnabled()) {
 							for (Integer classId : classIdsToRemove) {
 								logger.debug("Clean GC'ed classId={}", classId);
 							}
 						}
-
 					} catch (InterruptedException ignored) {
 					}
 				}
@@ -371,8 +372,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 					appInfo, maxInstances, jmxObjectNamePart, config);
 			
 			classesInfoById.put(classId, classInfo);
-			classLoaderInfo.getClassIdsByName().put(className, classId);
-			appInfo.addManagedClassId(classId);
+			appInfo.registerClass(classLoaderInfo, className, classId);
 		}
 		String action = classBeingRedefined == null ? "transformClass" : "re-transformClass";
 		if (logger.isDebugEnabled()) {
@@ -521,7 +521,68 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		return null;
 	}
 
-	
+	@Override
+	public String getSingletonPermanentId(int objectId) {
+		ManagedObjectWeakRef ref = objectsStorage.get(objectId);
+		if (ref != null) {
+			if (ref.classInfo.getObjectIds().size() == 1) {
+				// also need to check other app classes with the same name
+				Object obj = ref.get();
+				if (obj != null) {
+					ManagedAppInfo appInfo = ref.classInfo.getAppInfo();
+					String className = ref.classInfo.getClassName();
+					List<Integer> classIds = appInfo.getClassIdsByName(className);
+					for (int cid : classIds) {
+						if (ref.classInfo.getId() != cid) {
+							XmxClassManager classInfo = this.classesInfoById.get(cid);
+							if (!classInfo.getObjectIds().isEmpty()) {
+								// not singleton
+								return null;
+							}
+						}
+					}
+
+					// OK, singleton verified
+					return appInfo.getName() + ":" + className;
+				}
+			}
+		}
+		// not singleton
+		return null;
+	}
+
+	@Override
+	public XmxObjectInfo getSingletonObject(String permanentId) throws NotSingletonException {
+		int n = permanentId.indexOf(':');
+		if (n < 0) {
+			throw new XmxRuntimeException("Bad PermaRef \"" + permanentId + "\"");
+		}
+		String appName = permanentId.substring(0, n);
+		String className = permanentId.substring(n + 1);
+
+		ManagedAppInfo appInfo = appInfosByName.get(appName);
+		if (appInfo == null) {
+			throw new NotSingletonException(permanentId, NotSingletonException.Reason.MISSING_APP);
+		}
+		boolean multipleClasses = false;
+		List<Integer> objectIds = new ArrayList<>(2);
+		List<Integer> classIds = appInfo.getClassIdsByName(className);
+		for (int cid : classIds) {
+			XmxClassManager classInfo = this.classesInfoById.get(cid);
+			if (!classInfo.getObjectIds().isEmpty()) {
+				if (!objectIds.isEmpty()) {
+					multipleClasses = true;
+				}
+				objectIds.addAll(classInfo.getObjectIds());
+			}
+		}
+		if (objectIds.size() != 1) {
+			throw NotSingletonException.of(permanentId, multipleClasses, objectIds);
+		} else {
+			return getManagedObject(objectIds.get(0));
+		}
+	}
+
 	private XmxClassManager getManagedClassInfo(ManagedClassLoaderWeakRef loaderInfo, String className) {
 		Integer classId = loaderInfo.getClassIdsByName().get(className);
 		

@@ -2,6 +2,7 @@
 
 package com.gilecode.xmx.service;
 
+import com.gilecode.xmx.model.NotSingletonException;
 import com.gilecode.xmx.model.XmxClassInfo;
 import com.gilecode.xmx.model.XmxObjectInfo;
 import com.gilecode.xmx.model.XmxRuntimeException;
@@ -53,4 +54,29 @@ public interface IXmxService {
 	 * @param objectId unique object ID
 	 */
 	XmxObjectInfo getManagedObject(int objectId) throws XmxRuntimeException;
+
+	/**
+	 * If an object with the specified ID exists, is alive and is singleton, returns permanent ID
+	 * which can be used to access that singleton during this or another session. Otherwise, returns {@code null}
+	 * <p/>
+	 * A singleton is an object which is unique in its web or global application by the class name.
+	 *
+	 * @param objectId unique object ID
+	 *
+	 * @return {@code null} if an object ID does not represent singleton, or permanent singleton ID otherwise
+	 */
+	String getSingletonPermanentId(int objectId);
+
+	/**
+	 * Find an object by its permanent singleton ID previously returned by {@link #getSingletonPermanentId(int)}.
+	 * If not found or not singleton anymore, throws {@link NotSingletonException} with the detailed reason
+	 * available in {@link NotSingletonException#getReason()}
+	 *
+	 * @param permanentId permanent singleton ID previously returned by {@link #getSingletonPermanentId(int)}
+	 *
+	 * @return the singleton object
+	 *
+	 * @throws NotSingletonException if the singleton object can not be found, or not singleton anymore
+	 */
+	XmxObjectInfo getSingletonObject(String permanentId) throws NotSingletonException;
 }

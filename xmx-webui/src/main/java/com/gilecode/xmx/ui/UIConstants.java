@@ -24,4 +24,5 @@ public interface UIConstants {
 
 	String ATTR_SESSION_ID = "sid";
 
+	String PERMA_PATH_PREFIX = "$:";
 }

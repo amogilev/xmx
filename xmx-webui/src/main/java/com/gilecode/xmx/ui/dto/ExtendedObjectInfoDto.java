@@ -145,6 +145,12 @@ public class ExtendedObjectInfoDto extends ObjectInfoDto {
 	 */
 	final private ArrayPageDetails arrayPage;
 
+	/**
+	 * The permanent path to an object which can be applied while the root reference object is singleton,
+	 * or {@code null} if not available.
+	 */
+	final private String permaRefPath;
+
 	public static class ArrayPageDetails {
 
 		/**
@@ -195,12 +201,13 @@ public class ExtendedObjectInfoDto extends ObjectInfoDto {
 	                             List<String> classesNames,
 	                             Map<String, List<FieldInfo>> fieldsByClass,
 	                             Map<String, List<MethodInfo>> methodsByClass,
-	                             ArrayPageDetails arrayPage) {
+	                             ArrayPageDetails arrayPage, String permaRefPath) {
 		super(objectId, classInfo, text);
 		this.classesNames = classesNames;
 		this.fieldsByClass = fieldsByClass;
 		this.methodsByClass = methodsByClass;
 		this.arrayPage = arrayPage;
+		this.permaRefPath = permaRefPath;
 	}
 
 	public List<String> getClassesNames() {
@@ -221,6 +228,10 @@ public class ExtendedObjectInfoDto extends ObjectInfoDto {
 
 	public ArrayPageDetails getArrayPage() {
 		return arrayPage;
+	}
+
+	public String getPermaRefPath() {
+		return permaRefPath;
 	}
 }
 

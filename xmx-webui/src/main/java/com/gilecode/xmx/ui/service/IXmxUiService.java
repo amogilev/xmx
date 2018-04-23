@@ -2,6 +2,7 @@
 
 package com.gilecode.xmx.ui.service;
 
+import com.gilecode.xmx.model.NotSingletonException;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.dto.ExtendedClassInfoDto;
 import com.gilecode.xmx.ui.dto.ExtendedObjectInfoDto;
@@ -37,7 +38,7 @@ public interface IXmxUiService {
 	 * @param refpath the object refpath, like "$18.arrField.1"
 	 * @param arrPageNum if the object is array, specifies the page of the array elements to provide the details of
 	 */
-	ExtendedObjectInfoDto getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException;
+	ExtendedObjectInfoDto getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException, NotSingletonException;
 
 	/**
 	 * Searches an object by refpath, i.e. either managed object (for refpaths like "$23"), or an object traversed
@@ -52,7 +53,7 @@ public interface IXmxUiService {
 	 * @throws RefPathSyntaxException if a refpath is incorrect, i.e. has bad syntax or an sub-object cannot be extracted
 	 * 	using "getField" ot "getArrayElement" specifiers
 	 */
-	SearchObjectResult findObject(String refpath) throws MissingObjectException, RefPathSyntaxException;
+	SearchObjectResult findObject(String refpath) throws MissingObjectException, RefPathSyntaxException, NotSingletonException;
 
 	XmxObjectTextRepresentation invokeObjectMethod(String refpath, String methodId, String[] argsArr)
 			throws MissingObjectException, RefPathSyntaxException, Throwable;
@@ -66,11 +67,11 @@ public interface IXmxUiService {
 	 * @throws MissingObjectException if a managed object is missing now
 	 * @throws RefPathSyntaxException if refpath is not valid
 	 */
-	void setObjectFieldOrElement(String refpath, String elementId, String value) throws MissingObjectException, RefPathSyntaxException;
+	void setObjectFieldOrElement(String refpath, String elementId, String value) throws MissingObjectException, RefPathSyntaxException, NotSingletonException;
 
 	void printAllObjectsReport(PrintWriter out);
 
-	void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException;
+	void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException, NotSingletonException;
 
 	String getCurrentSessionId();
 }

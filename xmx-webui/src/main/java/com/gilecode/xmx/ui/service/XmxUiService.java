@@ -5,6 +5,7 @@ package com.gilecode.xmx.ui.service;
 import com.gilecode.reflection.ReflectionAccessUtils;
 import com.gilecode.reflection.ReflectionAccessor;
 import com.gilecode.xmx.core.type.IMethodInfoService;
+import com.gilecode.xmx.model.NotSingletonException;
 import com.gilecode.xmx.model.XmxClassInfo;
 import com.gilecode.xmx.model.XmxObjectInfo;
 import com.gilecode.xmx.model.XmxRuntimeException;
@@ -98,7 +99,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public ExtendedObjectInfoDto getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException {
+	public ExtendedObjectInfoDto getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException, NotSingletonException {
 		XmxObjectInfo objectInfo = findObject(refpath).foundObjectInfo;
 		Object obj = objectInfo.getValue();
 
@@ -118,7 +119,19 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		}
 		return new ExtendedObjectInfoDto(objectInfo.getObjectId(), new ClassInfoDto(objectInfo.getClassInfo()),
 				toText(obj, OBJ_JSON_CHARS_LIMIT),
-				classNames, fieldsByClass, methodsByClass, arrayPage);
+				classNames, fieldsByClass, methodsByClass, arrayPage,
+				getPermaRefPath(objectInfo, refpath));
+	}
+
+	private String getPermaRefPath(XmxObjectInfo objectInfo, String refpath) {
+		if (objectInfo.getValue() != null && !refpath.startsWith(PERMA_PATH_PREFIX)) {
+			String permaId = xmxService.getSingletonPermanentId(objectInfo.getObjectId());
+			if (permaId != null) {
+				int n = refpath.indexOf('.');
+				return PERMA_PATH_PREFIX + permaId + ':' + (n < 0 ? "" : refpath.substring(n + 1));
+			}
+		}
+		return null;
 	}
 
 	private Map<String, List<ExtendedObjectInfoDto.MethodInfo>> fillMethodsInfoByClass(XmxObjectInfo objectInfo) {
@@ -203,57 +216,85 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public SearchObjectResult findObject(String refpath) throws MissingObjectException, RefPathSyntaxException {
-		String[] refpathParts = refpath.split("\\.");
+	public SearchObjectResult findObject(String refpath) throws MissingObjectException,
+			RefPathSyntaxException, NotSingletonException {
 
-		// expect path starts with ID like "$123"
-		Integer objectId = parseRefId(refpathParts[0]);
-		XmxObjectInfo rootObjectInfo = getXmxObject(objectId);
-		if (refpathParts.length == 1) {
+		String rootPath;
+		String subPath;
+		XmxObjectInfo rootObjectInfo;
+		if (refpath.startsWith(PERMA_PATH_PREFIX)) {
+			// permanent path like "$:APP:CLASS:" or "$:APP:CLASS:.f1.f2"
+			int endClass = refpath.lastIndexOf(':');
+			if (endClass <= 1) {
+				throw new RefPathSyntaxException("Missing ':' after the class name", refpath);
+			}
+			String singletonId = refpath.substring(2, endClass);
+			rootObjectInfo = xmxService.getSingletonObject(singletonId);
+			rootPath = refpath.substring(0, endClass + 1);
+			if (endClass == refpath.length() - 1) {
+				subPath = "";
+			} else if (refpath.charAt(endClass + 1) != '.') {
+				throw new RefPathSyntaxException("Missing \":.\" between the class name and subcomponents", refpath);
+			} else {
+				subPath = refpath.substring(endClass + 2);
+			}
+		} else {
+			// general refpath like "$123" or "$123.f1.f2"
+			int endId = refpath.indexOf('.');
+			String refId = endId < 0 ? refpath : refpath.substring(0, endId);
+			subPath = endId < 0 ? "" : refpath.substring(endId + 1);
+			rootPath = refId;
+			Integer objectId = parseRefId(refId);
+			rootObjectInfo = getXmxObject(objectId);
+		}
+
+		if (subPath.isEmpty()) {
 			return new SearchObjectResult(rootObjectInfo.getValue(), rootObjectInfo);
 		}
 
+		String[] parts = subPath.split("\\.");
 		Object curObj = rootObjectInfo.getValue();
-		for (int curLevel = 1; curLevel < refpathParts.length; curLevel++) {
-			curObj = getNextLevelElement(refpathParts, curObj, curLevel);
+		for (int curLevel = 0; curLevel < parts.length; curLevel++) {
+			curObj = getNextLevelElement(rootPath, parts, curObj, curLevel);
 		}
 		XmxObjectInfo foundObjectInfo = getUnmanagedObjectInfo(curObj);
 		return new SearchObjectResult(rootObjectInfo.getValue(), foundObjectInfo);
 	}
 
-	private Object getNextLevelElement(String[] refpathParts, Object source, int level) throws RefPathSyntaxException {
-		String pathPart = refpathParts[level];
+	private Object getNextLevelElement(String rootPath, String[] parts, Object source, int level) throws RefPathSyntaxException {
+		String pathPart = parts[level];
 		if (source == null) {
-			throw new RefPathSyntaxException("Null object for path", buildPath(refpathParts, level));
+			throw new RefPathSyntaxException("Null object for path", buildPath(rootPath, parts, level));
 		}
 		if (Character.isDigit(pathPart.charAt(0))) {
 			if (!source.getClass().isArray()) {
 				throw new RefPathSyntaxException("Expected an array, but got " + source.getClass(),
-						buildPath(refpathParts, level));
+						buildPath(rootPath, parts, level));
 			}
 			try {
 				int idx = Integer.parseInt(pathPart);
 				source = Array.get(source, idx);
 			} catch (NumberFormatException | IndexOutOfBoundsException e) {
-				throw new RefPathSyntaxException("Invalid array index '" + pathPart + "'", buildPath(refpathParts, level));
+				throw new RefPathSyntaxException("Invalid array index '" + pathPart + "'", buildPath(rootPath, parts, level));
 			}
 		} else {
 			// expect a path part to indicate a field
 			Class<?> c = source.getClass();
-			Field f = getField(c, pathPart, buildPath(refpathParts, level));
+			Field f = getField(c, pathPart, buildPath(rootPath, parts, level));
 			try {
 				reflAccessor.makeAccessible(f);
 				source = f.get(source);
 			} catch (IllegalAccessException e) {
 				throw new RefPathSyntaxException("Failed to get field '" + pathPart + "' in class " + c,
-						buildPath(refpathParts, level));
+						buildPath(rootPath, parts, level));
 			}
 		}
 		return source;
 	}
 
-	private String buildPath(String[] refpathParts, int curLevel) {
-		StringBuilder sb = new StringBuilder();
+	private String buildPath(String rootPath, String[] refpathParts, int curLevel) {
+		StringBuilder sb = new StringBuilder(rootPath);
+		sb.append(rootPath.startsWith(PERMA_PATH_PREFIX) ? ':' : '.');
 		for (int i = 0; i <= curLevel; i++) {
 			sb.append(refpathParts[i]);
 			if (i != curLevel) {
@@ -376,7 +417,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public void setObjectFieldOrElement(String refpath, String elementId, String value)
-			throws MissingObjectException, RefPathSyntaxException {
+			throws MissingObjectException, RefPathSyntaxException, NotSingletonException {
 		SearchObjectResult searchResult = findObject(refpath);
 		XmxObjectInfo objectInfo = searchResult.foundObjectInfo;
 		Object obj = objectInfo.getValue();
@@ -437,7 +478,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException {
+	public void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException, NotSingletonException {
 		XmxObjectInfo objectInfo = findObject(refpath).foundObjectInfo;
 		Object jsonSourceObject;
 		Object obj = objectInfo.getValue();
@@ -504,7 +545,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	 *
 	 * @return the array of objects which may be used to invoke the method
 	 */
-	private Object[] translateArgs(String[] args, Method m, ClassLoader contextCL) throws RefPathSyntaxException, MissingObjectException {
+	private Object[] translateArgs(String[] args, Method m, ClassLoader contextCL) throws RefPathSyntaxException, MissingObjectException, NotSingletonException {
 		if (args == null) {
 			args = new String[0];
 		}
@@ -532,7 +573,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 
 	private Object deserializeValue(String value, Class<?> formalType, ClassLoader contextCL)
-			throws RefPathSyntaxException, MissingObjectException {
+			throws RefPathSyntaxException, MissingObjectException, NotSingletonException {
 		if (value.startsWith("$")) {
 			// value is refpath of the actual object
 			return findObject(value).foundObjectInfo.getValue();
