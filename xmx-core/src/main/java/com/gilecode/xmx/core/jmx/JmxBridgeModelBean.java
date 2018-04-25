@@ -4,8 +4,8 @@ package com.gilecode.xmx.core.jmx;
 
 import com.gilecode.reflection.ReflectionAccessUtils;
 import com.gilecode.reflection.ReflectionAccessor;
-import com.gilecode.xmx.dto.XmxObjectInfo;
-import com.gilecode.xmx.dto.XmxRuntimeException;
+import com.gilecode.xmx.model.XmxObjectInfo;
+import com.gilecode.xmx.model.XmxRuntimeException;
 import com.gilecode.xmx.service.IXmxService;
 
 import javax.management.*;

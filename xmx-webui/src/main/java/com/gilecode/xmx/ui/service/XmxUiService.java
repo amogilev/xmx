@@ -5,16 +5,13 @@ package com.gilecode.xmx.ui.service;
 import com.gilecode.reflection.ReflectionAccessUtils;
 import com.gilecode.reflection.ReflectionAccessor;
 import com.gilecode.xmx.core.type.IMethodInfoService;
-import com.gilecode.xmx.dto.XmxClassInfo;
-import com.gilecode.xmx.dto.XmxObjectInfo;
-import com.gilecode.xmx.dto.XmxRuntimeException;
+import com.gilecode.xmx.model.XmxClassInfo;
+import com.gilecode.xmx.model.XmxObjectInfo;
+import com.gilecode.xmx.model.XmxRuntimeException;
 import com.gilecode.xmx.service.IMapperService;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.UIConstants;
-import com.gilecode.xmx.ui.dto.ExtendedXmxClassInfo;
-import com.gilecode.xmx.ui.dto.ExtendedXmxObjectDetails;
-import com.gilecode.xmx.ui.dto.ExtendedXmxObjectInfo;
-import com.gilecode.xmx.ui.dto.XmxObjectTextRepresentation;
+import com.gilecode.xmx.ui.dto.*;
 import com.gilecode.yagson.YaGson;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -48,8 +45,8 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public Map<String, Collection<ExtendedXmxClassInfo>> getAppsAndClasses() {
-		Map<String, Collection<ExtendedXmxClassInfo>> appsClassesMap = new LinkedHashMap<>();
+	public Map<String, Collection<ExtendedClassInfoDto>> getAppsAndClasses() {
+		Map<String, Collection<ExtendedClassInfoDto>> appsClassesMap = new LinkedHashMap<>();
 		List<String> applicationNames = xmxService.getApplicationNames();
 		Collections.sort(applicationNames);
 		if (CollectionUtils.isNotEmpty(applicationNames)) {
@@ -62,15 +59,10 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 					}
 				});
 				if (CollectionUtils.isNotEmpty(managedClassInfos)) {
-					List<ExtendedXmxClassInfo> extendedXmxClassInfos = new ArrayList<>(managedClassInfos.size());
+					List<ExtendedClassInfoDto> extendedXmxClassInfos = new ArrayList<>(managedClassInfos.size());
 					for (XmxClassInfo managedClassInfo : managedClassInfos) {
-						ExtendedXmxClassInfo extendedXmxClassInfo = new ExtendedXmxClassInfo(
-								managedClassInfo.getId(),
-								managedClassInfo.getClassName(),
-								managedClassInfo.getMembersLookup());
-						extendedXmxClassInfo.setNumberOfObjects(CollectionUtils.size(
-								xmxService.getManagedObjects(extendedXmxClassInfo.getId()))
-						);
+						int numObjects = xmxService.getManagedObjects(managedClassInfo.getId()).size();
+						ExtendedClassInfoDto extendedXmxClassInfo = new ExtendedClassInfoDto(managedClassInfo, numObjects);
 						extendedXmxClassInfos.add(extendedXmxClassInfo);
 					}
 
@@ -92,23 +84,27 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public List<ExtendedXmxObjectInfo> getManagedClassInstancesInfo(Integer classId) {
+	public List<ObjectInfoDto> getManagedClassInstancesInfo(Integer classId) {
 		List<XmxObjectInfo> managedObjects = xmxService.getManagedObjects(classId);
-		List<ExtendedXmxObjectInfo> extObjectsInfo = new ArrayList<>(managedObjects.size());
-		for (XmxObjectInfo o : managedObjects) {
-			extObjectsInfo.add(toExtendedInfo(o, CLASS_OBJS_JSON_CHARS_LIMIT));
+		if (managedObjects.isEmpty()) {
+			return Collections.emptyList();
 		}
-		return extObjectsInfo;
+		List<ObjectInfoDto> objectsInfo = new ArrayList<>(managedObjects.size());
+		ClassInfoDto classDto = new ClassInfoDto(managedObjects.get(0).getClassInfo());
+		for (XmxObjectInfo o : managedObjects) {
+			objectsInfo.add(toObjectInfoDto(o, classDto, CLASS_OBJS_JSON_CHARS_LIMIT));
+		}
+		return objectsInfo;
 	}
 
 	@Override
-	public ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException {
+	public ExtendedObjectInfoDto getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException {
 		XmxObjectInfo objectInfo = findObject(refpath).foundObjectInfo;
 		Object obj = objectInfo.getValue();
 
-		ExtendedXmxObjectDetails.ArrayPageDetails arrayPage = getArrayPageDetails(obj, arrPageNum);
-		Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fieldsByClass = fillFieldsInfoByClass(objectInfo);
-		Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> methodsByClass = fillMethodsInfoByClass(objectInfo);
+		ExtendedObjectInfoDto.ArrayPageDetails arrayPage = getArrayPageDetails(obj, arrPageNum);
+		Map<String, List<ExtendedObjectInfoDto.FieldInfo>> fieldsByClass = fillFieldsInfoByClass(objectInfo);
+		Map<String, List<ExtendedObjectInfoDto.MethodInfo>> methodsByClass = fillMethodsInfoByClass(objectInfo);
 
 		List<String> classNames = new ArrayList<>();
 		if (obj != null) {
@@ -120,35 +116,35 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		} else {
 			classNames.add("null");
 		}
-		return new ExtendedXmxObjectDetails(objectInfo.getObjectId(), objectInfo.getClassInfo(), obj,
+		return new ExtendedObjectInfoDto(objectInfo.getObjectId(), new ClassInfoDto(objectInfo.getClassInfo()),
 				toText(obj, OBJ_JSON_CHARS_LIMIT),
 				classNames, fieldsByClass, methodsByClass, arrayPage);
 	}
 
-	private Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> fillMethodsInfoByClass(XmxObjectInfo objectInfo) {
-		Map<String, List<ExtendedXmxObjectDetails.MethodInfo>> methodsByClass = new LinkedHashMap<>();
+	private Map<String, List<ExtendedObjectInfoDto.MethodInfo>> fillMethodsInfoByClass(XmxObjectInfo objectInfo) {
+		Map<String, List<ExtendedObjectInfoDto.MethodInfo>> methodsByClass = new LinkedHashMap<>();
 		Map<String, Method> managedMethods = objectInfo.getMembersLookup().listManagedMethods();
 		for (Map.Entry<String, Method> e : managedMethods.entrySet()) {
 			String methodId = e.getKey();
 			Method m = e.getValue();
 			String declaringClassName = m.getDeclaringClass().getName();
 
-			List<ExtendedXmxObjectDetails.MethodInfo> classMethodsInfo = methodsByClass.get(declaringClassName);
+			List<ExtendedObjectInfoDto.MethodInfo> classMethodsInfo = methodsByClass.get(declaringClassName);
 			if (classMethodsInfo == null) {
 				classMethodsInfo = new ArrayList<>();
 				methodsByClass.put(declaringClassName, classMethodsInfo);
 			}
 			String methodNameTypeSignature = methodInfoService.getMethodNameTypeSignature(m);
-			ExtendedXmxObjectDetails.MethodInfo mi = new ExtendedXmxObjectDetails.MethodInfo(methodId, m.getName(), methodNameTypeSignature,
+			ExtendedObjectInfoDto.MethodInfo mi = new ExtendedObjectInfoDto.MethodInfo(methodId, m.getName(), methodNameTypeSignature,
 					methodInfoService.getMethodParameters(m), m.getModifiers());
 			classMethodsInfo.add(mi);
 		}
 		return methodsByClass;
 	}
 
-	private Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fillFieldsInfoByClass(XmxObjectInfo objectInfo) {
+	private Map<String, List<ExtendedObjectInfoDto.FieldInfo>> fillFieldsInfoByClass(XmxObjectInfo objectInfo) {
 		Object obj = objectInfo.getValue();
-		Map<String, List<ExtendedXmxObjectDetails.FieldInfo>> fieldsByClass = new LinkedHashMap<>();
+		Map<String, List<ExtendedObjectInfoDto.FieldInfo>> fieldsByClass = new LinkedHashMap<>();
 		if (obj != null) {
 			Map<String, Field> managedFields = objectInfo.getMembersLookup().listManagedFields();
 			for (Map.Entry<String, Field> e : managedFields.entrySet()) {
@@ -158,14 +154,14 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 				String declaringClassName = f.getDeclaringClass().getName();
 
-				List<ExtendedXmxObjectDetails.FieldInfo> classFieldsInfo = fieldsByClass.get(declaringClassName);
+				List<ExtendedObjectInfoDto.FieldInfo> classFieldsInfo = fieldsByClass.get(declaringClassName);
 				if (classFieldsInfo == null) {
 					classFieldsInfo = new ArrayList<>();
 					fieldsByClass.put(declaringClassName, classFieldsInfo);
 				}
 
 				XmxObjectTextRepresentation textValue = safeFieldToText(obj, f, OBJ_FIELDS_JSON_CHARS_LIMIT);
-				ExtendedXmxObjectDetails.FieldInfo fi = new ExtendedXmxObjectDetails.FieldInfo(fid, f.getName(),
+				ExtendedObjectInfoDto.FieldInfo fi = new ExtendedObjectInfoDto.FieldInfo(fid, f.getName(),
 						f.getModifiers(), textValue);
 				classFieldsInfo.add(fi);
 			}
@@ -173,7 +169,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return fieldsByClass;
 	}
 
-	private ExtendedXmxObjectDetails.ArrayPageDetails getArrayPageDetails(Object obj, int arrPageNum) {
+	private ExtendedObjectInfoDto.ArrayPageDetails getArrayPageDetails(Object obj, int arrPageNum) {
 		if (obj != null && obj.getClass().isArray()) {
 			Object[] objArr = (Object[]) obj;
 			int pageNum = arrPageNum > 0 && arrPageNum * ARRAY_PAGE_LENGTH < objArr.length ? arrPageNum : 0;
@@ -183,7 +179,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			for (int i = 0; i < pageLength; i++) {
 				pageElements[i] = toText(objArr[pageStart + i], OBJ_FIELDS_JSON_CHARS_LIMIT);
 			}
-			return new ExtendedXmxObjectDetails.ArrayPageDetails(objArr.length, pageNum, pageElements);
+			return new ExtendedObjectInfoDto.ArrayPageDetails(objArr.length, pageNum, pageElements);
 		}
 		return null;
 	}
@@ -473,8 +469,11 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return objInfo;
 	}
 
-	private ExtendedXmxObjectInfo toExtendedInfo(XmxObjectInfo info, long jsonCharsLimit) {
-		return new ExtendedXmxObjectInfo(info, toText(info.getValue(), jsonCharsLimit));
+	private ObjectInfoDto toObjectInfoDto(XmxObjectInfo info, ClassInfoDto classDto, long jsonCharsLimit) {
+		if (classDto == null) {
+			classDto = new ClassInfoDto(info.getClassInfo());
+		}
+		return new ObjectInfoDto(info.getObjectId(), classDto, toText(info.getValue(), jsonCharsLimit));
 	}
 
 	/**

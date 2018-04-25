@@ -2,9 +2,9 @@
 
 package com.gilecode.xmx.service;
 
-import com.gilecode.xmx.dto.XmxClassInfo;
-import com.gilecode.xmx.dto.XmxObjectInfo;
-import com.gilecode.xmx.dto.XmxRuntimeException;
+import com.gilecode.xmx.model.XmxClassInfo;
+import com.gilecode.xmx.model.XmxObjectInfo;
+import com.gilecode.xmx.model.XmxRuntimeException;
 
 import java.util.List;
 

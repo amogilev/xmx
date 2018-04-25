@@ -2,15 +2,16 @@
 
 package com.gilecode.xmx.ui.dto;
 
-import com.gilecode.xmx.dto.XmxClassInfo;
-
 import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
 
 import static com.gilecode.xmx.ui.UIConstants.ARRAY_PAGE_LENGTH;
 
-public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
+/**
+ * A detailed object information. The basic information is extended with fields, methods and array details.
+ */
+public class ExtendedObjectInfoDto extends ObjectInfoDto {
 	/**
 	 * Information about a single field.
 	 */
@@ -189,13 +190,13 @@ public class ExtendedXmxObjectDetails extends ExtendedXmxObjectInfo {
 	}
 
 
-	public ExtendedXmxObjectDetails(int objectId, XmxClassInfo classInfo, Object value,
-									XmxObjectTextRepresentation text,
-									List<String> classesNames,
-									Map<String, List<FieldInfo>> fieldsByClass,
-									Map<String, List<MethodInfo>> methodsByClass,
-									ArrayPageDetails arrayPage) {
-		super(objectId, classInfo, value, text);
+	public ExtendedObjectInfoDto(int objectId, ClassInfoDto classInfo,
+	                             XmxObjectTextRepresentation text,
+	                             List<String> classesNames,
+	                             Map<String, List<FieldInfo>> fieldsByClass,
+	                             Map<String, List<MethodInfo>> methodsByClass,
+	                             ArrayPageDetails arrayPage) {
+		super(objectId, classInfo, text);
 		this.classesNames = classesNames;
 		this.fieldsByClass = fieldsByClass;
 		this.methodsByClass = methodsByClass;

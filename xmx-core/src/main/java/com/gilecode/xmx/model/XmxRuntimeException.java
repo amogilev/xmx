@@ -1,6 +1,6 @@
 // Copyright © 2014-2017 Andrey Mogilev. All rights reserved.
 
-package com.gilecode.xmx.dto;
+package com.gilecode.xmx.model;
 
 /**
  * Exceptions thrown from XmxService.  

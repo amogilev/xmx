@@ -3,9 +3,9 @@
 package com.gilecode.xmx.ui.service;
 
 import com.gilecode.xmx.service.IXmxService;
-import com.gilecode.xmx.ui.dto.ExtendedXmxClassInfo;
-import com.gilecode.xmx.ui.dto.ExtendedXmxObjectDetails;
-import com.gilecode.xmx.ui.dto.ExtendedXmxObjectInfo;
+import com.gilecode.xmx.ui.dto.ExtendedClassInfoDto;
+import com.gilecode.xmx.ui.dto.ExtendedObjectInfoDto;
+import com.gilecode.xmx.ui.dto.ObjectInfoDto;
 import com.gilecode.xmx.ui.dto.XmxObjectTextRepresentation;
 
 import java.io.IOException;
@@ -20,7 +20,7 @@ import java.util.Map;
  */
 public interface IXmxUiService {
 
-	Map<String, Collection<ExtendedXmxClassInfo>> getAppsAndClasses();
+	Map<String, Collection<ExtendedClassInfoDto>> getAppsAndClasses();
 
 	/**
 	 * If there is exactly one alive managed class instance, return its internal ID.
@@ -28,7 +28,7 @@ public interface IXmxUiService {
 	 */
 	Integer getManagedClassSingleInstanceId(int classId);
 
-	List<ExtendedXmxObjectInfo> getManagedClassInstancesInfo(Integer classId);
+	List<ObjectInfoDto> getManagedClassInstancesInfo(Integer classId);
 
 	/**
 	 * Obtains the details of the object by its refpath, which includes all fields
@@ -37,7 +37,7 @@ public interface IXmxUiService {
 	 * @param refpath the object refpath, like "$18.arrField.1"
 	 * @param arrPageNum if the object is array, specifies the page of the array elements to provide the details of
 	 */
-	ExtendedXmxObjectDetails getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException;
+	ExtendedObjectInfoDto getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException;
 
 	/**
 	 * Searches an object by refpath, i.e. either managed object (for refpaths like "$23"), or an object traversed

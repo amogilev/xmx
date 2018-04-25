@@ -2,9 +2,9 @@
 
 package com.gilecode.xmx.ui;
 
-import com.gilecode.xmx.ui.dto.ExtendedXmxClassInfo;
-import com.gilecode.xmx.ui.dto.ExtendedXmxObjectDetails;
-import com.gilecode.xmx.ui.dto.ExtendedXmxObjectInfo;
+import com.gilecode.xmx.ui.dto.ExtendedClassInfoDto;
+import com.gilecode.xmx.ui.dto.ExtendedObjectInfoDto;
+import com.gilecode.xmx.ui.dto.ObjectInfoDto;
 import com.gilecode.xmx.ui.dto.XmxObjectTextRepresentation;
 import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.service.MissingObjectException;
@@ -64,7 +64,7 @@ public class RestController implements UIConstants {
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String handleGetAppsAndClasses(ModelMap model) {
-		Map<String, Collection<ExtendedXmxClassInfo>> appsClassesMap = xmxUiService.getAppsAndClasses();
+		Map<String, Collection<ExtendedClassInfoDto>> appsClassesMap = xmxUiService.getAppsAndClasses();
 		model.addAttribute("managedAppsClassesMap", appsClassesMap);
 		model.addAttribute(ATTR_SESSION_ID, xmxUiService.getCurrentSessionId());
 		return "appsClasses";
@@ -79,7 +79,7 @@ public class RestController implements UIConstants {
 			// fast path for singletons
 			return "redirect:/getObjectDetails/$" + singletonId + "?" + ATTR_SESSION_ID + "=" + sessionId;
 		}
-		List<ExtendedXmxObjectInfo> extObjectsInfo = xmxUiService.getManagedClassInstancesInfo(classId);
+		List<ObjectInfoDto> extObjectsInfo = xmxUiService.getManagedClassInstancesInfo(classId);
 		model.addAttribute("className", className);
 		model.addAttribute("objects", extObjectsInfo);
 		model.addAttribute(ATTR_SESSION_ID, sessionId);
@@ -94,7 +94,7 @@ public class RestController implements UIConstants {
 				@RequestParam(required = false, defaultValue = "0") int arrPage)
 			throws MissingObjectException, RefPathSyntaxException {
 		checkSessionId(sessionId);
-		ExtendedXmxObjectDetails details = xmxUiService.getExtendedObjectDetails(refpath, arrPage);
+		ExtendedObjectInfoDto details = xmxUiService.getExtendedObjectDetails(refpath, arrPage);
 		String className = details.getClassesNames().get(0);
 		model.addAttribute("refpath", refpath);
 		model.addAttribute("className", className);
@@ -115,7 +115,7 @@ public class RestController implements UIConstants {
 		checkSessionId(sessionId);
 		xmxUiService.setObjectFieldOrElement(refpath, elementId, value);
 
-		ExtendedXmxObjectDetails updatedDetails = xmxUiService.getExtendedObjectDetails(refpath, 0);
+		ExtendedObjectInfoDto updatedDetails = xmxUiService.getExtendedObjectDetails(refpath, 0);
 		model.addAttribute("details", updatedDetails);
 
 		return "redirect:/getObjectDetails/" + refpath + "?" + ATTR_SESSION_ID + "=" + sessionId;

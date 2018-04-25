@@ -2,7 +2,7 @@
 
 package com.gilecode.xmx.ui.service;
 
-import com.gilecode.xmx.dto.XmxObjectInfo;
+import com.gilecode.xmx.model.XmxObjectInfo;
 
 /**
  * A search result returned by {@link IXmxUiService#findObject(String)}
