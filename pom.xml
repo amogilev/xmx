@@ -85,6 +85,7 @@
 
   <modules>
     <module>xmx-boot</module>
+    <module>xmx-aop-api</module>
     <module>xmx-core</module>
     <module>xmx-agent</module>
     <module>xmx-webui</module>
