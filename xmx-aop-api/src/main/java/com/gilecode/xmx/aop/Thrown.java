@@ -5,10 +5,10 @@ package com.gilecode.xmx.aop;
 import java.lang.annotation.*;
 
 /**
- * Used to mark implicit 'this' parameter of an intercepted method.
+ * Specifies that this advice parameter holds the {@link Throwable} thrown from the intercepted method.
  */
 @Target({ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface This {
+public @interface Thrown {
 }

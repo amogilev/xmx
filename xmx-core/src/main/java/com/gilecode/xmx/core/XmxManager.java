@@ -4,10 +4,14 @@ package com.gilecode.xmx.core;
 
 
 import com.gilecode.specr.SpeculativeProcessorFactory;
+import com.gilecode.xmx.aop.impl.XmxAopManager;
+import com.gilecode.xmx.boot.IXmxAopService;
 import com.gilecode.xmx.boot.IXmxBootService;
 import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.IXmxConfig;
 import com.gilecode.xmx.cfg.Properties;
+import com.gilecode.xmx.cfg.PropertyValue;
+import com.gilecode.xmx.core.instrument.XmxManagedClassTransformer;
 import com.gilecode.xmx.core.jmx.JmxSupport;
 import com.gilecode.xmx.model.NotSingletonException;
 import com.gilecode.xmx.model.XmxClassInfo;
@@ -47,11 +51,13 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	private static final String LAUNCHER_CLASS_ATTR = "XMX-Server-Launcher-Class";
 
 	private final IXmxConfig config;
+	private final XmxAopManager xmxAopManager;
 	private MBeanServer jmxServer;
 
 	XmxManager(IXmxConfig config) {
 		this.config = config;
 		if (isEnabled()) {
+			this.xmxAopManager = new XmxAopManager();
 			startCleanerThreads();
 			if (config.getSystemProperty(Properties.GLOBAL_JMX_ENABLED).asBool()) {
 				// TODO maybe create a custom server instead, with custom connectors etc.
@@ -62,6 +68,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				startUI();
 			}
 		} else {
+			this.xmxAopManager = null;
 			logger.warn("XMX functionality is disabled by configuration");
 		}
 	}
@@ -179,7 +186,12 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	public boolean isEnabled() {
 		return config.getSystemProperty(Properties.GLOBAL_ENABLED).asBool();
 	}
-	
+
+	@Override
+	public IXmxAopService getAopService() {
+		return xmxAopManager;
+	}
+
 	/**
 	 * Registers a managed object into XMX system.
 	 * A new unique ID is generated for an object, and a weak reference to the object is saved into the storage.
@@ -380,13 +392,26 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		} else {
 			logger.info("{}: {}", action, className);
 		}
-		
-		// actually transform the class - add registerObject to constructors
-		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-		XmxInstructionsAdder xmxInstructionsAdder = new XmxInstructionsAdder(cw, classId, bcClassName);
 
-		cr.accept(xmxInstructionsAdder, 0);
+		Map<String, Class<?>> potentialAdvices = loadPotentialAdvices(appConfig, className, classLoaderInfo);
+
+		// actually transform the class - add registerObject to constructors and advices
+		boolean supportAdvices = !potentialAdvices.isEmpty();
+		ClassWriter cw = new ClassWriter(supportAdvices ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
+		XmxManagedClassTransformer transformer = new XmxManagedClassTransformer(cw, classId, bcClassName,
+				className, potentialAdvices, appConfig, xmxAopManager);
+
+		cr.accept(transformer, supportAdvices ? ClassReader.SKIP_FRAMES : 0);
 		return cw.toByteArray();
+	}
+
+	private Map<String, Class<?>> loadPotentialAdvices(IAppPropertiesSource appConfig, String className, ManagedClassLoaderWeakRef classLoaderInfo) {
+		PropertyValue potentialAdvices = appConfig.getMemberProperty(className, "*", Properties.M_ADVICES);
+		if (potentialAdvices == null) {
+			return Collections.emptyMap();
+		}
+		String[] adviceDescs = potentialAdvices.asString().split(",");
+		return xmxAopManager.loadAndVerifyAdvices(adviceDescs, classLoaderInfo);
 	}
 
 	// Inner Implementation of XmxService API

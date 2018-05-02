@@ -5,12 +5,10 @@ package com.gilecode.xmx.aop;
 import java.lang.annotation.*;
 
 /**
- * Specifies which parameter of the intercepted method is mapped to the annotated parameter of the advice method.
+ * Specifies which argument of the intercepted method is mapped to the annotated parameter of the advice method.
  * <p/>
- * NOTE: the types of the corresponding parameters must be either equal, or the advice parameter shall ne of type
- * {@link Object}. Otherwise, the advice will not be mapped to the managed method.
- *
- * TODO: in future, support arg to be array of matching type with a single replaceable element.
+ * NOTE: the type of the annotated parameter shall be either {@code Object}, or equal to the corresponding parameter
+ * of the target method.
  */
 @Target({ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)

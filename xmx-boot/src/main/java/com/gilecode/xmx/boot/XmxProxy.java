@@ -85,6 +85,11 @@ public class XmxProxy {
 				}
 			}
 		}
+
+		// initialize AOP proxy
+		if (xmxService != null) {
+			XmxAopProxy.setAopService(xmxService.getAopService());
+		}
 		
 		return xmxService != null;
 	}

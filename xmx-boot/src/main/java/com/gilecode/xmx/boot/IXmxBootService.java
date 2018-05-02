@@ -41,4 +41,8 @@ public interface IXmxBootService {
 	 */
 	boolean isEnabled();
 
+	/**
+	 * Return AOP manager used
+	 */
+	IXmxAopService getAopService();
 }

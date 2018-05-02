@@ -39,6 +39,8 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 	 * All IDs of managed classes loaded by the referent class loader, mapped by class name.
 	 */
 	private final ConcurrentMap<String, Integer> classIdsByName;
+
+	private final ConcurrentMap<String, ClassLoader> adviceJarLoaders = new ConcurrentHashMap<>();
 	
 	
 	private ManagedClassLoaderWeakRef(ClassLoader referent, ReferenceQueue<? super ClassLoader> q, 
@@ -64,6 +66,10 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 
 	public ConcurrentMap<String, Integer> getClassIdsByName() {
 		return classIdsByName;
+	}
+
+	public ConcurrentMap<String, ClassLoader> getAdviceJarLoaders() {
+		return adviceJarLoaders;
 	}
 
 	@Override

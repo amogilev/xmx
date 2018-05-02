@@ -21,26 +21,5 @@ import java.lang.annotation.*;
 @Documented
 public @interface Advice {
 
-	enum Kind {
-
-		/**
-		 * Invoked at the very start of the method invocation. Optionally allows to replace the intercepted method
-		 * arguments, if the corresponding advice parameters are declared as an array type which component type is
-		 * the original argument type.
-		 */
-		BEFORE,
-
-		/**
-		 * Invoked on a normal exit from the method using 'return'. Not invoked on throws!
-		 * Optionally allows to override the return value.
-		 */
-		AFTER,
-
-		/**
-		 * Invoked on an abrupt method exit by an explicit or implicit throw.
-		 */
-		THROW;
-	}
-
-	Kind value();
+	AdviceKind value();
 }

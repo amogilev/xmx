@@ -35,7 +35,12 @@ public final class Properties {
 	// "special" class-level properties
 	//
 	public static final String SP_MANAGED = "Managed";
-	
+
+	//
+	// known member-level properties
+	//
+	public static final String M_ADVICES = "Advices";
+
 	private static final String SPECIAL_CLASSES_SUFFIX = "Classes";
 	
 	//
