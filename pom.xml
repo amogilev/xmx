@@ -96,6 +96,7 @@
     <module>xmx-core</module>
     <module>xmx-agent</module>
     <module>xmx-webui</module>
+    <module>xmx-advices</module>
     <module>xmx-server-jetty</module>
     <module>xmx-distribution</module>
     <module>xmx-distributions-all</module>

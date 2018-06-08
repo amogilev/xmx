@@ -33,6 +33,14 @@
         <include>com.gilecode.xmx:xmx-webui:war</include>
       </includes>
     </dependencySet>
+    <dependencySet>
+      <useProjectArtifact>false</useProjectArtifact>
+      <outputDirectory>lib/advices</outputDirectory>
+      <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+      <includes>
+        <include>com.gilecode.xmx:xmx-advices:jar</include>
+      </includes>
+    </dependencySet>
   </dependencySets>
   <fileSets>
     <fileSet>
