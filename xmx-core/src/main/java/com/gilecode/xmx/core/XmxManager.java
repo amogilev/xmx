@@ -12,6 +12,7 @@ import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.IXmxConfig;
 import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.cfg.PropertyValue;
+import com.gilecode.xmx.core.instrument.ClassWriterWithCustomLoader;
 import com.gilecode.xmx.core.instrument.XmxManagedClassTransformer;
 import com.gilecode.xmx.core.jmx.JmxSupport;
 import com.gilecode.xmx.model.NotSingletonException;
@@ -399,7 +400,9 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 
 		// actually transform the class - add registerObject to constructors and advices
 		boolean supportAdvices = !potentialAdvices.isEmpty();
-		ClassWriter cw = new ClassWriter(supportAdvices ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
+		ClassWriter cw = new ClassWriterWithCustomLoader(
+				supportAdvices ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS,
+				classLoader);
 		XmxManagedClassTransformer transformer = new XmxManagedClassTransformer(cw, classId, bcClassName,
 				className, potentialAdvices, appConfig, xmxAopManager);
 
