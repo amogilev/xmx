@@ -7,7 +7,10 @@ import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.cfg.PropertyValue;
 import com.gilecode.xmx.cfg.pattern.PatternsSupport;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class AppSubConfig implements IAppPropertiesSource {
 	
@@ -43,6 +46,23 @@ public class AppSubConfig implements IAppPropertiesSource {
 	@Override
 	public PropertyValue getMemberProperty(String className, String memberName, String propName) {
 		return getProperty(className, memberName, propName);
+	}
+
+	@Override
+	public List<PropertyValue> getDistinctMemberPropertyValues(String className, String propName) {
+		Set<String> distinctValues = new LinkedHashSet<>();
+		for (SectionWithHeader sh : matchingSectionsReversed) {
+			if (sh.getHeader().matchesAfterApp(className, "*") && sh.containsKey(propName)) {
+				distinctValues.add(sh.get(propName));
+			}
+		}
+
+		List<PropertyValue> result = new ArrayList<>(distinctValues.size());
+		for (String val : distinctValues) {
+			result.add(PropertyValueImpl.of(val));
+		}
+
+		return result;
 	}
 	
 	/**

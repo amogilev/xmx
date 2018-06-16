@@ -22,6 +22,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -109,12 +110,12 @@ public class TestMethodWeaver {
 		Method targetMethod = findMethod(targetClass, targetMethodName);
 		assertNotNull(targetMethod);
 
-		String[] adviceDescs = new String[adviceClasses.length];
+		List<String> adviceDescs = new ArrayList<>();
 		Map<String, Class<?>> adviceClassesMap = new HashMap<>();
 		for (int i = 0; i < adviceClasses.length; i++) {
 			Class<?> adviceClass = adviceClasses[i];
 			String adviceDesc = ":" + adviceClass.getName();
-			adviceDescs[i] = adviceDesc;
+			adviceDescs.add(adviceDesc);
 			adviceClassesMap.put(adviceDesc, adviceClass);
 		}
 

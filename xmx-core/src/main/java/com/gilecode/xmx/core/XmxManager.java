@@ -406,11 +406,14 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	}
 
 	private Map<String, Class<?>> loadPotentialAdvices(IAppPropertiesSource appConfig, String className, ManagedClassLoaderWeakRef classLoaderInfo) {
-		PropertyValue potentialAdvices = appConfig.getMemberProperty(className, "*", Properties.M_ADVICES);
-		if (potentialAdvices == null) {
+		List<PropertyValue> potentialAdvices = appConfig.getDistinctMemberPropertyValues(className, Properties.M_ADVICES);
+		if (potentialAdvices.isEmpty()) {
 			return Collections.emptyMap();
 		}
-		String[] adviceDescs = potentialAdvices.asString().split(",");
+		Set<String> adviceDescs = new LinkedHashSet<>();
+		for (PropertyValue advicesProp : potentialAdvices) {
+			adviceDescs.addAll(Arrays.asList(advicesProp.asString().split(",")));
+		}
 		return xmxAopManager.loadAndVerifyAdvices(adviceDescs, classLoaderInfo);
 	}
 

@@ -78,6 +78,9 @@ class SectionHeader {
 		} else if (name == null) {
 			// higher level of property than of section
 			return false;
+		} else if (name.equals("*")) {
+			// special case, used to collect distinct values of a property for all members
+			return true;
 		}
 		return pattern.matcher(name).matches();
 	}

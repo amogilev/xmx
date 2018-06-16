@@ -12,6 +12,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
+import java.util.Arrays;
 import java.util.Map;
 
 public class XmxManagedClassTransformer extends ClassVisitor {
@@ -80,7 +81,7 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 			PropertyValue advices = appConfig.getMemberProperty(javaClassName, name, Properties.M_ADVICES);
 			if (advices != null) {
 				String[] adviceDescs = advices.asString().split(",");
-				WeavingContext ctx = xmxAopManager.prepareMethodAdvicesWeaving(adviceDescs,
+				WeavingContext ctx = xmxAopManager.prepareMethodAdvicesWeaving(Arrays.asList(adviceDescs),
 						potentialAdviceClassesByDesc, Type.getArgumentTypes(desc), Type.getReturnType(desc),
 						javaClassName, name);
 

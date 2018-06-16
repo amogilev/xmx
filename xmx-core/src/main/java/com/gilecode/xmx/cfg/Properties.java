@@ -3,6 +3,7 @@
 package com.gilecode.xmx.cfg;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -57,6 +58,9 @@ public final class Properties {
 	private static final Set<String> ALL_CLASS_PROPNAMES = new HashSet<>(Arrays.asList(
 			CLASS_MAX_INSTANCES, SP_MANAGED));
 	
+	// all known names of Member-level properties
+	private static final Set<String> ALL_MEMBER_PROPNAMES = Collections.singleton(M_ADVICES);
+
 	// all known names of App-level properties - includes all class-level properties, theirs special '*Classes" form,
 	//  and App-only properies 
 	private static final Set<String> ALL_APP_PROPNAMES = new HashSet<>();
@@ -95,8 +99,7 @@ public final class Properties {
 		case CLASS:
 			return ALL_CLASS_PROPNAMES.contains(name);
 		case MEMBER:
-			// member level is not supported yet 
-			return false;
+			return ALL_MEMBER_PROPNAMES.contains(name);
 		default:
 			assert false;
 			return false;

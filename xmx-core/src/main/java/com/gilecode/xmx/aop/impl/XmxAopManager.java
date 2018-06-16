@@ -28,8 +28,8 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 	private final ConcurrentMap<Integer, WeavingContext> joinpointsWeavingInfo = new ConcurrentHashMap<>();
 
 	@Override
-	public Map<String, Class<?>> loadAndVerifyAdvices(String[] adviceDescs, ManagedClassLoaderWeakRef classLoaderRef) {
-		Map<String, Class<?>> adviceClassesByDesc = new HashMap<>(adviceDescs.length);
+	public Map<String, Class<?>> loadAndVerifyAdvices(Collection<String> adviceDescs, ManagedClassLoaderWeakRef classLoaderRef) {
+		Map<String, Class<?>> adviceClassesByDesc = new HashMap<>(adviceDescs.size());
 		for (String desc : adviceDescs) {
 			if (knownBadDescs.contains(desc)) {
 				continue;
@@ -77,12 +77,13 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 	}
 
 	private static URL findJar(String jarName) {
-		// TODO
+		// TODO get home dir (where??)
 		return null;
 	}
 
 	@Override
-	public WeavingContext prepareMethodAdvicesWeaving(String[] adviceDescs, Map<String, Class<?>> adviceClassesByDesc,
+	public WeavingContext prepareMethodAdvicesWeaving(Collection<String> adviceDescs,
+	                                                  Map<String, Class<?>> adviceClassesByDesc,
 	                                                  Type[] targetParamTypes, Type targetReturnType,
 	                                                  String targetClassName, String targetMethodName) {
 		WeavingContext ctx = new WeavingContext(joinPointsCounter.getAndIncrement());

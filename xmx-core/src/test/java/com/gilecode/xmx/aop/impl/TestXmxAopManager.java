@@ -10,6 +10,7 @@ import org.junit.Test;
 import org.objectweb.asm.Type;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -248,12 +249,11 @@ public class TestXmxAopManager {
 	}
 
 	private WeavingContext doPrepareWeavingContext(Method target, Class<?>...adviceClasses) {
-		String[] adviceDescs = new String[adviceClasses.length];
+		List<String> adviceDescs = new ArrayList<>();
 		Map<String, Class<?>> adviceClassesByDesc = new HashMap<>();
-		for (int i = 0; i < adviceClasses.length; i++) {
-			Class<?> adviceClass = adviceClasses[i];
+		for (Class<?> adviceClass : adviceClasses) {
 			String desc = ":" + adviceClass.getName();
-			adviceDescs[i] = desc;
+			adviceDescs.add(desc);
 			adviceClassesByDesc.put(desc, adviceClass);
 		}
 
