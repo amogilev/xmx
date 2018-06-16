@@ -19,7 +19,6 @@ import java.util.zip.ZipInputStream;
 
 public class XmxAgent {
 	
-	private static final String XMX_HOME_PROP = "xmx.home.dir";
 	private static final String XMX_TEMP_HOME_NAME = "xmx_temp_home";
 	private static final String XMX_DISTR_RES = "xmx-distribution.zip";
 
@@ -74,10 +73,8 @@ public class XmxAgent {
 			File agentLibDir = new File(agentHomeDir, "lib");
 			appendJarsToBootstrapClassLoader(instr, agentLibDir, "xmx-boot", "xmx-aop-api");
 			
-			System.setProperty(XMX_HOME_PROP, agentHomeDir.getAbsolutePath());
-
 			// from this moment we can use xmx-boot classes
-			boolean success = initializeLoader(agentProperties);
+			boolean success = initializeLoader(agentProperties, agentHomeDir.getAbsoluteFile());
 			if (success) {
 				// initialize transformer
 				instr.addTransformer(new XmxClassTransformer());
@@ -139,9 +136,9 @@ public class XmxAgent {
 		return found;
 	}
 
-	private static boolean initializeLoader(Map<String, String> agentProperties) {
+	private static boolean initializeLoader(Map<String, String> agentProperties, File xmxHome) {
 		// no additional errors required if failed or disabled - all printed by XmxProxy
-		return XmxProxy.initialize(agentProperties);
+		return XmxProxy.initialize(agentProperties, xmxHome);
 	}
 
 	private static Map<String, String> parseArguments(String agentArgs) {

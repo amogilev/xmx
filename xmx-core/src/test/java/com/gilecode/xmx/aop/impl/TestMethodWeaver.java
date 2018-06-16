@@ -42,7 +42,7 @@ public class TestMethodWeaver {
 
 	@Before
 	public void setUp() throws Exception {
-		aopManager = new XmxAopManager();
+		aopManager = new XmxAopManager(null, null);
 
 		Method setAopService = XmxAopProxy.class.getDeclaredMethod("setAopService", IXmxAopService.class);
 		setAopService.setAccessible(true);

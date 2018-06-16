@@ -20,7 +20,7 @@ import static org.junit.Assert.*;
 @SuppressWarnings("unused")
 public class TestXmxAopManager {
 
-	private XmxAopManager uut = new XmxAopManager();
+	private XmxAopManager uut = new XmxAopManager(null, null);
 
 	private int target(Long arg0, String arg1, double arg2) {
 		return 0;

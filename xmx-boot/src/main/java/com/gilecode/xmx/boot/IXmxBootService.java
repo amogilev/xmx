@@ -11,11 +11,6 @@ package com.gilecode.xmx.boot;
 public interface IXmxBootService {
 
 	/**
-	 * Property name for XMX home folder.
-	 */
-	String XMX_HOME_PROP = "xmx.home.dir";
-
-	/**
 	 * Checks whether the class is configured to be managed and, if needed,
 	 * transform it so that each created instance of it will
 	 * be registered.

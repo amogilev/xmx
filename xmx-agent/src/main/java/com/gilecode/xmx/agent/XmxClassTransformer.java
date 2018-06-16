@@ -3,6 +3,7 @@
 package com.gilecode.xmx.agent;
 
 import com.gilecode.xmx.boot.XmxProxy;
+import com.gilecode.xmx.boot.XmxURLClassLoader;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -31,10 +32,9 @@ public class XmxClassTransformer implements ClassFileTransformer {
 			// skip anonymous (lambda) classes
 			return null;
 		}
-		
-		if (className.startsWith("com/gilecode") && (className.startsWith("com/gilecode/specr/") ||
-				className.startsWith("com/gilecode/xmx/"))) {
-			// skip XMX classes from management to prevent circular class loading
+
+		if (isXmxClass(className) || isXmxLoader(loader)) {
+			// skip XMX classes from management to prevent circular class loading and showing internal services
 			return null;
 		}
 
@@ -52,5 +52,20 @@ public class XmxClassTransformer implements ClassFileTransformer {
 			disabled = true;
 			return null;
 		}
+	}
+
+	private static boolean isXmxClass(String className) {
+		return className.startsWith("com/gilecode") && (className.startsWith("com/gilecode/specr/") ||
+				className.startsWith("com/gilecode/xmx/"));
+	}
+
+	private static boolean isXmxLoader(ClassLoader loader) {
+		while (loader != null) {
+			if (loader.getClass() == XmxURLClassLoader.class) {
+				return true;
+			}
+			loader = loader.getParent();
+		}
+		return false;
 	}
 }

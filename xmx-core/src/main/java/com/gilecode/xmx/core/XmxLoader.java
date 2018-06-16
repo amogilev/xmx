@@ -11,6 +11,7 @@ import com.gilecode.xmx.log.LogbackConfigurator;
 import com.gilecode.xmx.service.IXmxService;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.Map;
 
 /**
@@ -20,7 +21,7 @@ public class XmxLoader {
 
 	private static XmxManager instance;
 
-	public synchronized static IXmxBootService createXmxService(Map<String, String> overrideSystemProps) {
+	public synchronized static IXmxBootService createXmxService(Map<String, String> overrideSystemProps, File homeDir) {
 		if (instance != null) {
 			throw new IllegalStateException("XMX is already initialized");
 		}
@@ -29,10 +30,10 @@ public class XmxLoader {
 		config.overrideSystemProperties(overrideSystemProps);
 		configureLogging(config);
 
-		instance = new XmxManager(config);
+		instance = new XmxManager(config, homeDir);
 
 		if (instance.isEnabled()) {
-			printWelcomeMessage(config);
+			printWelcomeMessage(config, homeDir);
 		}
 
 		return instance;
@@ -55,7 +56,7 @@ public class XmxLoader {
 		config.onLoggingInitialized();
 	}
 
-	private static void printWelcomeMessage(IXmxConfig config) {
+	private static void printWelcomeMessage(IXmxConfig config, File homeDir) {
 		StringBuilder sb = new StringBuilder(1024);
 		String prefix = "=[XMX]= ";
 		String newline = System.lineSeparator();
@@ -68,6 +69,8 @@ public class XmxLoader {
 			sb.append(" (").append(cfgStatus).append(")");
 		}
 		sb.append(newline);
+
+		sb.append(prefix).append("XMX Home Dir=").append(homeDir).append(newline);
 
 		sb.append(prefix).append(LogbackConfigurator.getLastStatus()).append(newline);
 		if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {

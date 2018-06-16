@@ -7,6 +7,7 @@ import com.gilecode.specr.SpeculativeProcessorFactory;
 import com.gilecode.xmx.aop.impl.XmxAopManager;
 import com.gilecode.xmx.boot.IXmxAopService;
 import com.gilecode.xmx.boot.IXmxBootService;
+import com.gilecode.xmx.boot.XmxURLClassLoader;
 import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.IXmxConfig;
 import com.gilecode.xmx.cfg.Properties;
@@ -33,7 +34,6 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.ReferenceQueue;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -51,13 +51,15 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	private static final String LAUNCHER_CLASS_ATTR = "XMX-Server-Launcher-Class";
 
 	private final IXmxConfig config;
+	private final File homeDir;
 	private final XmxAopManager xmxAopManager;
 	private MBeanServer jmxServer;
 
-	XmxManager(IXmxConfig config) {
+	XmxManager(IXmxConfig config, File homeDir) {
 		this.config = config;
+		this.homeDir = homeDir;
 		if (isEnabled()) {
-			this.xmxAopManager = new XmxAopManager();
+			this.xmxAopManager = new XmxAopManager(homeDir, config.getConfigurationFile().getParentFile());
 			startCleanerThreads();
 			if (config.getSystemProperty(Properties.GLOBAL_JMX_ENABLED).asBool()) {
 				// TODO maybe create a custom server instead, with custom connectors etc.
@@ -671,9 +673,8 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	private void startUI() {
 		logger.debug("Starting XMX Web UI..,");
 
-		File xmxHomeDir = new File(System.getProperty(XMX_HOME_PROP));
-		final File uiWarFile = new File(xmxHomeDir, "bin" + File.separator + "xmx-webui.war");
-		File xmxLibDir = new File(xmxHomeDir, "lib");
+		final File uiWarFile = new File(homeDir, "bin" + File.separator + "xmx-webui.war");
+		File xmxLibDir = new File(homeDir, "lib");
 		
 		final String serverImpl = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_IMPL).asString();
 		final String serverImplJarPrefix = "xmx-server-" + serverImpl.toLowerCase(Locale.ENGLISH);
@@ -712,7 +713,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		final IXmxServerLauncher launcher;
 		try {
 			// use classloader of xmx-core as parent
-			ClassLoader serverCL = new URLClassLoader(urls, XmxManager.class.getClassLoader());
+			ClassLoader serverCL = new XmxURLClassLoader(urls, XmxManager.class.getClassLoader());
 			appNameByLoader.put(serverCL, IXmxServerLauncher.APPNAME);
 			Class<? extends IXmxServerLauncher> launcherClass = 
 					Class.forName(launcherClassName, true, serverCL).asSubclass(IXmxServerLauncher.class);

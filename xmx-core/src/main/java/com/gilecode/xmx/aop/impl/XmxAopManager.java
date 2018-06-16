@@ -4,20 +4,26 @@ package com.gilecode.xmx.aop.impl;
 
 import com.gilecode.xmx.aop.*;
 import com.gilecode.xmx.boot.IXmxAopService;
+import com.gilecode.xmx.boot.XmxURLClassLoader;
 import com.gilecode.xmx.core.ManagedClassLoaderWeakRef;
+import com.gilecode.xmx.model.XmxRuntimeException;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
+import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Manages loading of advice classes, weaving and invocation of advice methods.
+ */
 public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmxAopService, IXmxAopLoader {
 
 	private final static Logger logger = LoggerFactory.getLogger(XmxAopManager.class);
@@ -26,6 +32,24 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 	private final AdviceVerifier adviceVerifier = new AdviceVerifier();
 	private final AtomicInteger joinPointsCounter = new AtomicInteger(1);
 	private final ConcurrentMap<Integer, WeavingContext> joinpointsWeavingInfo = new ConcurrentHashMap<>();
+
+	/**
+	 * The directory for advices JARs under XMX Home.
+	 */
+	private final File homeAdvicesDir;
+
+	/**
+	 * The directory for advices JARs under XMX Configuration.
+	 */
+	private final File configAdvicesDir;
+
+	/**
+	 * Creates the manager instance, with the specified home and config directories.
+	 */
+	public XmxAopManager(File homeDir, File configDir) {
+		this.homeAdvicesDir = new File(homeDir, "lib/advices/");
+		this.configAdvicesDir = new File(configDir, "advices/");
+	}
 
 	@Override
 	public Map<String, Class<?>> loadAndVerifyAdvices(Collection<String> adviceDescs, ManagedClassLoaderWeakRef classLoaderRef) {
@@ -53,7 +77,7 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 		return adviceClassesByDesc;
 	}
 
-	private static Class<?> loadClass(ManagedClassLoaderWeakRef classLoaderRef, String jarName, String className) throws BadAdviceException {
+	private Class<?> loadClass(ManagedClassLoaderWeakRef classLoaderRef, String jarName, String className) throws BadAdviceException {
 		ClassLoader adviceJarLoader = getOrCreateAdviceJarLoader(classLoaderRef, jarName);
 		try {
 			return Class.forName(className, true, adviceJarLoader);
@@ -62,23 +86,57 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 		}
 	}
 
-	private static ClassLoader getOrCreateAdviceJarLoader(ManagedClassLoaderWeakRef classLoaderRef, String jarName) throws BadAdviceException {
+	private ClassLoader getOrCreateAdviceJarLoader(ManagedClassLoaderWeakRef classLoaderRef, String jarName) throws BadAdviceException {
 		ConcurrentMap<String, ClassLoader> adviceJarLoaders = classLoaderRef.getAdviceJarLoaders();
 		ClassLoader jarLoader = adviceJarLoaders.get(jarName);
 		if (jarLoader == null) {
-			URL jarUrl = findJar(jarName);
-			if (jarUrl == null) {
-				throw new BadAdviceException("Jar file '" + jarName + "' is not found");
+			URL jarUrl = getJarFile(jarName);
+			ClassLoader newJarLoader = new XmxURLClassLoader(new URL[]{jarUrl}, classLoaderRef.get());
+			jarLoader = adviceJarLoaders.putIfAbsent(jarName, newJarLoader);
+			if (jarLoader == null) {
+				jarLoader = newJarLoader;
 			}
-			// FIXME use special class loader, make sure that classes loaded by it are not managed
-			jarLoader = adviceJarLoaders.putIfAbsent(jarName, new URLClassLoader(new URL[]{jarUrl}, classLoaderRef.get()));
 		}
 		return jarLoader;
 	}
 
-	private static URL findJar(String jarName) {
-		// TODO get home dir (where??)
-		return null;
+	/**
+	 * Finds a JAR file by its name and return the file URL. If file is missing, throws exception.
+	 * The JAR file is searched by name in XMX_HOME/lib/advices/ and XMX_CONFIG_HOME/advices
+	 *
+	 * @param jarName the name or path to advices JAR file
+	 *
+	 * @return the URL of the found JAR file
+	 *
+	 * @throws BadAdviceException if not found
+	 */
+	private URL getJarFile(String jarName) throws BadAdviceException {
+		List<File> candidateFiles = new ArrayList<>();
+		boolean isPath = jarName.contains("/") || jarName.contains(File.separator);
+		if (isPath) {
+			// look by absolute path
+			candidateFiles.add(new File(jarName));
+		} else {
+			// look in <xmx_home>/lib/advices and in <xmx_config>/advices
+			candidateFiles.add(new File(homeAdvicesDir, jarName));
+			candidateFiles.add(new File(configAdvicesDir, jarName));
+		}
+		for (File candidate : candidateFiles) {
+			if (candidate.isFile()) {
+				try {
+					return candidate.toURI().toURL();
+				} catch (MalformedURLException e) {
+					// not expected
+					throw new XmxRuntimeException(e);
+				}
+			}
+		}
+		// not found
+		String message = "Jar file '" + jarName + "' is not found!";
+		if (!isPath) {
+			message += " It may be added either to " + homeAdvicesDir + " or to " + configAdvicesDir + " directory.";
+		}
+		throw new BadAdviceException(message);
 	}
 
 	@Override

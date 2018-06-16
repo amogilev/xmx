@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.Locale;
 import java.util.Map;
 
@@ -19,25 +18,24 @@ public class XmxProxy {
 	 * Initializes XMX with optional override of system (XMX global) properties.
 	 * 
 	 * @param overrideProperties properties to override, case-insensitive
-	 * 
-	 * @return whether XMX is initialized successfully and is enabled 
+	 * @param homeDir XMX home dir, detected by the location of agent JAR
+	 *
+	 * @return whether XMX is initialized successfully and is enabled
 	 */
 	synchronized
-	public static boolean initialize(Map<String, String> overrideProperties) {
+	public static boolean initialize(Map<String, String> overrideProperties, File homeDir) {
 		if (initialized) {
 			logError("XMX is already initialized!");
 			return xmxService != null;
 		}
 		initialized = true;
 		
-		String homeDir = System.getProperty(IXmxBootService.XMX_HOME_PROP);
 		if (homeDir == null) {
 			// not proper "agent" start... but still try to determine by this jar location
 			URL jarLocation = XmxProxy.class.getProtectionDomain().getCodeSource().getLocation();
 			if (jarLocation != null) {
 				try {
-					homeDir = new File(jarLocation.toURI()).getParentFile().getParentFile().getAbsolutePath();
-					System.setProperty(IXmxBootService.XMX_HOME_PROP, homeDir);
+					homeDir = new File(jarLocation.toURI()).getParentFile().getParentFile().getAbsoluteFile();
 				} catch (Exception e) {
 					logError("", e);
 				}
@@ -66,13 +64,13 @@ public class XmxProxy {
 			} else {
 				try {
 					URL[] urls = new URL[]{coreImpls[0].toURI().toURL()};
-					ClassLoader xmxClassLoader = new URLClassLoader(urls, ClassLoader.getSystemClassLoader());
+					ClassLoader xmxClassLoader = new XmxURLClassLoader(urls, ClassLoader.getSystemClassLoader());
 
 					Class<?> xmxLoaderClass =
 							Class.forName("com.gilecode.xmx.core.XmxLoader", true, xmxClassLoader);
 					Method xmxCreateSvcMethod =
-							xmxLoaderClass.getDeclaredMethod("createXmxService", Map.class);
-					xmxService = (IXmxBootService) xmxCreateSvcMethod.invoke(xmxLoaderClass, overrideProperties);
+							xmxLoaderClass.getDeclaredMethod("createXmxService", Map.class, File.class);
+					xmxService = (IXmxBootService) xmxCreateSvcMethod.invoke(xmxLoaderClass, overrideProperties, homeDir);
 
 					if (!xmxService.isEnabled()) {
 						// disabled
