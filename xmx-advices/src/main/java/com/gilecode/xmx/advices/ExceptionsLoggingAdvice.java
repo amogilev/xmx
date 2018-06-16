@@ -16,7 +16,7 @@ public class ExceptionsLoggingAdvice {
 
 	@Advice(AdviceKind.AFTER_THROW)
 	public static void afterThrow(@AllArguments Object[] args, @Thrown Throwable ex) {
-		// TODO: need to add objectId to proxy & @TargetObjectId & @TargetMethod. Obtaining theinfo from StackTrace
+		// TODO: need to add objectId to proxy & @TargetObjectId & @TargetMethod. Obtaining the info from StackTrace
 		//       is inefficient
 		String methodName = "", className="";
 		StackTraceElement[] stackTrace = ex.getStackTrace();

@@ -12,10 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -75,23 +72,10 @@ public class XmxAgent {
 				
 
 			File agentLibDir = new File(agentHomeDir, "lib");
-			
-			// find xmx-boot.jar, support optional version
-			File[] xmxBootFiles = agentLibDir.listFiles(new FilenameFilter() {
-				@Override
-				public boolean accept(File dir, String name) {
-					name = name.toLowerCase(Locale.ENGLISH);
-					return name.equals("xmx-boot.jar") || (name.startsWith("xmx-boot-") && name.endsWith(".jar"));
-				}
-			});
-			
-			if (xmxBootFiles == null || xmxBootFiles.length == 0 || !xmxBootFiles[0].isFile()) {
-				throw new RuntimeException("Failed to determine proper XMX home directory. Please make sure that xmx-agent.jar resides in XMX_HOME/bin");
-			}
+			appendJarsToBootstrapClassLoader(instr, agentLibDir, "xmx-boot", "xmx-aop-api");
 			
 			System.setProperty(XMX_HOME_PROP, agentHomeDir.getAbsolutePath());
-			instr.appendToBootstrapClassLoaderSearch(new JarFile(xmxBootFiles[0]));
-			
+
 			// from this moment we can use xmx-boot classes
 			boolean success = initializeLoader(agentProperties);
 			if (success) {
@@ -102,6 +86,57 @@ public class XmxAgent {
 			System.err.println("Failed to start XmxAgent");
 			e.printStackTrace();
 		}
+	}
+
+	private static void appendJarsToBootstrapClassLoader(Instrumentation instr, File agentLibDir, String... libNames) throws IOException {
+		String[] filenames = agentLibDir.list();
+		for (String libName : libNames) {
+			String fileName = findLatestLibraryJar(filenames, libName);
+			File f = fileName == null ? null : new File(agentLibDir, fileName);
+			if (fileName == null || !f.isFile()) {
+				throw new RuntimeException("Failed to determine proper XMX home directory. Please make sure " +
+						"that xmx-agent.jar resides in XMX_HOME/bin");
+			}
+			instr.appendToBootstrapClassLoaderSearch(new JarFile(f));
+		}
+	}
+
+	/**
+	 * Among the specifiied filenames, selects the JAR name which corresponds to the latest version of the specified
+	 * library.
+	 *
+	 * @param filenames a list of filenames
+	 * @param libNameLC the library name (must be in lower case), e.g. "xmx-boot"
+	 *
+	 * @return the JAR file name to use, or {@code null} if missing
+	 */
+	private static String findLatestLibraryJar(String[] filenames, String libNameLC) {
+		String found = null;
+		String foundMaxVersion = null;
+
+		Comparator<String> libVersionsComparator = new SemVerComparator();
+
+		for (String fname : filenames) {
+			fname = fname.toLowerCase(Locale.ENGLISH);
+			if (fname.startsWith(libNameLC) && fname.endsWith(".jar")) {
+				String version = null;
+				if (fname.charAt(libNameLC.length()) == '-') {
+					version = fname.substring(libNameLC.length() + 1, fname.length() - 4);
+				} else if (fname.equals(libNameLC + ".jar")) {
+					version = "";
+				} else {
+					// invalid file, ignore
+					continue;
+				}
+
+				if (foundMaxVersion == null || libVersionsComparator.compare(foundMaxVersion, version) < 0) {
+					foundMaxVersion = version;
+					found = fname;
+				}
+			}
+		}
+
+		return found;
 	}
 
 	private static boolean initializeLoader(Map<String, String> agentProperties) {

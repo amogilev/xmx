@@ -2,7 +2,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
   <id>bin</id>
-  
+
   <formats>
     <format>zip</format>
   </formats>
@@ -22,6 +22,7 @@
       <outputFileNameMapping>${artifact.artifactId}-${artifact.version}.${artifact.extension}</outputFileNameMapping>
       <includes>
         <include>com.gilecode.xmx:xmx-boot:jar</include>
+        <include>com.gilecode.xmx:xmx-aop-api:jar</include>
         <include>com.gilecode.xmx:xmx-core:jar</include>
         <include>com.gilecode.xmx:xmx-server-jetty:jar</include>
       </includes>
