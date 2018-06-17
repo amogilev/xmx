@@ -4,8 +4,9 @@ package com.gilecode.xmx.cfg.pattern.impl;
 
 import com.gilecode.xmx.cfg.pattern.IMethodMatcher;
 import com.gilecode.xmx.cfg.pattern.ITypeMatcher;
+import com.gilecode.xmx.cfg.pattern.MethodSpec;
+import com.gilecode.xmx.cfg.pattern.TypeSpec;
 
-import java.lang.reflect.Method;
 import java.util.List;
 
 /**
@@ -29,8 +30,8 @@ public class ParametersMatcher implements IMethodMatcher {
     }
 
     @Override
-    public boolean matches(Method m) {
-        Class<?>[] parameterTypes = m.getParameterTypes();
+    public boolean matches(MethodSpec m) {
+        TypeSpec[] parameterTypes = m.getParameterTypes();
         if (requiredTypesMatchers.size() > parameterTypes.length) {
             return false;
         } else if (!allowExtraParams && requiredTypesMatchers.size() != parameterTypes.length) {

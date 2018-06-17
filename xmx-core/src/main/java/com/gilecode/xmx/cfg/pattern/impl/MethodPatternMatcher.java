@@ -4,8 +4,8 @@ package com.gilecode.xmx.cfg.pattern.impl;
 
 import com.gilecode.xmx.cfg.pattern.IMethodMatcher;
 import com.gilecode.xmx.cfg.pattern.ITypeMatcher;
+import com.gilecode.xmx.cfg.pattern.MethodSpec;
 
-import java.lang.reflect.Method;
 import java.util.regex.Pattern;
 
 /**
@@ -26,7 +26,7 @@ public class MethodPatternMatcher implements IMethodMatcher {
     }
 
     @Override
-    public boolean matches(Method m) {
+    public boolean matches(MethodSpec m) {
         if (!modifierFlags.matches(m.getModifiers())) {
             return false;
         }

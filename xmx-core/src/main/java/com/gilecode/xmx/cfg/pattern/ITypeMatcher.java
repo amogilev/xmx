@@ -7,11 +7,11 @@ package com.gilecode.xmx.cfg.pattern;
  */
 public interface ITypeMatcher {
 
-    boolean matches(Class<?> type);
+    boolean matches(TypeSpec typeSpec);
 
     ITypeMatcher ANY_TYPE = new ITypeMatcher() {
         @Override
-        public boolean matches(Class<?> type) {
+        public boolean matches(TypeSpec typeSpec) {
             return true;
         }
     };

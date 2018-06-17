@@ -7,6 +7,7 @@ import com.gilecode.xmx.aop.impl.WeavingContext;
 import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.cfg.PropertyValue;
+import com.gilecode.xmx.cfg.pattern.MethodSpec;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -76,9 +77,8 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 
 		} else if (!potentialAdviceClassesByDesc.isEmpty()) {
 			// weave advices
-
-			// FIXME need special support of methodPatterns in config! And pass name + access + signature
-			PropertyValue advices = appConfig.getMethodProperty(javaClassName, name, Properties.M_ADVICES);
+			MethodSpec spec = MethodSpec.of(access, name, desc);
+			PropertyValue advices = appConfig.getMethodProperty(javaClassName, spec, Properties.M_ADVICES);
 			if (advices != null) {
 				String[] adviceDescs = advices.asString().split(",");
 				WeavingContext ctx = xmxAopManager.prepareMethodAdvicesWeaving(Arrays.asList(adviceDescs),

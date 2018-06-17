@@ -5,7 +5,6 @@ package com.gilecode.xmx.cfg.pattern;
 import com.gilecode.xmx.cfg.impl.XmxIniParseException;
 import com.gilecode.xmx.cfg.pattern.impl.MethodPatternParser;
 
-import java.lang.reflect.Method;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -77,7 +76,7 @@ public class PatternsSupport {
 		}
 		return new IMethodMatcher() {
 			@Override
-			public boolean matches(Method m) {
+			public boolean matches(MethodSpec m) {
 				for (IMethodMatcher orMatcher : orMatchers) {
 					if (orMatcher.matches(m)) {
 						return true;

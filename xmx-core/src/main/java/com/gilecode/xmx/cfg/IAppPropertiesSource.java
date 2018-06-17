@@ -2,6 +2,8 @@
 
 package com.gilecode.xmx.cfg;
 
+import com.gilecode.xmx.cfg.pattern.MethodSpec;
+
 import java.util.List;
 
 /**
@@ -14,7 +16,7 @@ public interface IAppPropertiesSource {
 	
 	PropertyValue getClassProperty(String className, String propName);
 	
-	PropertyValue getMethodProperty(String className, String methodName, String propName);
+	PropertyValue getMethodProperty(String className, MethodSpec methodSpec, String propName);
 
 	PropertyValue getFieldProperty(String className, String fieldName, String propName);
 

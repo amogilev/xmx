@@ -5,6 +5,7 @@ package com.gilecode.xmx.cfg.impl;
 import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.cfg.PropertyValue;
+import com.gilecode.xmx.cfg.pattern.MethodSpec;
 import com.gilecode.xmx.cfg.pattern.PatternsSupport;
 
 import java.util.ArrayList;
@@ -44,8 +45,9 @@ public class AppSubConfig implements IAppPropertiesSource {
 	}
 
 	@Override
-	public PropertyValue getMethodProperty(String className, String methodName, String propName) {
-		return getProperty(className, methodName, true, propName);
+	public PropertyValue getMethodProperty(String className, MethodSpec methodSpec, String propName) {
+		// FIXME: match method pattern instead
+		return getProperty(className, methodSpec.getName(), true, propName);
 	}
 
 	@Override

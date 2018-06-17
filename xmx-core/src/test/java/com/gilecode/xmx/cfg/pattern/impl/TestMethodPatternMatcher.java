@@ -4,8 +4,10 @@ package com.gilecode.xmx.cfg.pattern.impl;
 
 import com.gilecode.xmx.cfg.impl.XmxIniParseException;
 import com.gilecode.xmx.cfg.pattern.IMethodMatcher;
+import com.gilecode.xmx.cfg.pattern.MethodSpec;
 import com.gilecode.xmx.cfg.pattern.PatternsSupport;
 import org.junit.Test;
+import org.objectweb.asm.Type;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -40,11 +42,16 @@ abstract class TestMethodPatternsDemo {
 public class TestMethodPatternMatcher {
 
     private void checkCount(String pattern, int expectedCount) {
+    	checkCount_Refl(pattern, expectedCount);
+    	checkCount_Desc(pattern, expectedCount);
+    }
+
+    private void checkCount_Refl(String pattern, int expectedCount) {
         IMethodMatcher matcher = PatternsSupport.parseMethodPattern(pattern);
         Method[] methods = TestMethodPatternsDemo.class.getDeclaredMethods();
         int count = 0;
         for (Method m : methods) {
-            if (matcher.matches(m)) {
+            if (matcher.matches(MethodSpec.of(m))) {
                 count++;
             }
         }
@@ -52,12 +59,47 @@ public class TestMethodPatternMatcher {
         assertEquals(expectedCount, count);
     }
 
-    private void checkResult(String pattern, String expectedSignature) {
+    private void checkCount_Desc(String pattern, int expectedCount) {
+        IMethodMatcher matcher = PatternsSupport.parseMethodPattern(pattern);
+        Method[] methods = TestMethodPatternsDemo.class.getDeclaredMethods();
+        int count = 0;
+        for (Method m : methods) {
+	        MethodSpec spec = MethodSpec.of(m.getModifiers(), m.getName(), Type.getType(m).getDescriptor());
+            if (matcher.matches(spec)) {
+                count++;
+            }
+        }
+
+        assertEquals(expectedCount, count);
+    }
+
+	private void checkResult(String pattern, String expectedSignature) {
+    	checkResult_Refl(pattern, expectedSignature);
+    	checkResult_Desc(pattern, expectedSignature);
+	}
+
+    private void checkResult_Refl(String pattern, String expectedSignature) {
         IMethodMatcher matcher = PatternsSupport.parseMethodPattern(pattern);
         Method[] methods = TestMethodPatternsDemo.class.getDeclaredMethods();
         Method found = null;
         for (Method m : methods) {
-            if (matcher.matches(m)) {
+            if (matcher.matches(MethodSpec.of(m))) {
+                assertNull("Expected one match, but found several", found);
+                found = m;
+            }
+        }
+
+        assertNotNull("Expected one match, but found none", found);
+        assertEquals(expectedSignature, found.toString());
+    }
+
+    private void checkResult_Desc(String pattern, String expectedSignature) {
+        IMethodMatcher matcher = PatternsSupport.parseMethodPattern(pattern);
+        Method[] methods = TestMethodPatternsDemo.class.getDeclaredMethods();
+        Method found = null;
+        for (Method m : methods) {
+	        MethodSpec spec = MethodSpec.of(m.getModifiers(), m.getName(), Type.getType(m).getDescriptor());
+	        if (matcher.matches(spec)) {
                 assertNull("Expected one match, but found several", found);
                 found = m;
             }
@@ -71,6 +113,9 @@ public class TestMethodPatternMatcher {
     public void testMain0() {
         checkCount("public static void main0(String[])", 1);
         checkCount("public static void main0(java.lang.String[])", 1);
+
+        checkResult("public static void main0(String[])",
+		        "public static void com.gilecode.xmx.cfg.pattern.impl.TestMethodPatternsDemo.main0(java.lang.String[])");
     }
 
     @Test

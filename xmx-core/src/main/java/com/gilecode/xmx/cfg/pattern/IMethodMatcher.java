@@ -2,18 +2,16 @@
 
 package com.gilecode.xmx.cfg.pattern;
 
-import java.lang.reflect.Method;
-
 /**
  * Pattern-based matcher for methods.
  */
 public interface IMethodMatcher {
 
-    boolean matches(Method m);
+    boolean matches(MethodSpec spec);
 
     IMethodMatcher ANY_METHOD = new IMethodMatcher() {
         @Override
-        public boolean matches(Method m) {
+        public boolean matches(MethodSpec spec) {
             return true;
         }
     };
