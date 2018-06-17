@@ -10,11 +10,14 @@ import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 public class XmxCfgSectionNameParser implements SectionsNamespace {
+
+	String curSectionName;
 	
 	// shared map for parsed parts of section names
 	Map<String, String> sectionNameParts = new HashMap<>(4);
 	
 	public SectionHeader parseSectionHeader(String curSectionName) {
+		this.curSectionName = curSectionName;
 		parseSectionNameParts(curSectionName);
 		if (sectionNameParts.containsKey(SECTION_SYSTEM)) {
 			if (sectionNameParts.size() > 1) {
@@ -41,7 +44,13 @@ public class XmxCfgSectionNameParser implements SectionsNamespace {
 				header.classSpec = spec;
 				header.classPattern = pattern;
 				break;
-			case PART_MEMBER:
+			case PART_METHOD:
+			case PART_FIELD:
+				if (header.memberSpec != null) {
+					throw new XmxIniParseException("Wrong section name - Method and Field parts cannot be combined: '"
+							+ curSectionName + "'");
+				}
+				header.memberIsMethod = e.getKey().equals(PART_METHOD);
 				header.memberSpec = spec;
 				header.memberPattern = pattern;
 				break;
@@ -54,34 +63,38 @@ public class XmxCfgSectionNameParser implements SectionsNamespace {
 		return header;
 	}
 
-	void parseSectionNameParts(String str) {
+	void parseSectionNameParts(String sectionName) {
 		sectionNameParts.clear();
 		
 		int partStart = 0;
 		for (;;) {
-			int partEnd = findUnquotedChar(str, ';', partStart);
+			int partEnd = findUnquotedChar(sectionName, ';', partStart);
 			if (partEnd > 0) {
-				parseSectionNamePart(str.substring(partStart, partEnd));
+				parseSectionNamePart(sectionName.substring(partStart, partEnd));
 				partStart = partEnd + 1;
 			} else {
-				parseSectionNamePart(str.substring(partStart));
+				parseSectionNamePart(sectionName.substring(partStart));
 				return;
 			}
 		}
 	}
 
 	void parseSectionNamePart(String part) {
+		String key, value;
 		int n = findUnquotedChar(part, '=', 0);
 		if (n < 0) {
 			// whole part is a key, with empty value 
-			String key = unquote(part.trim());
-			if (!key.isEmpty()) {
-				sectionNameParts.put(key, "");
-			}
+			key = unquote(part.trim());
+			value = "";
 		} else {
-			String key = unquote(part.substring(0, n).trim());
-			String value = part.substring(n + 1).trim();
-			sectionNameParts.put(key, value);
+			key = unquote(part.substring(0, n).trim());
+			value = part.substring(n + 1).trim();
+		}
+		if (!key.isEmpty()) {
+			String prev = sectionNameParts.put(key, value);
+			if (prev != null) {
+				throw new XmxIniParseException("Duplicate part '" + key + "' in section '" + curSectionName + "'");
+			}
 		}
 	}
 

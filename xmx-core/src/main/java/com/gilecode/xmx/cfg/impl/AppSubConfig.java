@@ -35,24 +35,29 @@ public class AppSubConfig implements IAppPropertiesSource {
 
 	@Override
 	public PropertyValue getAppProperty(String propName) {
-		return getProperty(null, null, propName);
+		return getProperty(null, null, false, propName);
 	}
 	
 	@Override
 	public PropertyValue getClassProperty(String className, String propName) {
-		return getProperty(className, null, propName);
+		return getProperty(className, null, false, propName);
 	}
 
 	@Override
-	public PropertyValue getMemberProperty(String className, String memberName, String propName) {
-		return getProperty(className, memberName, propName);
+	public PropertyValue getMethodProperty(String className, String methodName, String propName) {
+		return getProperty(className, methodName, true, propName);
 	}
 
 	@Override
-	public List<PropertyValue> getDistinctMemberPropertyValues(String className, String propName) {
+	public PropertyValue getFieldProperty(String className, String fieldName, String propName) {
+		return getProperty(className, fieldName, false, propName);
+	}
+
+	@Override
+	public List<PropertyValue> getDistinctMethodPropertyValues(String className, String propName) {
 		Set<String> distinctValues = new LinkedHashSet<>();
 		for (SectionWithHeader sh : matchingSectionsReversed) {
-			if (sh.getHeader().matchesAfterApp(className, "*") && sh.containsKey(propName)) {
+			if (sh.getHeader().matchesAfterApp(className, "*", true) && sh.containsKey(propName)) {
 				distinctValues.add(sh.get(propName));
 			}
 		}
@@ -69,14 +74,14 @@ public class AppSubConfig implements IAppPropertiesSource {
 	 * Internal method which works with all property levels from App to Member. 
 	 */
 	private PropertyValue getProperty(String className,
-			String memberName, String propName) {
+			String memberName, boolean memberIsMethod, String propName) {
 		
 		if (memberName == null && Properties.isSpecial(propName)) {
 			return getSpecialClassProperty(className, propName);
 		}
 		
 		for (SectionWithHeader sh : matchingSectionsReversed) {
-			if (sh.getHeader().matchesAfterApp(className, memberName) && sh.containsKey(propName)) {
+			if (sh.getHeader().matchesAfterApp(className, memberName, memberIsMethod) && sh.containsKey(propName)) {
 				return PropertyValueImpl.of(sh.get(propName));
 			}
 		}
@@ -91,7 +96,7 @@ public class AppSubConfig implements IAppPropertiesSource {
 		String propClassForm = Properties.specialClassesForm(propName);
 		
 		for (SectionWithHeader sh : matchingSectionsReversed) {
-			if (sh.getHeader().matchesAfterApp(className, null)) {
+			if (sh.getHeader().matchesAfterApp(className, null, false)) {
 				if (sh.containsKey(propName)) {
 					return PropertyValueImpl.of(sh.get(propName)); 
 				} else if (sh.getHeader().classSpec == null && sh.containsKey(propClassForm)) {

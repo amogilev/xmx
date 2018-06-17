@@ -78,7 +78,7 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 			// weave advices
 
 			// FIXME need special support of methodPatterns in config! And pass name + access + signature
-			PropertyValue advices = appConfig.getMemberProperty(javaClassName, name, Properties.M_ADVICES);
+			PropertyValue advices = appConfig.getMethodProperty(javaClassName, name, Properties.M_ADVICES);
 			if (advices != null) {
 				String[] adviceDescs = advices.asString().split(",");
 				WeavingContext ctx = xmxAopManager.prepareMethodAdvicesWeaving(Arrays.asList(adviceDescs),

@@ -12,11 +12,12 @@ import java.util.regex.Pattern;
  * @author Andrey Mogilev
  */
 class SectionHeader {
-	
+
 	Pattern appPattern;
 	Pattern classPattern;
 	Pattern memberPattern;
-	
+	boolean memberIsMethod;
+
 	CfgEntityLevel level;
 	
 	String appSpec;
@@ -27,21 +28,26 @@ class SectionHeader {
 		initLevel();
 	}
 
+	SectionHeader(Pattern appPattern, Pattern classPattern) {
+		this (appPattern, classPattern, null, false);
+	}
+	
 	SectionHeader(Pattern appPattern, Pattern classPattern,
-			Pattern memberPattern) {
+			Pattern memberPattern, boolean memberIsMethod) {
 		this.appPattern = appPattern;
 		this.classPattern = classPattern;
 		this.memberPattern = memberPattern;
-		
+		this.memberIsMethod = memberIsMethod;
+
 		if (appPattern == null || (classPattern == null && memberPattern != null)) {
 			throw new IllegalArgumentException("Illegal SectionHeader");
 		}
-		
+
 		initLevel();
 	}
-	
+
 	void initLevel() {
-		level = CfgEntityLevel.levelFor(appPattern, classPattern, memberPattern);	
+		level = CfgEntityLevel.levelFor(appPattern, classPattern, memberPattern, memberIsMethod);
 	}
 	
 	/**
@@ -49,19 +55,20 @@ class SectionHeader {
 	 * name, sections with lower level are considered non-matching (i.e. Member-level
 	 * sections cannot contain App-level properties).
 	 */
-	public boolean matches(String appName, String className, String memberName) {
-		return check(memberPattern, memberName) 
-				&& check(classPattern, className)
-				&& check(appPattern, appName);
+	public boolean matches(String appName, String className, String memberName, boolean memberIsMethod) {
+		return check(appPattern, appName) && check(classPattern, className) &&
+			(memberPattern == null ||
+			this.memberIsMethod == memberIsMethod && check(memberPattern, memberName));
 	}
 	
 	/**
 	 * Used for property matching in app subconfigs, where all sections are known
 	 * to match the application. 
 	 */
-	public boolean matchesAfterApp(String className, String memberName) {
-		return check(memberPattern, memberName) 
-				&& check(classPattern, className);
+	public boolean matchesAfterApp(String className, String memberName, boolean memberIsMethod) {
+		return check(classPattern, className) &&
+			(memberPattern == null ||
+			this.memberIsMethod == memberIsMethod && check(memberPattern, memberName));
 	}
 
 	/**

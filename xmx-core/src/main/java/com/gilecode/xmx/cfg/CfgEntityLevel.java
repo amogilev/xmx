@@ -11,7 +11,8 @@ package com.gilecode.xmx.cfg;
  * and Class, while App-level must have single App pattern.
  * <p/>
  * The level of the property is determined by the method which is used to
- * access it, like {@link IXmxConfig#getClassProperty()}
+ * access it, like {@link IXmxPropertiesSource#getSystemProperty(String)} or
+ * {@link IAppPropertiesSource#getClassProperty(String, String)}}
  *  
  * @author Andrey
  *
@@ -23,7 +24,9 @@ public enum CfgEntityLevel {
 	
 	APP(1),
 	CLASS(2),
-	MEMBER(3);
+
+	METHOD(4),
+	FIELD(5);
 	
 	private int level;
 
@@ -35,9 +38,9 @@ public enum CfgEntityLevel {
 		return level;
 	}
 	
-	public static <T> CfgEntityLevel levelFor(T appSpec, T classSpec, T memberSpec) {
+	public static <T> CfgEntityLevel levelFor(T appSpec, T classSpec, T memberSpec, boolean memberIsMethod) {
 		if (memberSpec != null) {
-			return MEMBER;
+			return memberIsMethod ? METHOD : FIELD;
 		} else if (classSpec != null) {
 			return CLASS;
 		} else if (appSpec != null) {

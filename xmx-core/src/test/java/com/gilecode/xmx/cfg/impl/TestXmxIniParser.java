@@ -6,8 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static com.gilecode.xmx.cfg.impl.XmxCfgSectionNameParser.findUnquotedChar;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class TestXmxIniParser {
 	
@@ -29,7 +28,7 @@ public class TestXmxIniParser {
 		assertEquals(-1, findUnquotedChar(str, ',', str.length()+100));
 		assertEquals(-1, findUnquotedChar(str, 'c', 0));
 	}
-	
+
 	@Test
 	public void testParseSectionNamePartEmpty1() {
 		uut.parseSectionNamePart("App");
@@ -93,8 +92,30 @@ public class TestXmxIniParser {
 		SectionHeader sh = uut.parseSectionHeader("App=*;Class=com.gilecode.Foo");
 		assertEquals("*", sh.appSpec);
 		assertEquals("com.gilecode.Foo", sh.classSpec);
-		assertTrue(sh.matches("myapp", "com.gilecode.Foo", null));
+		assertTrue(sh.matches("myapp", "com.gilecode.Foo", null, true));
 	}
 	
-	
+	@Test
+	public void testDuplicateParts() {
+		try {
+			uut.parseSectionHeader("App=*;Class=com.gilecode.Foo;Class=Foo");
+			fail("Exception expected");
+		} catch (XmxIniParseException e) {
+			assertEquals("Duplicate part 'Class' in section 'App=*;Class=com.gilecode.Foo;Class=Foo'",
+					e.getMessage());
+		}
+	}
+
+	@Test
+	public void testDuplicateMemberParts() {
+		try {
+			uut.parseSectionHeader("App=*;Method=Foo;Field=Bar");
+			fail("Exception expected");
+		} catch (XmxIniParseException e) {
+			assertEquals("Wrong section name - Method and Field parts cannot be combined: 'App=*;Method=Foo;Field=Bar'",
+					e.getMessage());
+		}
+	}
+
+
 }

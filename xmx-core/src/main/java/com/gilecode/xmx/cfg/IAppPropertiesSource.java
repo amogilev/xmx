@@ -14,7 +14,9 @@ public interface IAppPropertiesSource {
 	
 	PropertyValue getClassProperty(String className, String propName);
 	
-	PropertyValue getMemberProperty(String className, String memberName, String propName);
+	PropertyValue getMethodProperty(String className, String methodName, String propName);
 
-	List<PropertyValue> getDistinctMemberPropertyValues(String className, String propName);
+	PropertyValue getFieldProperty(String className, String fieldName, String propName);
+
+	List<PropertyValue> getDistinctMethodPropertyValues(String className, String propName);
 }

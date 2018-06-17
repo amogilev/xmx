@@ -411,7 +411,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 	}
 
 	private Map<String, Class<?>> loadPotentialAdvices(IAppPropertiesSource appConfig, String className, ManagedClassLoaderWeakRef classLoaderInfo) {
-		List<PropertyValue> potentialAdvices = appConfig.getDistinctMemberPropertyValues(className, Properties.M_ADVICES);
+		List<PropertyValue> potentialAdvices = appConfig.getDistinctMethodPropertyValues(className, Properties.M_ADVICES);
 		if (potentialAdvices.isEmpty()) {
 			return Collections.emptyMap();
 		}

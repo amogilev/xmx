@@ -38,7 +38,7 @@ public final class Properties {
 	public static final String SP_MANAGED = "Managed";
 
 	//
-	// known member-level properties
+	// known method-level properties
 	//
 	public static final String M_ADVICES = "Advices";
 
@@ -58,12 +58,16 @@ public final class Properties {
 	private static final Set<String> ALL_CLASS_PROPNAMES = new HashSet<>(Arrays.asList(
 			CLASS_MAX_INSTANCES, SP_MANAGED));
 	
-	// all known names of Member-level properties
-	private static final Set<String> ALL_MEMBER_PROPNAMES = Collections.singleton(M_ADVICES);
+	// all known names of Method-level properties
+	private static final Set<String> ALL_METHOD_PROPNAMES = Collections.singleton(M_ADVICES);
+
+	// all known names of Field-level properties - none yet
+	private static final Set<String> ALL_FIELD_PROPNAMES = Collections.emptySet();
 
 	// all known names of App-level properties - includes all class-level properties, theirs special '*Classes" form,
 	//  and App-only properies 
 	private static final Set<String> ALL_APP_PROPNAMES = new HashSet<>();
+
 	static {
 		ALL_APP_PROPNAMES.addAll(Arrays.asList(APP_ENABLED, specialClassesForm(SP_MANAGED)));
 		ALL_APP_PROPNAMES.addAll(ALL_CLASS_PROPNAMES);
@@ -98,8 +102,10 @@ public final class Properties {
 			return ALL_APP_PROPNAMES.contains(name);
 		case CLASS:
 			return ALL_CLASS_PROPNAMES.contains(name);
-		case MEMBER:
-			return ALL_MEMBER_PROPNAMES.contains(name);
+		case METHOD:
+			return ALL_METHOD_PROPNAMES.contains(name);
+		case FIELD:
+			return ALL_FIELD_PROPNAMES.contains(name);
 		default:
 			assert false;
 			return false;
