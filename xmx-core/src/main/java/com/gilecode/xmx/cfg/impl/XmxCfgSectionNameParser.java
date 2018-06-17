@@ -34,7 +34,8 @@ public class XmxCfgSectionNameParser implements SectionsNamespace {
 		SectionHeader header = new SectionHeader();
 		for (Entry<String, String> e : sectionNameParts.entrySet()) {
 			String spec = e.getValue();
-			Pattern pattern = PatternsSupport.parse(spec);
+			boolean isMethod = e.getKey().equals(PART_METHOD);
+			Pattern pattern = isMethod ? null : PatternsSupport.parse(spec);
 			switch (e.getKey()) {
 			case PART_APP:
 				header.appSpec = spec;
@@ -46,20 +47,24 @@ public class XmxCfgSectionNameParser implements SectionsNamespace {
 				break;
 			case PART_METHOD:
 			case PART_FIELD:
-				if (header.memberSpec != null) {
+				if (header.methodOrFieldSpec != null) {
 					throw new XmxIniParseException("Wrong section name - Method and Field parts cannot be combined: '"
 							+ curSectionName + "'");
 				}
-				header.memberIsMethod = e.getKey().equals(PART_METHOD);
-				header.memberSpec = spec;
-				header.memberPattern = pattern;
+				header.methodOrFieldSpec = spec;
+				if (isMethod) {
+					header.methodMatcher = PatternsSupport.parseMethodPattern(spec);
+				} else {
+					header.fieldPattern = pattern;
+				}
+
 				break;
 			default:
 				throw new XmxIniParseException("Unrecognized property: '" + e.getKey() + 
 						" in section name [" + curSectionName + "]"); 
 			}
 		}
-		header.initLevel();
+		header.init();
 		return header;
 	}
 

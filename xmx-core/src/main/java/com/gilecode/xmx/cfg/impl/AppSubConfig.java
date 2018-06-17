@@ -2,6 +2,7 @@
 
 package com.gilecode.xmx.cfg.impl;
 
+import com.gilecode.xmx.cfg.CfgEntityLevel;
 import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.cfg.PropertyValue;
@@ -36,30 +37,61 @@ public class AppSubConfig implements IAppPropertiesSource {
 
 	@Override
 	public PropertyValue getAppProperty(String propName) {
-		return getProperty(null, null, false, propName);
+		for (SectionWithHeader sh : matchingSectionsReversed) {
+			SectionHeader header = sh.getHeader();
+			if (header.level == CfgEntityLevel.APP && sh.containsKey(propName)) {
+				return PropertyValueImpl.of(sh.get(propName));
+			}
+		}
+
+		return null;
 	}
 	
 	@Override
 	public PropertyValue getClassProperty(String className, String propName) {
-		return getProperty(className, null, false, propName);
+		if (Properties.isSpecial(propName)) {
+			return getSpecialClassProperty(className, propName);
+		}
+
+		for (SectionWithHeader sh : matchingSectionsReversed) {
+			SectionHeader header = sh.getHeader();
+			// currently. class properties are allowed both in App and Class sections
+			if (sh.containsKey(propName) &&
+					(header.level == CfgEntityLevel.APP || header.isMatchingClassSection(className))) {
+				return PropertyValueImpl.of(sh.get(propName));
+			}
+		}
+
+		return null;
 	}
 
 	@Override
 	public PropertyValue getMethodProperty(String className, MethodSpec methodSpec, String propName) {
-		// FIXME: match method pattern instead
-		return getProperty(className, methodSpec.getName(), true, propName);
+		for (SectionWithHeader sh : matchingSectionsReversed) {
+			if (sh.getHeader().isMatchingMethodSection(className, methodSpec) && sh.containsKey(propName)) {
+				return PropertyValueImpl.of(sh.get(propName));
+			}
+		}
+
+		return null;
 	}
 
 	@Override
 	public PropertyValue getFieldProperty(String className, String fieldName, String propName) {
-		return getProperty(className, fieldName, false, propName);
+		for (SectionWithHeader sh : matchingSectionsReversed) {
+			if (sh.getHeader().isMatchingFieldSection(className, fieldName) && sh.containsKey(propName)) {
+				return PropertyValueImpl.of(sh.get(propName));
+			}
+		}
+
+		return null;
 	}
 
 	@Override
 	public List<PropertyValue> getDistinctMethodPropertyValues(String className, String propName) {
 		Set<String> distinctValues = new LinkedHashSet<>();
 		for (SectionWithHeader sh : matchingSectionsReversed) {
-			if (sh.getHeader().matchesAfterApp(className, "*", true) && sh.containsKey(propName)) {
+			if (sh.getHeader().isMatchingMethodSection(className, null) && sh.containsKey(propName)) {
 				distinctValues.add(sh.get(propName));
 			}
 		}
@@ -71,41 +103,21 @@ public class AppSubConfig implements IAppPropertiesSource {
 
 		return result;
 	}
-	
+
 	/**
-	 * Internal method which works with all property levels from App to Member. 
-	 */
-	private PropertyValue getProperty(String className,
-			String memberName, boolean memberIsMethod, String propName) {
-		
-		if (memberName == null && Properties.isSpecial(propName)) {
-			return getSpecialClassProperty(className, propName);
-		}
-		
-		for (SectionWithHeader sh : matchingSectionsReversed) {
-			if (sh.getHeader().matchesAfterApp(className, memberName, memberIsMethod) && sh.containsKey(propName)) {
-				return PropertyValueImpl.of(sh.get(propName));
-			}
-		}
-		
-		return null;
-	}
-	
-	/**
-	 * Supports "special" class properties and their Class-pattern form, like Managed & ManangedClasses.
+	 * Supports "special" class properties and their Class-pattern form, like Managed & ManagedClasses.
 	 */
 	private PropertyValue getSpecialClassProperty(String className, String propName) {
 		String propClassForm = Properties.specialClassesForm(propName);
 		
 		for (SectionWithHeader sh : matchingSectionsReversed) {
-			if (sh.getHeader().matchesAfterApp(className, null, false)) {
-				if (sh.containsKey(propName)) {
-					return PropertyValueImpl.of(sh.get(propName)); 
-				} else if (sh.getHeader().classSpec == null && sh.containsKey(propClassForm)) {
-					String patternValue = sh.get(propClassForm);
-					boolean propValue = PatternsSupport.matches(patternValue, className);
-					return PropertyValueImpl.of(Boolean.toString(propValue));
-				}
+			SectionHeader header = sh.getHeader();
+			if (header.level == CfgEntityLevel.APP && sh.containsKey(propClassForm)) {
+				String patternValue = sh.get(propClassForm);
+				boolean propValue = PatternsSupport.matches(patternValue, className);
+				return PropertyValueImpl.of(Boolean.toString(propValue));
+			} else if (header.isMatchingClassSection(className) && sh.containsKey(propName)) {
+				return PropertyValueImpl.of(sh.get(propName));
 			}
 		}
 		

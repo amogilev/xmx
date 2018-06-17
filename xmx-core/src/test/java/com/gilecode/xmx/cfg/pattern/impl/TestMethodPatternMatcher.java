@@ -212,6 +212,11 @@ public class TestMethodPatternMatcher {
     }
 
     @Test
+    public void testQuotedPattern() {
+        checkCount("\"int main*\"", 1);
+    }
+
+    @Test
     public void testSkipsGenerics() {
         checkCount("public <T> void main*(T)", 0);
     }

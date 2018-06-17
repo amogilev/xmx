@@ -3,11 +3,14 @@
 package com.gilecode.xmx.cfg.impl;
 
 import com.gilecode.xmx.cfg.CfgEntityLevel;
+import com.gilecode.xmx.cfg.pattern.IMethodMatcher;
+import com.gilecode.xmx.cfg.pattern.MethodSpec;
 
 import java.util.regex.Pattern;
 
 /**
- * Parsed name for System, App-level, Class-level or Member-level configuration section. 
+ * Parsed name for System, App-level, Class-level or Member-level configuration section.
+ * Provides convenient methods for property matching.
  * 
  * @author Andrey Mogilev
  */
@@ -15,60 +18,89 @@ class SectionHeader {
 
 	Pattern appPattern;
 	Pattern classPattern;
-	Pattern memberPattern;
-	boolean memberIsMethod;
+	IMethodMatcher methodMatcher;
+	Pattern fieldPattern; // will be changed to IFieldMatcher eventually
+	boolean hasMemberPart;
 
 	CfgEntityLevel level;
 	
 	String appSpec;
 	String classSpec;
-	String memberSpec;
+	String methodOrFieldSpec;
 	
 	SectionHeader() {
-		initLevel();
+		init();
 	}
 
 	SectionHeader(Pattern appPattern, Pattern classPattern) {
-		this (appPattern, classPattern, null, false);
+		this (appPattern, classPattern, null, null);
 	}
 	
 	SectionHeader(Pattern appPattern, Pattern classPattern,
-			Pattern memberPattern, boolean memberIsMethod) {
+	              IMethodMatcher methodMatcher, Pattern fieldPattern) {
 		this.appPattern = appPattern;
 		this.classPattern = classPattern;
-		this.memberPattern = memberPattern;
-		this.memberIsMethod = memberIsMethod;
+		this.methodMatcher = methodMatcher;
+		this.fieldPattern = fieldPattern;
 
-		if (appPattern == null || (classPattern == null && memberPattern != null)) {
-			throw new IllegalArgumentException("Illegal SectionHeader");
+		init();
+
+		if (methodMatcher != null && fieldPattern != null) {
+			throw new IllegalArgumentException("Illegal SectionHeader: both Method and Field parts");
 		}
 
-		initLevel();
+		if (appPattern == null || (classPattern == null && hasMemberPart)) {
+			throw new IllegalArgumentException("Illegal SectionHeader");
+		}
 	}
 
-	void initLevel() {
-		level = CfgEntityLevel.levelFor(appPattern, classPattern, memberPattern, memberIsMethod);
+	void init() {
+		this.hasMemberPart = methodMatcher != null || fieldPattern != null;
+		Object memberPart = hasMemberPart ? this : null; // any non-null Object works here
+		this.level = CfgEntityLevel.levelFor(appPattern, classPattern, memberPart, methodMatcher != null);
 	}
 	
+	public boolean isMatchingClassSection(String appName, String className) {
+		return appMatches(appName) && isMatchingClassSection(className);
+	}
+
+	public boolean isMatchingMethodSection(String appName, String className, MethodSpec methodSpec) {
+		return appMatches(appName) && isMatchingMethodSection(className, methodSpec);
+	}
+
 	/**
-	 * Used for property matching. Property level is determined by the least non-null
-	 * name, sections with lower level are considered non-matching (i.e. Member-level
-	 * sections cannot contain App-level properties).
+	 * Check whether this section is a Field section which matches specified app, class and field.
 	 */
-	public boolean matches(String appName, String className, String memberName, boolean memberIsMethod) {
-		return check(appPattern, appName) && check(classPattern, className) &&
-			(memberPattern == null ||
-			this.memberIsMethod == memberIsMethod && check(memberPattern, memberName));
+	public boolean isMatchingFieldSection(String appName, String className, String fieldName) {
+		return appMatches(appName) && isMatchingFieldSection(className, fieldName);
 	}
-	
+
 	/**
 	 * Used for property matching in app subconfigs, where all sections are known
 	 * to match the application. 
 	 */
-	public boolean matchesAfterApp(String className, String memberName, boolean memberIsMethod) {
-		return check(classPattern, className) &&
-			(memberPattern == null ||
-			this.memberIsMethod == memberIsMethod && check(memberPattern, memberName));
+	public boolean isMatchingClassSection(String className) {
+		return level == CfgEntityLevel.CLASS && check(classPattern, className);
+	}
+
+	public boolean isMatchingFieldSection(String className, String fieldName) {
+		return level == CfgEntityLevel.FIELD && check(classPattern, className)
+				&& (fieldName == null || fieldPattern.matcher(fieldName).matches());
+	}
+
+	/**
+	 * Return {@code true} iff this section is a Method section which matches the class name and the
+	 * method, if the latter is specified. If {@code null} 'methodSpec' is provided, then only the
+	 * class name is checked.
+	 *
+	 * @param className the class name to match against the Class part
+	 * @param methodSpec the method specification to match, or {@code null}
+	 *
+	 * @return whether this section is a matching Method-level section
+	 */
+	public boolean isMatchingMethodSection(String className, MethodSpec methodSpec) {
+		return level == CfgEntityLevel.METHOD && check(classPattern, className)
+				&& (methodSpec == null || methodMatcher.matches(methodSpec));
 	}
 
 	/**
@@ -103,8 +135,9 @@ class SectionHeader {
 		if (classSpec != null) {
 			sb.append(";Class=").append(classSpec);
 		}
-		if (memberSpec != null) {
-			sb.append(";Member=").append(memberSpec);
+		if (methodOrFieldSpec != null) {
+			String key = fieldPattern == null ? "Method" : "Field";
+			sb.append(";").append(key).append("=").append(methodOrFieldSpec);
 		}
 		sb.append(']');
 		return sb.toString();

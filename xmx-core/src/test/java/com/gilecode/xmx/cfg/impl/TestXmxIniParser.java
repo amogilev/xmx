@@ -92,7 +92,7 @@ public class TestXmxIniParser {
 		SectionHeader sh = uut.parseSectionHeader("App=*;Class=com.gilecode.Foo");
 		assertEquals("*", sh.appSpec);
 		assertEquals("com.gilecode.Foo", sh.classSpec);
-		assertTrue(sh.matches("myapp", "com.gilecode.Foo", null, true));
+		assertTrue(sh.isMatchingClassSection("myapp", "com.gilecode.Foo"));
 	}
 	
 	@Test

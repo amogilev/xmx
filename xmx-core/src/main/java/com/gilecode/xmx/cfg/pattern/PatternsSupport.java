@@ -66,6 +66,12 @@ public class PatternsSupport {
 	}
 
 	public static IMethodMatcher parseMethodPattern(String patternValue) throws XmxIniParseException {
+		patternValue = patternValue.trim();
+		// remove quotes if necessary
+		if (patternValue.length() >= 2 && patternValue.charAt(0) == '"'
+				&& patternValue.charAt(patternValue.length() - 1) == '"') {
+			patternValue = patternValue.substring(1, patternValue.length() - 1);
+		}
 		String[] patterns = patternValue.split("\\|");
 		if (patterns.length == 1) {
 			return new MethodPatternParser(patterns[0]).getMatcher();
