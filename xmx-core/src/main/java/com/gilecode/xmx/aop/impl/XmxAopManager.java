@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.*;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -28,7 +29,6 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 
 	private final static Logger logger = LoggerFactory.getLogger(XmxAopManager.class);
 
-	private final Set<String> knownBadDescs = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 	private final AdviceVerifier adviceVerifier = new AdviceVerifier();
 	private final AtomicInteger joinPointsCounter = new AtomicInteger(1);
 	private final ConcurrentMap<Integer, WeavingContext> joinpointsWeavingInfo = new ConcurrentHashMap<>();
@@ -52,32 +52,102 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 	}
 
 	@Override
-	public Map<String, Class<?>> loadAndVerifyAdvices(Collection<String> adviceDescs, ManagedClassLoaderWeakRef classLoaderRef) {
-		Map<String, Class<?>> adviceClassesByDesc = new HashMap<>(adviceDescs.size());
+	public AdviceLoadResult loadAndVerifyAdvices(Collection<String> adviceDescs, ManagedClassLoaderWeakRef classLoaderRef) {
+		Map<String, WeakCachedSupplier<Class<?>>> adviceClassesByDesc = new HashMap<>(adviceDescs.size());
+		Set<ClassLoader> jarLoaders = new HashSet<>(adviceDescs.size());
 		for (String desc : adviceDescs) {
-			if (knownBadDescs.contains(desc)) {
-				continue;
-			}
-			try {
-				int n = desc.lastIndexOf(':');
-				String jarName = n > 0 ? desc.substring(0, n) : null;
-				String className = n >= 0 ? desc.substring(n + 1) : desc;
-
-				Class<?> adviceClass = loadClass(classLoaderRef, jarName, className);
-				// FIXME cache verified advice classes somewhere (in ManagedClassLoaderWeakRef)?
-				adviceVerifier.verifyAdviceClass(adviceClass);
-
-				adviceClassesByDesc.put(desc, adviceClass);
-
-			} catch (BadAdviceException e) {
-				knownBadDescs.add(desc);
-				logger.warn("Bad advice '" + desc + "' is skipped!", e);
+			WeakCachedSupplier<Class<?>> adviceClassSup = loadAndVerifyAdviceClass(desc, classLoaderRef, jarLoaders);
+			if (adviceClassSup != null) {
+				adviceClassesByDesc.put(desc, adviceClassSup);
 			}
 		}
-		return adviceClassesByDesc;
+		return new AdviceLoadResult(adviceClassesByDesc, jarLoaders);
 	}
 
-	private Class<?> loadClass(ManagedClassLoaderWeakRef classLoaderRef, String jarName, String className) throws BadAdviceException {
+	private class JarClassLoadingSupplier extends WeakCachedSupplier<Class<?>> {
+
+		private final String jarName;
+		private final String className;
+		private final ManagedClassLoaderWeakRef targetCLRef;
+
+		public JarClassLoadingSupplier(String jarName, String className, ManagedClassLoaderWeakRef targetCLRef) {
+			this.jarName = jarName;
+			this.className = className;
+			this.targetCLRef = targetCLRef;
+		}
+
+		@Override
+		protected Class<?> load() throws BadAdviceException {
+			return loadClass(targetCLRef, jarName, className);
+		}
+	}
+
+	private static class AdviceMethodSupplier extends WeakCachedSupplier<Method> {
+
+		private final ISupplier<Class<?>> classSup;
+		private final int methodIdx;
+		private final String methodName; // used to check that the class is not changed (much)
+
+		public AdviceMethodSupplier(ISupplier<Class<?>> classSup, int methodIdx, Method initialRef) {
+			super(new WeakReference<>(initialRef));
+			this.classSup = classSup;
+			this.methodIdx = methodIdx;
+			this.methodName = initialRef.getName();
+		}
+
+		@Override
+		protected Method load() throws BadAdviceException {
+			Class<?> adviceClass = classSup.get();
+			Method[] declaredMethods = adviceClass.getDeclaredMethods();
+			if (methodIdx >= declaredMethods.length || !methodName.equals(declaredMethods[methodIdx].getName())) {
+				throw new BadAdviceException("Unexpected concurrent change of the advice class " + adviceClass);
+			}
+			return declaredMethods[methodIdx];
+		}
+	}
+
+	private WeakCachedSupplier<Class<?>> loadAndVerifyAdviceClass(String desc, ManagedClassLoaderWeakRef classLoaderRef,
+	                                                              Set<ClassLoader> jarLoaders) {
+		Class<?> adviceClass;
+		WeakCachedSupplier<Class<?>> adviceClassSup = classLoaderRef.getVerifiedAdvicesByDesc().get(desc);
+		if (adviceClassSup == null && classLoaderRef.getKnownBadAdviceDescs().contains(desc)) {
+			return null;
+		} else if (adviceClassSup != null) {
+			try {
+				adviceClass = adviceClassSup.get();
+			} catch (BadAdviceException e) {
+				// unexpected: a class was successfully loaded once, but has failed to re-load
+				classLoaderRef.getKnownBadAdviceDescs().add(desc);
+				logger.error("Unexpected: failed to re-load advice '" + desc + "'!", e);
+				return null;
+			}
+
+			// found cached and weak ref is still alive
+			jarLoaders.add(adviceClass.getClassLoader());
+			return adviceClassSup;
+		}
+
+		// load class and verify it if loaded for the first time
+		try {
+			int n = desc.lastIndexOf(':');
+			String jarName = n > 0 ? desc.substring(0, n) : null;
+			String className = n >= 0 ? desc.substring(n + 1) : desc;
+
+			adviceClassSup = new JarClassLoadingSupplier(jarName, className, classLoaderRef);
+			adviceClass = adviceClassSup.load();
+			adviceVerifier.verifyAdviceClass(adviceClass);
+
+			classLoaderRef.getVerifiedAdvicesByDesc().put(desc, adviceClassSup);
+			return adviceClassSup;
+
+		} catch (BadAdviceException e) {
+			classLoaderRef.getKnownBadAdviceDescs().add(desc);
+			logger.warn("Bad advice '" + desc + "' is skipped!", e);
+			return null;
+		}
+	}
+
+	Class<?> loadClass(ManagedClassLoaderWeakRef classLoaderRef, String jarName, String className) throws BadAdviceException {
 		ClassLoader adviceJarLoader = getOrCreateAdviceJarLoader(classLoaderRef, jarName);
 		try {
 			return Class.forName(className, true, adviceJarLoader);
@@ -87,14 +157,33 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 	}
 
 	private ClassLoader getOrCreateAdviceJarLoader(ManagedClassLoaderWeakRef classLoaderRef, String jarName) throws BadAdviceException {
-		ConcurrentMap<String, ClassLoader> adviceJarLoaders = classLoaderRef.getAdviceJarLoaders();
-		ClassLoader jarLoader = adviceJarLoaders.get(jarName);
+		ConcurrentMap<String, ManagedClassLoaderWeakRef.SmartReference<ClassLoader>> adviceJarLoaders =
+				classLoaderRef.getAdviceJarLoaders();
+		ManagedClassLoaderWeakRef.SmartReference<ClassLoader> jarLoaderRef = adviceJarLoaders.get(jarName);
+		ClassLoader jarLoader = jarLoaderRef == null ? null : jarLoaderRef.get();
 		if (jarLoader == null) {
 			URL jarUrl = getJarFile(jarName);
-			ClassLoader newJarLoader = new XmxURLClassLoader(new URL[]{jarUrl}, classLoaderRef.get());
-			jarLoader = adviceJarLoaders.putIfAbsent(jarName, newJarLoader);
-			if (jarLoader == null) {
-				jarLoader = newJarLoader;
+			ClassLoader targetCL = classLoaderRef.get();
+			ClassLoader newJarLoader = new XmxURLClassLoader(new URL[]{jarUrl}, targetCL);
+			ManagedClassLoaderWeakRef.SmartReference<ClassLoader> newJarLoaderRef =
+					classLoaderRef.createSmartReference(newJarLoader);
+			logger.debug("Loaded advice JAR {} for target CL {}", jarUrl, targetCL);
+
+			while (true) {
+				jarLoaderRef = adviceJarLoaders.putIfAbsent(jarName, newJarLoaderRef);
+				if (jarLoaderRef != null) {
+					if ((jarLoader = jarLoaderRef.get()) != null) {
+						// use the first CL added to adviceJarLoaders, remove the extra created smart reference
+						classLoaderRef.removeSmartReference(jarLoaderRef);
+						return jarLoader;
+					} else if (!adviceJarLoaders.replace(jarName, jarLoaderRef, newJarLoaderRef)) {
+						// the stored reference is GC'ed, but replacing it failed because of the concurrent change,
+						//  so try again
+						continue;
+					}
+				}
+				// OK, use new created class loader
+				return newJarLoader;
 			}
 		}
 		return jarLoader;
@@ -141,33 +230,43 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 
 	@Override
 	public WeavingContext prepareMethodAdvicesWeaving(Collection<String> adviceDescs,
-	                                                  Map<String, Class<?>> adviceClassesByDesc,
+	                                                  Map<String, WeakCachedSupplier<Class<?>>> adviceClassesByDesc,
 	                                                  Type[] targetParamTypes, Type targetReturnType,
 	                                                  String targetClassName, String targetMethodName) {
 		WeavingContext ctx = new WeavingContext(joinPointsCounter.getAndIncrement());
 		Map<AdviceKind, List<WeavingAdviceInfo>> adviceInfoByKind = ctx.getAdviceInfoByKind();
 		for (String desc : adviceDescs) {
-			Class<?> adviceClass = adviceClassesByDesc.get(desc);
-			if (adviceClass != null) {
-				for (Method advice : adviceClass.getDeclaredMethods()) {
-					Advice adviceAnnotation = advice.getAnnotation(Advice.class);
-					if (adviceAnnotation == null || !adviceVerifier.isAdviceCompatibleMethod(advice,
-							targetParamTypes, targetReturnType, targetClassName, targetMethodName)) {
-						continue;
-					}
-
-					AdviceKind adviceKind = adviceAnnotation.value();
-					WeavingAdviceInfo adviceInfo = prepareWeaving(advice, adviceKind, ctx, targetParamTypes.length);
-
-					List<WeavingAdviceInfo> compatibleAdvices = adviceInfoByKind.get(adviceKind);
-					if (compatibleAdvices == null) {
-						compatibleAdvices = new ArrayList<>(2);
-						adviceInfoByKind.put(adviceKind, compatibleAdvices);
-					}
-					compatibleAdvices.add(adviceInfo);
+			WeakCachedSupplier<Class<?>> adviceClassSup = adviceClassesByDesc.get(desc);
+			Class<?> adviceClass;
+			try {
+				adviceClass = adviceClassSup.get();
+			} catch (BadAdviceException e) {
+				// not expected here
+				logger.error("Unexpected: the advice class shall be cached: {}", desc);
+				continue;
+			}
+			Method[] declaredMethods = adviceClass.getDeclaredMethods();
+			for (int i = 0; i < declaredMethods.length; i++) {
+				Method advice = declaredMethods[i];
+				Advice adviceAnnotation = advice.getAnnotation(Advice.class);
+				if (adviceAnnotation == null || !adviceVerifier.isAdviceCompatibleMethod(advice,
+						targetParamTypes, targetReturnType, targetClassName, targetMethodName)) {
+					continue;
 				}
+
+				AdviceMethodSupplier adviceSup = new AdviceMethodSupplier(adviceClassSup, i, advice);
+				AdviceKind adviceKind = adviceAnnotation.value();
+				WeavingAdviceInfo adviceInfo = prepareWeaving(adviceSup, advice, adviceKind, ctx, targetParamTypes.length);
+
+				List<WeavingAdviceInfo> compatibleAdvices = adviceInfoByKind.get(adviceKind);
+				if (compatibleAdvices == null) {
+					compatibleAdvices = new ArrayList<>(2);
+					adviceInfoByKind.put(adviceKind, compatibleAdvices);
+				}
+				compatibleAdvices.add(adviceInfo);
 			}
 		}
+
 		if (!adviceInfoByKind.isEmpty()) {
 			joinpointsWeavingInfo.put(ctx.getJoinpointId(), ctx);
 			int interceptedArgumentsCount = ctx.getInterceptedArguments().size();
@@ -181,7 +280,8 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 	}
 
 	// NOTE: advice class shall be verified and advice method shall be compatible! Checks are not duplicated!
-	private WeavingAdviceInfo prepareWeaving(Method advice, AdviceKind adviceKind, WeavingContext ctx, int nTargetParams) {
+	private WeavingAdviceInfo prepareWeaving(AdviceMethodSupplier adviceSup, Method advice, AdviceKind adviceKind,
+	                                         WeavingContext ctx, int nTargetParams) {
 		Annotation[][] parametersAnnotations = advice.getParameterAnnotations();
 
 		List<AdviceArgument> arguments = new ArrayList<>(parametersAnnotations.length);
@@ -208,7 +308,7 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 
 		// check @OverrideRetVal if present
 		hasOverrideRetVal = advice.getAnnotation(OverrideRetVal.class) != null;
-		return new WeavingAdviceInfo(advice, adviceKind, arguments, hasOverrideRetVal);
+		return new WeavingAdviceInfo(adviceSup, adviceKind, arguments, hasOverrideRetVal);
 	}
 
 	private static boolean isFastProxyArgsAllowed(List<AdviceArgument> adviceArguments, int interceptedArgumentsCount) {

@@ -2,6 +2,7 @@
 
 package com.gilecode.xmx.aop;
 
+import com.gilecode.xmx.aop.impl.WeakCachedSupplier;
 import com.gilecode.xmx.aop.impl.WeavingContext;
 import com.gilecode.xmx.core.ManagedClassLoaderWeakRef;
 import org.objectweb.asm.Type;
@@ -17,7 +18,7 @@ public interface IXmxAopLoader {
 	 * @param adviceDescs descriptors of advice classes, with the name of jar and class
 	 * @param classLoaderRef the (managed) class loader of target classes; used as a parent loader for actual loader of
 	 */
-	Map<String, Class<?>> loadAndVerifyAdvices(Collection<String> adviceDescs, ManagedClassLoaderWeakRef classLoaderRef);
+	AdviceLoadResult loadAndVerifyAdvices(Collection<String> adviceDescs, ManagedClassLoaderWeakRef classLoaderRef);
 
 	/**
 	 * Among all pre-loaded advices configured for the specified target method, selects the compatible advice methods
@@ -26,7 +27,8 @@ public interface IXmxAopLoader {
 	 * In particular, the preparation determines which target arguments need to be intercepted, to what advice
 	 * methods they shall be proxied etc.
 	 */
-	WeavingContext prepareMethodAdvicesWeaving(Collection<String> adviceDescs, Map<String, Class<?>> adviceClassesByDesc,
+	WeavingContext prepareMethodAdvicesWeaving(Collection<String> adviceDescs,
+	                                           Map<String, WeakCachedSupplier<Class<?>>> adviceClassesByDesc,
 	                                           Type[] targetParamTypes, Type targetReturnType,
 	                                           String targetClassName, String targetMethodName);
 }

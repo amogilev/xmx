@@ -2,7 +2,6 @@
 
 package com.gilecode.xmx.aop.impl;
 
-import com.gilecode.xmx.TestUtils;
 import com.gilecode.xmx.aop.*;
 import org.junit.Test;
 import org.objectweb.asm.Type;
@@ -412,8 +411,8 @@ public class TestAdviceVerifier {
 
 	private boolean checkCompatibility(Class<?> adviceClass, String adviceMethodName, String testMethodName) throws BadAdviceException {
 		uut.verifyAdviceClass(adviceClass);
-		Method target = TestUtils.findMethod(TestAdviceVerifier.class, testMethodName);
-		Method advice = TestUtils.findMethod(adviceClass, adviceMethodName);
+		Method target = AopTestUtils.findMethod(TestAdviceVerifier.class, testMethodName);
+		Method advice = AopTestUtils.findMethod(adviceClass, adviceMethodName);
 		return uut.isAdviceCompatibleMethod(advice, Type.getArgumentTypes(target), Type.getReturnType(target),
 				TestAdviceVerifier.class.getName(), testMethodName);
 	}

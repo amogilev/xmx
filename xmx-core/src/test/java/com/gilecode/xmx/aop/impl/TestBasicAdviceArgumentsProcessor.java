@@ -2,7 +2,6 @@
 
 package com.gilecode.xmx.aop.impl;
 
-import com.gilecode.xmx.TestUtils;
 import com.gilecode.xmx.aop.*;
 import org.junit.Test;
 
@@ -21,7 +20,7 @@ public class TestBasicAdviceArgumentsProcessor extends BasicAdviceArgumentsProce
 
 	@Test
 	public void testGetAdviceArgumentKind() {
-		Method m = TestUtils.findMethod(TestBasicAdviceArgumentsProcessor.class, "sampleMethod");
+		Method m = AopTestUtils.findMethod(TestBasicAdviceArgumentsProcessor.class, "sampleMethod");
 		Annotation[][] annotations = m.getParameterAnnotations();
 
 		assertEquals(AdviceArgument.Kind.ARGUMENT, getAdviceArgumentKind(annotations[0][0]));
@@ -34,7 +33,7 @@ public class TestBasicAdviceArgumentsProcessor extends BasicAdviceArgumentsProce
 
 	@Test
 	public void testFindArgumentAnnotation() {
-		Method m = TestUtils.findMethod(TestBasicAdviceArgumentsProcessor.class, "sampleMethod");
+		Method m = AopTestUtils.findMethod(TestBasicAdviceArgumentsProcessor.class, "sampleMethod");
 		Annotation[][] annotations = m.getParameterAnnotations();
 
 		assertEquals(annotations[0][0], findArgumentAnnotation(annotations[0]));
@@ -51,7 +50,7 @@ public class TestBasicAdviceArgumentsProcessor extends BasicAdviceArgumentsProce
 
 	@Test
 	public void testGetArgumentIdx() {
-		Method m = TestUtils.findMethod(TestBasicAdviceArgumentsProcessor.class, "sampleMethod");
+		Method m = AopTestUtils.findMethod(TestBasicAdviceArgumentsProcessor.class, "sampleMethod");
 		Annotation[][] annotations = m.getParameterAnnotations();
 
 		assertEquals(0, getArgumentIdx(annotations[0][0]));

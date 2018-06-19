@@ -4,6 +4,7 @@ package com.gilecode.xmx.core;
 
 
 import com.gilecode.specr.SpeculativeProcessorFactory;
+import com.gilecode.xmx.aop.AdviceLoadResult;
 import com.gilecode.xmx.aop.impl.XmxAopManager;
 import com.gilecode.xmx.boot.IXmxAopService;
 import com.gilecode.xmx.boot.IXmxBootService;
@@ -140,6 +141,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 								objectIds.remove(objectId);
 							}
 							objectsStorage.remove(objectId);
+							classInfo.getClassLoaderInfo().decrementManagedInstancesCount();
 							logger.debug("Clean GC'ed object id={} of class {}", objectId, classInfo.getClassName());
 
 							if (objRef.jmxObjectName != null) {
@@ -284,6 +286,8 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			objectsStorage.put(objectId, new ManagedObjectWeakRef(obj, managedObjectsRefQueue, 
 					objectId, classInfo, jmxObjectName));
 			objectIds.add(objectId);
+			classInfo.getClassLoaderInfo().incrementManagedInstancesCount();
+
 			if (logger.isDebugEnabled()) {
 				logger.debug("Registered new instance objId={} for class {} (classId={})", objectId,
 						classInfo.getClassName(), classId);
@@ -370,7 +374,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		if (classBeingRedefined != null) {
 			// currently the hot code replacement cannot add, remove or change signature of fields and methods
 			// so, we can continue using existing ManagedClassInfo
-			// May require re-visiting in Java 9 and further!
+			// May require re-visiting in Java 11 and further!
 			
 			XmxClassManager classInfo = getManagedClassInfo(classLoaderInfo, classBeingRedefined.getName());
 			assert classInfo != null : "Should have been transformed already: " + classBeingRedefined;
@@ -385,7 +389,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				jmxObjectNamePart = JmxSupport.createClassObjectNamePart(className, appName);
 			}
 			XmxClassManager classInfo = new XmxClassManager(classId, className,
-					appInfo, maxInstances, jmxObjectNamePart, config);
+					classLoaderInfo, maxInstances, jmxObjectNamePart, config);
 			
 			classesInfoById.put(classId, classInfo);
 			appInfo.registerClass(classLoaderInfo, className, classId);
@@ -397,24 +401,24 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			logger.info("{}: {}", action, className);
 		}
 
-		Map<String, Class<?>> potentialAdvices = loadPotentialAdvices(appConfig, className, classLoaderInfo);
+		AdviceLoadResult adviceLoadResult = loadPotentialAdvices(appConfig, className, classLoaderInfo);
 
 		// actually transform the class - add registerObject to constructors and advices
-		boolean supportAdvices = !potentialAdvices.isEmpty();
+		boolean supportAdvices = !adviceLoadResult.isEmpty();
 		ClassWriter cw = new ClassWriterWithCustomLoader(
 				supportAdvices ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS,
 				classLoader);
 		XmxManagedClassTransformer transformer = new XmxManagedClassTransformer(cw, classId, bcClassName,
-				className, potentialAdvices, appConfig, xmxAopManager);
+				className, adviceLoadResult, appConfig, xmxAopManager);
 
 		cr.accept(transformer, supportAdvices ? ClassReader.SKIP_FRAMES : 0);
 		return cw.toByteArray();
 	}
 
-	private Map<String, Class<?>> loadPotentialAdvices(IAppPropertiesSource appConfig, String className, ManagedClassLoaderWeakRef classLoaderInfo) {
+	private AdviceLoadResult loadPotentialAdvices(IAppPropertiesSource appConfig, String className, ManagedClassLoaderWeakRef classLoaderInfo) {
 		List<PropertyValue> potentialAdvices = appConfig.getDistinctMethodPropertyValues(className, Properties.M_ADVICES);
 		if (potentialAdvices.isEmpty()) {
-			return Collections.emptyMap();
+			return AdviceLoadResult.empty();
 		}
 		Set<String> adviceDescs = new LinkedHashSet<>();
 		for (PropertyValue advicesProp : potentialAdvices) {

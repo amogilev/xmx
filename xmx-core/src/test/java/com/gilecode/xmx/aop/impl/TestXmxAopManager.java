@@ -2,16 +2,12 @@
 
 package com.gilecode.xmx.aop.impl;
 
-import com.gilecode.xmx.TestUtils;
 import com.gilecode.xmx.aop.*;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.junit.Test;
-import org.objectweb.asm.Type;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -48,7 +44,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testPrepareCheckFast1() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_CheckFast1.class);
 		List<AdviceArgument> args;
 		InterceptedArgument iarg;
@@ -101,7 +97,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testPrepareCheckFast2() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_CheckFast2.class);
 		List<AdviceArgument> args;
 		InterceptedArgument iarg;
@@ -133,7 +129,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testPrepareCheckFast23() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_CheckFast2.class, SampleAdvice_CheckFast3.class);
 
 		List<WeavingAdviceInfo> beforeAdvicesInfo = ctx.getAdviceInfoByKind().get(AdviceKind.BEFORE);
@@ -145,7 +141,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testPrepareCheckFast24() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_CheckFast2.class, SampleAdvice_CheckFast4.class);
 
 		List<WeavingAdviceInfo> beforeAdvicesInfo = ctx.getAdviceInfoByKind().get(AdviceKind.BEFORE);
@@ -159,14 +155,14 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testPrepareEmpty1() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_Empty.class);
 		assertTrue(ctx.getAdviceInfoByKind().isEmpty());
 	}
 
 	@Test
 	public void testPrepareEmpty2() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target);
 		assertTrue(ctx.getAdviceInfoByKind().isEmpty());
 	}
@@ -178,7 +174,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testPrepareIncompatible() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_Incompatible.class);
 		assertTrue(ctx.getAdviceInfoByKind().isEmpty());
 	}
@@ -200,7 +196,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testPrepareGeneric() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_Generic.class,
 				SampleAdvice_Incompatible.class, SampleAdvice_Empty.class);
 		List<AdviceArgument> args;
@@ -249,18 +245,9 @@ public class TestXmxAopManager {
 	}
 
 	private WeavingContext doPrepareWeavingContext(Method target, Class<?>...adviceClasses) {
-		List<String> adviceDescs = new ArrayList<>();
-		Map<String, Class<?>> adviceClassesByDesc = new HashMap<>();
-		for (Class<?> adviceClass : adviceClasses) {
-			String desc = ":" + adviceClass.getName();
-			adviceDescs.add(desc);
-			adviceClassesByDesc.put(desc, adviceClass);
-		}
-
-		return uut.prepareMethodAdvicesWeaving(adviceDescs, adviceClassesByDesc,
-				Type.getArgumentTypes(target), Type.getReturnType(target),
-				target.getDeclaringClass().getName(), target.getName());
+		return AopTestUtils.prepareTestWeavingContext(uut, target, adviceClasses);
 	}
+
 
 	//
 	// Tests for before() and afterX() proxying
@@ -292,7 +279,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testProxy_NoRet() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target,
 				SampleAdvice_AfterNoRet.class);
 		Object[] args = {};
@@ -302,7 +289,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testProxy_OverrideRet() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target,
 				SampleAdvice_AfterNoRet.class, SampleAdvice_CapturingFastAfter.class, SampleAdvice_AfterNoRet.class);
 		Object[] args = {1L, "2", 3.0};
@@ -312,7 +299,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testProxy_Fast() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target,
 				SampleAdvice_CapturingAllBefore.class, SampleAdvice_CapturingFastAfter.class);
 		assertTrue(ctx.getAdviceInfoByKind().get(AdviceKind.BEFORE).get(0).isFastProxyArgsAllowed());
@@ -383,7 +370,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testProxy_Mod1() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_CapturingMod1.class,
 				SampleAdvice_CapturingAllBefore.class);
 		argsCap.reset();
@@ -409,7 +396,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testProxy_Mod2() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_CapturingMod2.class,
 				SampleAdvice_CapturingAllBefore.class);
 		argsCap.reset();
@@ -435,7 +422,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testProxy_Mod3() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_CapturingMod3.class,
 				SampleAdvice_CapturingAllBefore.class);
 		argsCap.reset();
@@ -461,7 +448,7 @@ public class TestXmxAopManager {
 
 	@Test
 	public void testProxy_ModAll() {
-		Method target = TestUtils.findMethod(this.getClass(), "target");
+		Method target = AopTestUtils.findMethod(this.getClass(), "target");
 		WeavingContext ctx = doPrepareWeavingContext(target, SampleAdvice_CapturingMod1.class,
 				SampleAdvice_CapturingMod2.class, SampleAdvice_CapturingMod3.class,
 				SampleAdvice_CapturingAllBefore.class);
@@ -492,5 +479,4 @@ public class TestXmxAopManager {
 		assertEquals("mod3_mod2_mod1_2", captured[1]);
 		assertEquals(324.1, captured[2]);
 	}
-
 }

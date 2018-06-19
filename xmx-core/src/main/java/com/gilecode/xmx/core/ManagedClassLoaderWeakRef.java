@@ -2,10 +2,15 @@
 
 package com.gilecode.xmx.core;
 
+import com.gilecode.xmx.aop.impl.WeakCachedSupplier;
+
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Weak reference for class loaders of managed classes, suitable for use
@@ -14,7 +19,7 @@ import java.util.concurrent.ConcurrentMap;
  * @author Andrey Mogilev
  */
 public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
-	
+
 	/**
 	 * Class and constant to represent bootstrap class loader, which is
 	 * {@code null} in the current Java implementation.
@@ -40,9 +45,91 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 	 */
 	private final ConcurrentMap<String, Integer> classIdsByName;
 
-	private final ConcurrentMap<String, ClassLoader> adviceJarLoaders = new ConcurrentHashMap<>();
-	
-	
+	/**
+	 * Count of all alive managed instances of all managed classes loaded by this class loader
+	 */
+	private final AtomicInteger managedInstancesCount = new AtomicInteger();
+
+	/**
+	 * All smart references managed by this class loader.
+	 */
+	private final Collection<SmartReference<?>> smartReferences = new ConcurrentLinkedQueue<>();
+
+	/**
+	 * A reference which can switch between strong and weak references based on the current count of managed instances.
+	 * <b/>
+	 * It can be used to "bind" dependent class loaders to this class loader, without creating cyclic dependencies which
+	 * would prevent Class GC. When there are some managed instances of any class loaded by this CL still alive, all
+	 * the smart references are in "strong" mode and thus prevents referents to be GC'ed.
+	 * <br/>
+	 * On the other hand, such binding is not absolutely reliable (it is possible that all managed instances are
+	 * collected but then created again; or there are non-managed instances left; or there are concurrency issues
+	 * between creating/removing managed instances and references, etc.), so this mechanism shall be considered
+	 * only as an optimization. There is still a possibility that teh reference is GC'ed, so the users of the smart
+	 * references shall be able to re-load the actual referents at any time.
+	 */
+	public static class SmartReference<T> {
+		private volatile WeakReference<T> weakReference;
+		private volatile T strongReference;
+
+		private SmartReference(T strongReference, boolean strong) {
+			assert strongReference != null;
+			if (strong) {
+				this.strongReference = strongReference;
+			} else {
+				this.weakReference = new WeakReference<>(strongReference);
+			}
+		}
+
+		public T get() {
+			T localStrongRef = strongReference;
+			if (localStrongRef != null) {
+				return localStrongRef;
+			}
+
+			// NOTE: even if concurrently switched to "strong" mode here, we still can safely use the weak ref
+			WeakReference<T> localWeakRef = this.weakReference;
+			if (localWeakRef != null) {
+				return localWeakRef.get();
+			} else {
+				return null;
+			}
+		}
+
+		void update(boolean newStrong) {
+			T localStrongRef = strongReference;
+			boolean curStrong = localStrongRef != null;
+			if (curStrong != newStrong) {
+				if (newStrong) {
+					// weak ref can be used even if already switched to "strong" in another thread
+					this.strongReference = weakReference.get();
+				} else {
+					this.weakReference = new WeakReference<>(localStrongRef);
+					this.strongReference = null;
+				}
+			}
+		}
+	}
+
+	/**
+	 * The advice ClassLoaders mapped by the JAR name, used for the target classes loaded by this class loader.
+	 */
+	private final ConcurrentMap<String, SmartReference<ClassLoader>> adviceJarLoaders = new ConcurrentHashMap<>();
+
+	/**
+	 * The advice descriptors (jar + class name) which failed to be loaded or verified in the context of this class
+	 * loader.
+	 * <br/>
+	 * Note that the same advice could potentially be successfully loaded for another class loader, e.g. if some
+	 * required classes exist in that context and not in this one.
+	 */
+	private final Set<String> knownBadAdviceDescs = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+
+	/**
+	 * The cache of successfully verified advice classes, mapped by advice descriptor.
+	 */
+	private final Map<String, WeakCachedSupplier<Class<?>>> verifiedAdvicesByDesc = new ConcurrentHashMap<>();
+
 	private ManagedClassLoaderWeakRef(ClassLoader referent, ReferenceQueue<? super ClassLoader> q, 
 			ManagedAppInfo appInfo, ConcurrentMap<String, Integer> classIdsByName) {
 		super(referent, q);
@@ -68,8 +155,63 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 		return classIdsByName;
 	}
 
-	public ConcurrentMap<String, ClassLoader> getAdviceJarLoaders() {
+	public ConcurrentMap<String, SmartReference<ClassLoader>> getAdviceJarLoaders() {
 		return adviceJarLoaders;
+	}
+
+	public Set<String> getKnownBadAdviceDescs() {
+		return knownBadAdviceDescs;
+	}
+
+	public Map<String, WeakCachedSupplier<Class<?>>> getVerifiedAdvicesByDesc() {
+		return verifiedAdvicesByDesc;
+	}
+
+	public <T> SmartReference<T> createSmartReference(T referent) {
+		SmartReference<T> ref = new SmartReference<>(referent, true);
+		smartReferences.add(ref);
+		// update after adding to storage
+		ref.update(managedInstancesCount.get() > 0);
+		return ref;
+	}
+
+	public <T> void removeSmartReference(SmartReference<T> smartRef) {
+		smartReferences.remove(smartRef);
+		smartRef.update(false);
+	}
+
+	void incrementManagedInstancesCount() {
+		if (managedInstancesCount.incrementAndGet() == 1) {
+			// use double-checking to prevent GC locks in case of concurrency between inc/dec counts
+			synchronized (this) {
+				if (managedInstancesCount.get() > 0) {
+					for (Iterator<SmartReference<?>> iterator = smartReferences.iterator(); iterator.hasNext(); ) {
+						SmartReference<?> sr = iterator.next();
+						sr.update(true);
+						if (sr.get() == null) {
+							iterator.remove();
+						}
+					}
+				}
+			}
+		}
+	}
+
+	void decrementManagedInstancesCount() {
+		if (managedInstancesCount.decrementAndGet() == 0) {
+			synchronized (this) {
+				if (managedInstancesCount.get() == 0) {
+					for (Iterator<SmartReference<?>> iterator = smartReferences.iterator(); iterator.hasNext(); ) {
+						SmartReference<?> sr = iterator.next();
+						if (sr.get() == null) {
+							iterator.remove();
+						} else {
+							sr.update(false);
+						}
+					}
+				}
+			}
+		}
 	}
 
 	@Override

@@ -3,6 +3,9 @@
 package com.gilecode.xmx.aop.impl;
 
 import com.gilecode.xmx.aop.AdviceKind;
+import com.gilecode.xmx.aop.BadAdviceException;
+import com.gilecode.xmx.aop.ISupplier;
+import com.gilecode.xmx.model.XmxRuntimeException;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -15,7 +18,7 @@ public class WeavingAdviceInfo {
 	/**
 	 * The advice method.
 	 */
-	private final Method advice;
+	private final ISupplier<Method> adviceSupplier;
 
 	/**
 	 * The advice kind, e.g. {@link AdviceKind#BEFORE}.
@@ -31,16 +34,25 @@ public class WeavingAdviceInfo {
 
 	private boolean fastProxyArgsAllowed;
 
-	public WeavingAdviceInfo(Method advice, AdviceKind adviceKind, List<AdviceArgument> adviceArguments,
+	public WeavingAdviceInfo(ISupplier<Method> adviceSupplier, AdviceKind adviceKind, List<AdviceArgument> adviceArguments,
 	                         boolean hasOverrideRetVal) {
-		this.advice = advice;
+		this.adviceSupplier = adviceSupplier;
 		this.adviceKind = adviceKind;
 		this.adviceArguments = adviceArguments;
 		this.hasOverrideRetVal = hasOverrideRetVal;
 	}
 
 	public Method getAdvice() {
-		return advice;
+		try {
+			return adviceSupplier.get();
+		} catch (BadAdviceException e) {
+			// unexpected: advice jar changed?
+			throw new XmxRuntimeException("Unexpected: advice method failed to re-load!", e);
+		}
+	}
+
+	public ISupplier<Method> getAdviceSupplier() {
+		return adviceSupplier;
 	}
 
 	public AdviceKind getAdviceKind() {

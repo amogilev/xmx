@@ -22,12 +22,9 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import static com.gilecode.xmx.TestUtils.findMethod;
+import static com.gilecode.xmx.aop.impl.AopTestUtils.findMethod;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.*;
 
@@ -110,19 +107,7 @@ public class TestMethodWeaver {
 		Method targetMethod = findMethod(targetClass, targetMethodName);
 		assertNotNull(targetMethod);
 
-		List<String> adviceDescs = new ArrayList<>();
-		Map<String, Class<?>> adviceClassesMap = new HashMap<>();
-		for (int i = 0; i < adviceClasses.length; i++) {
-			Class<?> adviceClass = adviceClasses[i];
-			String adviceDesc = ":" + adviceClass.getName();
-			adviceDescs.add(adviceDesc);
-			adviceClassesMap.put(adviceDesc, adviceClass);
-		}
-
-		WeavingContext wctx = aopManager.prepareMethodAdvicesWeaving(adviceDescs, adviceClassesMap,
-				Type.getArgumentTypes(targetMethod), Type.getReturnType(targetMethod),
-				targetClass.getName(), targetMethodName);
-
+		WeavingContext wctx = AopTestUtils.prepareTestWeavingContext(aopManager, targetMethod, adviceClasses);
 		Class<?> advisedClass = testCL.defineTestClassWithWeaving(targetClass.getName(),
 				targetMethodName, wctx);
 		return advisedClass;

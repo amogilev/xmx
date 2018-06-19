@@ -2,7 +2,9 @@
 
 package com.gilecode.xmx.core.instrument;
 
+import com.gilecode.xmx.aop.AdviceLoadResult;
 import com.gilecode.xmx.aop.IXmxAopLoader;
+import com.gilecode.xmx.aop.impl.AdviceVerifier;
 import com.gilecode.xmx.aop.impl.WeavingContext;
 import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.Properties;
@@ -14,7 +16,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import java.util.Arrays;
-import java.util.Map;
 
 public class XmxManagedClassTransformer extends ClassVisitor {
 	
@@ -43,10 +44,12 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 	 * The potential advice classes for this class, mapped by their "jar:name" descriptor.
 	 * Which advice classes from this map shall be applied to which method is defined by the
 	 * configuration.
-	 * <p/>
-	 * All advice classes here are loaded and verified (by {@link com.gilecode.xmx.aop.impl.AdviceVerifier#verifyAdviceClass(Class)}
+	 * <br/>
+	 * All advice classes here are loaded and verified (by {@link AdviceVerifier#verifyAdviceClass(Class)}
+	 * <br/>
+	 * The use of {@link AdviceLoadResult} prevents early GC of weak refs to the advice classes.
 	 */
-	private final Map<String, Class<?>> potentialAdviceClassesByDesc;
+	private final AdviceLoadResult loadedAdvices;
 
 	/**
 	 * AOP manager for the current session.
@@ -55,13 +58,13 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 
 	public XmxManagedClassTransformer(ClassVisitor cv, int classId, String bcClassName,
 	                                  String javaClassName,
-	                                  Map<String, Class<?>> potentialAdviceClassesByDesc,
+	                                  AdviceLoadResult loadedAdvices,
 	                                  IAppPropertiesSource appConfig, IXmxAopLoader xmxAopManager) {
 		super(Opcodes.ASM5, cv);
 		this.classId = classId;
 		this.bcClassName = bcClassName;
 		this.javaClassName = javaClassName;
-		this.potentialAdviceClassesByDesc = potentialAdviceClassesByDesc;
+		this.loadedAdvices = loadedAdvices;
 		this.appConfig = appConfig;
 		this.xmxAopManager = xmxAopManager;
 	}
@@ -75,14 +78,14 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 			// add registering managed objects to constructors
 			return new XmxManagedConstructorTransformer(classId, bcClassName, parentVisitor);
 
-		} else if (!potentialAdviceClassesByDesc.isEmpty()) {
+		} else if (!loadedAdvices.isEmpty()) {
 			// weave advices
 			MethodSpec spec = MethodSpec.of(access, name, desc);
 			PropertyValue advices = appConfig.getMethodProperty(javaClassName, spec, Properties.M_ADVICES);
 			if (advices != null) {
 				String[] adviceDescs = advices.asString().split(",");
 				WeavingContext ctx = xmxAopManager.prepareMethodAdvicesWeaving(Arrays.asList(adviceDescs),
-						potentialAdviceClassesByDesc, Type.getArgumentTypes(desc), Type.getReturnType(desc),
+						loadedAdvices.getAdviceClassesByDesc(), Type.getArgumentTypes(desc), Type.getReturnType(desc),
 						javaClassName, name);
 
 				if (!ctx.getAdviceInfoByKind().isEmpty()) {

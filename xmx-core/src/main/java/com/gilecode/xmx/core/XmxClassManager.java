@@ -35,9 +35,9 @@ public class XmxClassManager {
 	private final String className;
 	
 	/**
-	 * Corresponding application.
+	 * Corresponding class loader information.
 	 */
-	private final ManagedAppInfo appInfo;
+	private final ManagedClassLoaderWeakRef classLoaderInfo;
 	
 	/**
 	 * Max managed instances allowed.
@@ -93,11 +93,11 @@ public class XmxClassManager {
 
 	private boolean disabledByMaxInstances; // TODO maybe extend to custom flags
 
-	public XmxClassManager(int id, String className,
-	                       ManagedAppInfo appInfo, int maxInstances, String jmxObjectNamePart, IXmxConfig config) {
+	public XmxClassManager(int id, String className, ManagedClassLoaderWeakRef classLoaderInfo,
+	                       int maxInstances, String jmxObjectNamePart, IXmxConfig config) {
 		this.id = id;
 		this.className = className;
-		this.appInfo = appInfo;
+		this.classLoaderInfo = classLoaderInfo;
 		this.maxInstances = maxInstances;
 		this.jmxObjectNamePart = jmxObjectNamePart;
 		this.config = config;
@@ -153,9 +153,13 @@ public class XmxClassManager {
 	public String getClassName() {
 		return className;
 	}
-	
+
+	public ManagedClassLoaderWeakRef getClassLoaderInfo() {
+		return classLoaderInfo;
+	}
+
 	public ManagedAppInfo getAppInfo() {
-		return appInfo;
+		return classLoaderInfo.getAppInfo();
 	}
 
 	public ModelMBeanInfoSupport getJmxClassModel() {
