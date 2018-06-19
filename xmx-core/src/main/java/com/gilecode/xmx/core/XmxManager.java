@@ -630,11 +630,13 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 
 	private void fillLiveObjects(List<XmxObjectInfo> result, Integer classId) {
 		XmxClassManager classInfo = classesInfoById.get(classId);
-		if (classInfo == null) {
+		Set<Integer> objectIds;
+
+		if (classInfo == null || (objectIds = classInfo.getObjectIds()) == null) {
 			// no objects registered yet
 			return;
 		}
-		for (Integer id : classInfo.getObjectIds()) {
+		for (Integer id : objectIds) {
 			ManagedObjectWeakRef ref = objectsStorage.get(id);
 			if (ref != null) {
 				Object obj = ref.get();
