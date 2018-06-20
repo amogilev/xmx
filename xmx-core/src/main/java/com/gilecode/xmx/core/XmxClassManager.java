@@ -122,7 +122,7 @@ public class XmxClassManager {
 
 	/**
 	 * Resets the previous initialization, reverts to uninitialized form with only basic information about the 
-	 * class. This method may be invoked only when there are no alive instances of the class left.
+	 * class. This method may be invoked only when there are no alive managed instances of the class left.
 	 */
 	// synchronized // NOTE: actually, all uses are synchronized on XmxManager.instance, similar to all accesses to objectIds
 	public void reset() {
@@ -137,6 +137,7 @@ public class XmxClassManager {
 		this.jmxClassModel = null;
 		this.disabledByMaxInstances = false;
 		this.objectIds = null;
+		this.clazz = null; // required for Class GC
 
 		logger.debug("Reset class {} (classId={})", getClassName(), getId());
 	}
