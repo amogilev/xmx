@@ -159,7 +159,8 @@ public class ManagedAppInfo {
 				success = classLoadersWithClassName.replace(className, oldVal, newVal);
 			}
 		}
-		clRef.getClassIdsByName().remove(className);
+		// NOTE: classIdsByName actually cleaned in ClassCleanerThread
+		// clRef.getClassIdsByName().remove(className);
 	}
 
 	public List<Integer> getClassIdsByName(String className) {

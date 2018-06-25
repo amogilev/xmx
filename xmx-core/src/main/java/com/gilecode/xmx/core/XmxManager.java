@@ -174,6 +174,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 								logger.debug("Clean GC'ed classId={}", classId);
 							}
 						}
+						loaderInfo.getClassIdsByName().clear();
 					} catch (InterruptedException ignored) {
 					}
 				}
@@ -567,8 +568,10 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 					List<Integer> classIds = appInfo.getClassIdsByName(className);
 					for (int cid : classIds) {
 						if (ref.classInfo.getId() != cid) {
-							XmxClassManager classInfo = this.classesInfoById.get(cid);
-							if (!classInfo.getObjectIds().isEmpty()) {
+							// check other (probably GC'ed) classes with the same name
+							XmxClassManager otherClassInfo = this.classesInfoById.get(cid);
+							Set<Integer> otherClassObjectIds = otherClassInfo.getObjectIds();
+							if (otherClassObjectIds != null && !otherClassObjectIds.isEmpty()) {
 								// not singleton
 								return null;
 							}
@@ -602,11 +605,12 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		List<Integer> classIds = appInfo.getClassIdsByName(className);
 		for (int cid : classIds) {
 			XmxClassManager classInfo = this.classesInfoById.get(cid);
-			if (!classInfo.getObjectIds().isEmpty()) {
+			Set<Integer> classObjectIds = classInfo.getObjectIds();
+			if (classObjectIds != null && !classObjectIds.isEmpty()) {
 				if (!objectIds.isEmpty()) {
 					multipleClasses = true;
 				}
-				objectIds.addAll(classInfo.getObjectIds());
+				objectIds.addAll(classObjectIds);
 			}
 		}
 		if (objectIds.size() != 1) {
