@@ -10,10 +10,15 @@ import org.slf4j.LoggerFactory;
 public class MapperService implements IMapperService {
 
 	private static final Logger logger = LoggerFactory.getLogger(MapperService.class);
-	private static final YaGson jsonMapper = new YaGson();
 	private static final long JSON_DISABLE_ON_ERROR_SECONDS = 30;
 
 	private volatile long toJsonDisabledUntilTime = 0;
+
+	private static YaGson jsonMapper() {
+		// although Gson is thread-safe, do not use single 'static' instance for all work, as its typeTokenCache would
+		//  prevent Class GC for serialized classes
+		return new YaGson();
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -41,12 +46,12 @@ public class MapperService implements IMapperService {
 		try {
 			if (cLimit > 0) {
 				try {
-					return jsonMapper.toJson(obj, Object.class, cLimit);
+					return jsonMapper().toJson(obj, Object.class, cLimit);
 				} catch (StringOutputLimitExceededException e) {
 					return e.getTruncatedResult() + LIMIT_EXCEEDED_SUFFIX;
 				}
 			} else {
-				return jsonMapper.toJson(obj, Object.class);
+				return jsonMapper().toJson(obj, Object.class);
 			}
 		} catch (Throwable e) {
 			logger.warn("toJson() failed for an instance of {}", obj.getClass(), e);
