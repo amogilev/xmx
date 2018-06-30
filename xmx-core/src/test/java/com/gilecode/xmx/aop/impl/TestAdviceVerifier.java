@@ -24,7 +24,8 @@ public class TestAdviceVerifier {
 
 		@Advice(AdviceKind.BEFORE)
 		public static void foo1(@This Object aThis, @Argument(0) String a0, @ModifiableArgument(0) String[] arg1,
-		                        @AllArguments(modifiable = true) Object[] args) {
+				@TargetMethod Method target,
+				@AllArguments(modifiable = true) Object[] args) {
 		}
 
 		@Advice(AdviceKind.BEFORE)
@@ -32,8 +33,9 @@ public class TestAdviceVerifier {
 		}
 
 		@Advice(AdviceKind.AFTER_RETURN)
-		public static @OverrideRetVal String foo3(@This Object aThis, @Argument(0) String a0,
-		                                          @AllArguments Object[] args, @RetVal String retVal) {
+		public static @OverrideRetVal
+		String foo3(@This Object aThis, @Argument(0) String a0,
+				@AllArguments Object[] args, @RetVal String retVal) {
 			return retVal + "1";
 		}
 
@@ -42,8 +44,8 @@ public class TestAdviceVerifier {
 		}
 
 		@Advice(AdviceKind.AFTER_THROW)
-		public static String foo5(@This Object aThis, @Argument(0) String a0,
-		                                          @AllArguments Object[] args, @Thrown Throwable ex) {
+		public static String foo5(@This Object aThis, @Argument(0) String a0, @TargetMethod Method target,
+				@AllArguments Object[] args, @Thrown Throwable ex) {
 			return "1";
 		}
 
@@ -137,6 +139,13 @@ public class TestAdviceVerifier {
 	private static class SampleBadAdvice_ThrownNotThrowable {
 		@Advice(AdviceKind.AFTER_THROW)
 		public static void foo(@Thrown Object arg1) {
+		}
+	}
+
+	// bad: @targetMethod requires Method type
+	private static class SampleBadAdvice_TargetNotMethod {
+		@Advice(AdviceKind.AFTER_THROW)
+		public static void foo(@TargetMethod Object arg1) {
 		}
 	}
 
@@ -261,6 +270,16 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
+	public void testVerifyBad_TargetNotMethod() {
+		try {
+			uut.verifyAdviceClass(SampleBadAdvice_TargetNotMethod.class);
+			fail("Expected BadAdviceException");
+		} catch (BadAdviceException e) {
+			checkMessage(e, " requires java.lang.reflect.Method type");
+		}
+	}
+
+	@Test
 	public void testVerifyBad_IllegalArgIndex() {
 		Class<?>[] adviceClasses = {SampleBadAdvice_BadArgIndex1.class, SampleBadAdvice_BadArgIndex2.class,
 				SampleBadAdvice_BadArgIndex3.class};
@@ -362,16 +381,16 @@ public class TestAdviceVerifier {
 	private static class SampleAdvice_Generic {
 
 		@Advice(AdviceKind.BEFORE)
-		void adviceBefore(@This Object target, @AllArguments(modifiable = true) Object[] args) {}
+		void adviceBefore(@This Object target, @TargetMethod Method targetMethod, @AllArguments(modifiable = true) Object[] args) {}
 
 		@Advice(AdviceKind.AFTER_RETURN)
 		@OverrideRetVal
-		Object adviceAfterReturn(@This Object target, @AllArguments Object[] args, @RetVal Object retVal) {
+		Object adviceAfterReturn(@This Object target, @TargetMethod Method targetMethod, @AllArguments Object[] args, @RetVal Object retVal) {
 			return retVal;
 		}
 
 		@Advice(AdviceKind.AFTER_THROW)
-		void adviceAfterThrow(@This Object target, @AllArguments Object[] args, @Thrown Throwable ex) {}
+		void adviceAfterThrow(@This Object target, @TargetMethod Method targetMethod, @AllArguments Object[] args, @Thrown Throwable ex) {}
 	}
 
 	@Test

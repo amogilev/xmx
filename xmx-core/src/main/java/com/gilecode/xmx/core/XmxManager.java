@@ -409,7 +409,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				supportAdvices ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS,
 				classLoader);
 		XmxManagedClassTransformer transformer = new XmxManagedClassTransformer(cw, classId, bcClassName,
-				className, adviceLoadResult, appConfig, xmxAopManager);
+				className, adviceLoadResult, appConfig, xmxAopManager, classLoaderInfo);
 
 		cr.accept(transformer, supportAdvices ? ClassReader.SKIP_FRAMES : 0);
 		return cw.toByteArray();

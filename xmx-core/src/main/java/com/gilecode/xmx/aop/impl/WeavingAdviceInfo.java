@@ -16,6 +16,11 @@ import java.util.List;
 public class WeavingAdviceInfo {
 
 	/**
+	 * The parent context which holds all advices for the given joinpoint.
+	 */
+	private final WeavingContext context;
+
+	/**
 	 * The advice method.
 	 */
 	private final ISupplier<Method> adviceSupplier;
@@ -34,8 +39,9 @@ public class WeavingAdviceInfo {
 
 	private boolean fastProxyArgsAllowed;
 
-	public WeavingAdviceInfo(ISupplier<Method> adviceSupplier, AdviceKind adviceKind, List<AdviceArgument> adviceArguments,
+	public WeavingAdviceInfo(WeavingContext context, ISupplier<Method> adviceSupplier, AdviceKind adviceKind, List<AdviceArgument> adviceArguments,
 	                         boolean hasOverrideRetVal) {
+		this.context = context;
 		this.adviceSupplier = adviceSupplier;
 		this.adviceKind = adviceKind;
 		this.adviceArguments = adviceArguments;
@@ -49,6 +55,10 @@ public class WeavingAdviceInfo {
 			// unexpected: advice jar changed?
 			throw new XmxRuntimeException("Unexpected: advice method failed to re-load!", e);
 		}
+	}
+
+	public WeavingContext getContext() {
+		return context;
 	}
 
 	public ISupplier<Method> getAdviceSupplier() {

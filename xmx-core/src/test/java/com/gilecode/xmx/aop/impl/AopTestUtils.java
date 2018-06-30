@@ -2,6 +2,7 @@
 
 package com.gilecode.xmx.aop.impl;
 
+import com.gilecode.xmx.aop.BadAdviceException;
 import org.objectweb.asm.Type;
 
 import java.lang.reflect.Method;
@@ -31,7 +32,8 @@ public class AopTestUtils {
 		return found;
 	}
 
-	public static  WeavingContext prepareTestWeavingContext(XmxAopManager aopManager, Method target, final Class<?>...adviceClasses) {
+	public static  WeavingContext prepareTestWeavingContext(XmxAopManager aopManager, final Method target,
+	                                                        final Class<?>...adviceClasses) {
 		List<String> adviceDescs = new ArrayList<>();
 		Map<String, WeakCachedSupplier<Class<?>>> adviceClassesByDesc = new HashMap<>();
 		for (int i = 0; i < adviceClasses.length; i++) {
@@ -48,9 +50,15 @@ public class AopTestUtils {
 		}
 
 
+		WeakCachedSupplier<Class<?>> targetClassSupplier = new WeakCachedSupplier<Class<?>>() {
+			@Override
+			protected Class<?> load() throws BadAdviceException {
+				return target.getDeclaringClass();
+			}
+		};
 		return aopManager.prepareMethodAdvicesWeaving(adviceDescs, adviceClassesByDesc,
 				Type.getArgumentTypes(target), Type.getReturnType(target),
-				target.getDeclaringClass().getName(), target.getName());
+				target.getDeclaringClass().getName(), target.getName(), targetClassSupplier);
 	}
 
 }

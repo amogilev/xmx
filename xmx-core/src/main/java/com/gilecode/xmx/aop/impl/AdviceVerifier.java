@@ -26,11 +26,11 @@ public class AdviceVerifier extends BasicAdviceArgumentsProcessor {
 			new EnumMap<>(AdviceKind.class);
 	{
 		allowedArgAnnotationsByKind.put(AdviceKind.BEFORE, new HashSet<>(Arrays.asList(
-				Argument.class, ModifiableArgument.class, AllArguments.class, This.class)));
+				Argument.class, ModifiableArgument.class, AllArguments.class, TargetMethod.class, This.class)));
 		allowedArgAnnotationsByKind.put(AdviceKind.AFTER_RETURN, new HashSet<>(Arrays.asList(
-				Argument.class, AllArguments.class, This.class, RetVal.class)));
+				Argument.class, AllArguments.class, TargetMethod.class, This.class, RetVal.class)));
 		allowedArgAnnotationsByKind.put(AdviceKind.AFTER_THROW, new HashSet<>(Arrays.asList(
-				Argument.class, AllArguments.class, This.class, Thrown.class)));
+				Argument.class, AllArguments.class, TargetMethod.class, This.class, Thrown.class)));
 	}
 
 	/**
@@ -74,6 +74,9 @@ public class AdviceVerifier extends BasicAdviceArgumentsProcessor {
 							}
 							if (annotation instanceof Thrown && !parameterType.equals(Throwable.class)) {
 								throw new BadAdviceException(advice, annotation, "requires java.lang.Throwable type");
+							}
+							if (annotation instanceof TargetMethod && !parameterType.equals(Method.class)) {
+								throw new BadAdviceException(advice, annotation, "requires java.lang.reflect.Method type");
 							}
 							if (foundArgAnnotation != null) {
 								throw new BadAdviceException(advice, annotation, "overwrites annotation " + foundArgAnnotation);

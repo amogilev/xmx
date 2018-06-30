@@ -14,7 +14,8 @@ public class TestBasicAdviceArgumentsProcessor extends BasicAdviceArgumentsProce
 
 	@OverrideRetVal int sampleMethod(@Argument(0) int arg0, @ModifiableArgument(1) int arg1, @This int arg2,
 	                  @RetVal int arg3, @Thrown int arg4, @AllArguments int arg5,
-	                  @Deprecated @Argument(6) @SuppressWarnings("foo") int arg6) {
+	                  @Deprecated @Argument(6) @SuppressWarnings("foo") int arg6,
+	                  @TargetMethod Method arg7) {
 		return 0;
 	}
 
@@ -29,6 +30,7 @@ public class TestBasicAdviceArgumentsProcessor extends BasicAdviceArgumentsProce
 		assertEquals(AdviceArgument.Kind.RETVAL, getAdviceArgumentKind(annotations[3][0]));
 		assertEquals(AdviceArgument.Kind.THROWN, getAdviceArgumentKind(annotations[4][0]));
 		assertEquals(AdviceArgument.Kind.ALL_ARGUMENTS, getAdviceArgumentKind(annotations[5][0]));
+		assertEquals(AdviceArgument.Kind.TARGET, getAdviceArgumentKind(annotations[7][0]));
 	}
 
 	@Test
@@ -42,6 +44,7 @@ public class TestBasicAdviceArgumentsProcessor extends BasicAdviceArgumentsProce
 		assertEquals(annotations[3][0], findArgumentAnnotation(annotations[3]));
 		assertEquals(annotations[4][0], findArgumentAnnotation(annotations[4]));
 		assertEquals(annotations[5][0], findArgumentAnnotation(annotations[5]));
+		assertEquals(annotations[7][0], findArgumentAnnotation(annotations[7]));
 
 		Annotation found = findArgumentAnnotation(annotations[6]);
 		assertTrue(found instanceof Argument);
@@ -55,7 +58,7 @@ public class TestBasicAdviceArgumentsProcessor extends BasicAdviceArgumentsProce
 
 		assertEquals(0, getArgumentIdx(annotations[0][0]));
 		assertEquals(1, getArgumentIdx(annotations[1][0]));
-		for (int i = 2; i < 6; i++) {
+		for (int i = 2; i < 7; i++) {
 			try {
 				getArgumentIdx(annotations[i][0]);
 				fail("Exception expected");

@@ -46,4 +46,12 @@ public abstract class WeakCachedSupplier<T> implements ISupplier<T> {
 		}
 		return value;
 	}
+
+	public T getSilently() {
+		try {
+			return get();
+		} catch (BadAdviceException e) {
+			return null;
+		}
+	}
 }

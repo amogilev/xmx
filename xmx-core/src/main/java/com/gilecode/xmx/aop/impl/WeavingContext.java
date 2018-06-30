@@ -4,6 +4,7 @@ package com.gilecode.xmx.aop.impl;
 
 import com.gilecode.xmx.aop.AdviceKind;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -32,8 +33,14 @@ public class WeavingContext {
 	 */
 	private final int joinpointId;
 
-	public WeavingContext(int joinpointId) {
+	/**
+	 * Supplier of the target method, used to implement @TargetMethod arguments.
+	 */
+	private final WeakCachedSupplier<Method> targetMethodSupplier;
+
+	public WeavingContext(int joinpointId, WeakCachedSupplier<Method> targetMethodSupplier) {
 		this.joinpointId = joinpointId;
+		this.targetMethodSupplier = targetMethodSupplier;
 	}
 
 	private InterceptedArgument findInterceptedArgument(int targetMethodParameterIdx) {
@@ -75,5 +82,9 @@ public class WeavingContext {
 
 	public int getJoinpointId() {
 		return joinpointId;
+	}
+
+	public WeakCachedSupplier<Method> getTargetMethodSupplier() {
+		return targetMethodSupplier;
 	}
 }

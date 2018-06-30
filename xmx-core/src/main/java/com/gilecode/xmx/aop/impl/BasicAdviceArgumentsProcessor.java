@@ -15,7 +15,8 @@ import java.util.Set;
 class BasicAdviceArgumentsProcessor {
 
 	protected static Set<Class<? extends Annotation>> knownArgAnnotations = new HashSet<>(Arrays.asList(
-			Argument.class, ModifiableArgument.class, AllArguments.class, This.class, RetVal.class, Thrown.class));
+			Argument.class, ModifiableArgument.class, AllArguments.class,
+			This.class, RetVal.class, Thrown.class, TargetMethod.class));
 
 	protected static AdviceArgument.Kind getAdviceArgumentKind(Annotation argAnnotation) {
 		if (argAnnotation instanceof This) {
@@ -26,6 +27,8 @@ class BasicAdviceArgumentsProcessor {
 			return AdviceArgument.Kind.RETVAL;
 		} else if (argAnnotation instanceof Thrown) {
 			return AdviceArgument.Kind.THROWN;
+		} else if (argAnnotation instanceof TargetMethod) {
+			return AdviceArgument.Kind.TARGET;
 		} else if (argAnnotation instanceof Argument || argAnnotation instanceof ModifiableArgument) {
 			return AdviceArgument.Kind.ARGUMENT;
 		} else {

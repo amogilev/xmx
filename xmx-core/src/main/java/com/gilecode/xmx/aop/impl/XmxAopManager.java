@@ -31,6 +31,10 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 
 	private final AdviceVerifier adviceVerifier = new AdviceVerifier();
 	private final AtomicInteger joinPointsCounter = new AtomicInteger(1);
+
+	// NOTE: ideally, joinpoints with GC'ed target classes need to be periodically cleared. However, it seems that
+	//   the extra efforts for implementing that (RefQueue, WeakRefs etc.) would be just useless overhead for
+	//   the most of the applications.
 	private final ConcurrentMap<Integer, WeavingContext> joinpointsWeavingInfo = new ConcurrentHashMap<>();
 
 	/**
@@ -62,6 +66,50 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 			}
 		}
 		return new AdviceLoadResult(adviceClassesByDesc, jarLoaders);
+	}
+
+	private static class TargetMethodSupplier extends WeakCachedSupplier<Method> {
+		private final WeakCachedSupplier<Class<?>> classSupplier;
+		private final String methodName;
+		private final Type[] paramTypes;
+
+		public TargetMethodSupplier(WeakCachedSupplier<Class<?>> classSupplier, String methodName, Type[] paramTypes) {
+			this.classSupplier = classSupplier;
+			this.methodName = methodName;
+			this.paramTypes = paramTypes;
+		}
+
+		@Override
+		protected Method load() throws BadAdviceException {
+			Class<?> targetClass = classSupplier.get();
+			if (targetClass == null) {
+				return null;
+			}
+			for (Method m : targetClass.getDeclaredMethods()) {
+				if (matches(m)) {
+					return m;
+				}
+			}
+			return null;
+		}
+
+		private boolean matches(Method m) {
+			if (m.getName().equals(methodName)) {
+				Class<?>[] parameterTypes = m.getParameterTypes();
+				if (parameterTypes.length == paramTypes.length) {
+					for (int i = 0; i < parameterTypes.length; i++) {
+						Class<?> actualParamType = parameterTypes[i];
+						Type expectedParamType = paramTypes[i];
+						if (!Type.getType(actualParamType).equals(expectedParamType)) {
+							return false;
+						}
+					}
+					// found matching (by name and parameters)
+					return true;
+				}
+			}
+			return false;
+		}
 	}
 
 	private class JarClassLoadingSupplier extends WeakCachedSupplier<Class<?>> {
@@ -232,8 +280,11 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 	public WeavingContext prepareMethodAdvicesWeaving(Collection<String> adviceDescs,
 	                                                  Map<String, WeakCachedSupplier<Class<?>>> adviceClassesByDesc,
 	                                                  Type[] targetParamTypes, Type targetReturnType,
-	                                                  String targetClassName, String targetMethodName) {
-		WeavingContext ctx = new WeavingContext(joinPointsCounter.getAndIncrement());
+	                                                  String targetClassName, String targetMethodName,
+	                                                  WeakCachedSupplier<Class<?>> targetClassSupplier) {
+		WeakCachedSupplier<Method> targetMethodSupplier = new TargetMethodSupplier(targetClassSupplier,
+				targetMethodName, targetParamTypes);
+		WeavingContext ctx = new WeavingContext(joinPointsCounter.getAndIncrement(), targetMethodSupplier);
 		Map<AdviceKind, List<WeavingAdviceInfo>> adviceInfoByKind = ctx.getAdviceInfoByKind();
 		for (String desc : adviceDescs) {
 			WeakCachedSupplier<Class<?>> adviceClassSup = adviceClassesByDesc.get(desc);
@@ -308,7 +359,7 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 
 		// check @OverrideRetVal if present
 		hasOverrideRetVal = advice.getAnnotation(OverrideRetVal.class) != null;
-		return new WeavingAdviceInfo(adviceSup, adviceKind, arguments, hasOverrideRetVal);
+		return new WeavingAdviceInfo(ctx, adviceSup, adviceKind, arguments, hasOverrideRetVal);
 	}
 
 	private static boolean isFastProxyArgsAllowed(List<AdviceArgument> adviceArguments, int interceptedArgumentsCount) {
@@ -486,6 +537,11 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 					assert adviceInfo.getAdviceKind() == AdviceKind.AFTER_THROW;
 					adviceArgs[i] = afterArg;
 					break;
+				case TARGET:
+					adviceArgs[i] = adviceInfo.getContext().getTargetMethodSupplier().getSilently();
+					break;
+				default:
+					assert false : "Unknown argument kind";
 				}
 			}
 		}

@@ -5,11 +5,13 @@ package com.gilecode.xmx.core.instrument;
 import com.gilecode.xmx.aop.AdviceLoadResult;
 import com.gilecode.xmx.aop.IXmxAopLoader;
 import com.gilecode.xmx.aop.impl.AdviceVerifier;
+import com.gilecode.xmx.aop.impl.WeakCachedSupplier;
 import com.gilecode.xmx.aop.impl.WeavingContext;
 import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.cfg.PropertyValue;
 import com.gilecode.xmx.cfg.pattern.MethodSpec;
+import com.gilecode.xmx.core.ManagedClassLoaderWeakRef;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -56,10 +58,22 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 	 */
 	private final IXmxAopLoader xmxAopManager;
 
+	/**
+	 * The reference to class loader which loads the target class.
+	 */
+	private final ManagedClassLoaderWeakRef classLoaderRef;
+
+	/**
+	 * Supplier of the target class, initialized lazily. Used for implementing @TargetMethod advice arguments.
+	 */
+	private WeakCachedSupplier<Class<?>> targetClassSupplier;
+
 	public XmxManagedClassTransformer(ClassVisitor cv, int classId, String bcClassName,
 	                                  String javaClassName,
 	                                  AdviceLoadResult loadedAdvices,
-	                                  IAppPropertiesSource appConfig, IXmxAopLoader xmxAopManager) {
+	                                  IAppPropertiesSource appConfig,
+	                                  IXmxAopLoader xmxAopManager,
+	                                  ManagedClassLoaderWeakRef classLoaderRef) {
 		super(Opcodes.ASM5, cv);
 		this.classId = classId;
 		this.bcClassName = bcClassName;
@@ -67,13 +81,14 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 		this.loadedAdvices = loadedAdvices;
 		this.appConfig = appConfig;
 		this.xmxAopManager = xmxAopManager;
+		this.classLoaderRef = classLoaderRef;
 	}
 
 
 	@Override
 	public MethodVisitor visitMethod(final int access, String name, final String desc, String signature, String[] exceptions) {
 		MethodVisitor parentVisitor = super.visitMethod(access, name, desc, signature, exceptions);
-		
+
 		if (name.startsWith(CONSTR_NAME)) {
 			// add registering managed objects to constructors
 			return new XmxManagedConstructorTransformer(classId, bcClassName, parentVisitor);
@@ -85,8 +100,9 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 			if (advices != null) {
 				String[] adviceDescs = advices.asString().split(",");
 				WeavingContext ctx = xmxAopManager.prepareMethodAdvicesWeaving(Arrays.asList(adviceDescs),
-						loadedAdvices.getAdviceClassesByDesc(), Type.getArgumentTypes(desc), Type.getReturnType(desc),
-						javaClassName, name);
+						loadedAdvices.getAdviceClassesByDesc(),
+						Type.getArgumentTypes(desc), Type.getReturnType(desc),
+						javaClassName, name, getTargetClassSupplier());
 
 				if (!ctx.getAdviceInfoByKind().isEmpty()) {
 					return new XmxAdviceMethodWeaver(access, name, desc, parentVisitor, ctx);
@@ -95,5 +111,26 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 		}
 
 		return parentVisitor;
+	}
+
+	private WeakCachedSupplier<Class<?>> getTargetClassSupplier() {
+		if (targetClassSupplier == null) {
+			targetClassSupplier = new WeakCachedSupplier<Class<?>>() {
+				@Override
+				protected Class<?> load() {
+					ClassLoader cl = classLoaderRef.get();
+					if (cl != null) {
+						try {
+							return cl.loadClass(javaClassName);
+						} catch (ClassNotFoundException e) {
+							// unexpected, give up silently
+						}
+					}
+					// unexpected, give up silently
+					return null;
+				}
+			};
+		}
+		return targetClassSupplier;
 	}
 }

@@ -30,5 +30,5 @@ public interface IXmxAopLoader {
 	WeavingContext prepareMethodAdvicesWeaving(Collection<String> adviceDescs,
 	                                           Map<String, WeakCachedSupplier<Class<?>>> adviceClassesByDesc,
 	                                           Type[] targetParamTypes, Type targetReturnType,
-	                                           String targetClassName, String targetMethodName);
+	                                           String targetClassName, String targetMethodName, WeakCachedSupplier<Class<?>> targetClassSupplier);
 }

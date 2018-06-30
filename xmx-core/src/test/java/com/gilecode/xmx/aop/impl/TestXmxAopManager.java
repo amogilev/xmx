@@ -182,7 +182,7 @@ public class TestXmxAopManager {
 	private static class SampleAdvice_Generic {
 
 		@Advice(AdviceKind.BEFORE)
-		void adviceBefore(@This Object target, @AllArguments(modifiable = true) Object[] args) {}
+		void adviceBefore(@This Object target, @TargetMethod Method tm, @AllArguments(modifiable = true) Object[] args) {}
 
 		@Advice(AdviceKind.AFTER_RETURN)
 		@OverrideRetVal
@@ -219,13 +219,16 @@ public class TestXmxAopManager {
 		assertFalse(beforeAdviceInfo.hasOverrideRetVal());
 		assertFalse(beforeAdviceInfo.isFastProxyArgsAllowed());
 		args = beforeAdviceInfo.getAdviceArguments();
-		assertEquals(2, args.size());
+		assertEquals(3, args.size());
 		assertEquals(AdviceArgument.Kind.THIS, args.get(0).getKind());
 		assertNull(args.get(0).getInterceptedArgument());
 		assertFalse(args.get(0).isModifiable());
-		assertEquals(AdviceArgument.Kind.ALL_ARGUMENTS, args.get(1).getKind());
-		assertTrue(args.get(1).isModifiable());
+		assertEquals(AdviceArgument.Kind.TARGET, args.get(1).getKind());
+		assertFalse(args.get(1).isModifiable());
 		assertNull(args.get(1).getInterceptedArgument());
+		assertEquals(AdviceArgument.Kind.ALL_ARGUMENTS, args.get(2).getKind());
+		assertTrue(args.get(2).isModifiable());
+		assertNull(args.get(2).getInterceptedArgument());
 
 		assertEquals(AdviceKind.AFTER_RETURN, afterRetAdviceInfo.getAdviceKind());
 		assertEquals("adviceAfterReturn", afterRetAdviceInfo.getAdvice().getName());
@@ -350,9 +353,9 @@ public class TestXmxAopManager {
 		static void adviceBefore(@ModifiableArgument(0) Long[] arg0, @ModifiableArgument(1) String[] arg1,
 		                  @ModifiableArgument(2) double[] arg2) {
 			argsCap.setValue(new Object[]{arg0[0], arg1[0], arg2[0]});
-			arg0[0] = 20 + (Long)arg0[0];
+			arg0[0] = 20 + arg0[0];
 			arg1[0] = "mod2_" + arg1[0];
-			arg2[0] = 20.0 + (Double)arg2[0];
+			arg2[0] = 20.0 + arg2[0];
 		}
 	}
 

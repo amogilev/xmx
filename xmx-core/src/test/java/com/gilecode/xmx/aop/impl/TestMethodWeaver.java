@@ -136,63 +136,47 @@ public class TestMethodWeaver {
 
 	private static class SampleAdvice_Generic_Before {
 		@Advice(AdviceKind.BEFORE)
-		public void before(@AllArguments Object[] args, @This Object target) {
+		public void before(@AllArguments Object[] args, @This Object target, @TargetMethod Method tm) {
 			testEventsCap.setValue("UniversalAdvice_Before");
 			testInstanceCap.setValue(this);
 			testArgsCap.setValue(args);
 			testObjectsCap.setValue(target);
+			testObjectsCap.setValue(tm);
 		}
 	}
 
 	private static class SampleAdvice_Generic_Before_Static {
 		@Advice(AdviceKind.BEFORE)
-		public static void before(@AllArguments Object[] args, @This Object target) {
+		public static void before(@AllArguments Object[] args, @This Object target, @TargetMethod Method tm) {
 			testEventsCap.setValue("UniversalAdvice_Before_Static");
 			testArgsCap.setValue(args);
 			testObjectsCap.setValue(target);
-		}
-	}
-
-	private static class SampleAdvice_Generic_Before_Mod {
-		@Advice(AdviceKind.BEFORE)
-		public void before(@AllArguments(modifiable = true) Object[] args, @This Object target) {
-			testEventsCap.setValue("UniversalAdvice_Before");
-			testInstanceCap.setValue(this);
-			testArgsCap.setValue(args);
-			testObjectsCap.setValue(target);
+			testObjectsCap.setValue(tm);
 		}
 	}
 
 	private static class SampleAdvice_Generic_AfterRet {
 		@Advice(AdviceKind.AFTER_RETURN)
-		public void afterReturn(@AllArguments Object[] args, @This Object target, @RetVal Object retVal) {
+		public void afterReturn(@AllArguments Object[] args, @This Object target, @TargetMethod Method tm,
+				@RetVal Object retVal) {
 			testEventsCap.setValue("UniversalAdvice_AfterRet");
 			testInstanceCap.setValue(this);
 			testArgsCap.setValue(args);
 			testObjectsCap.setValue(target);
+			testObjectsCap.setValue(tm);
 			testObjectsCap.setValue(retVal);
-		}
-	}
-
-	private static class SampleAdvice_Generic_AfterRet_Mod {
-		@Advice(AdviceKind.AFTER_RETURN)
-		public @OverrideRetVal Object afterReturn(@AllArguments Object[] args, @This Object target, @RetVal Object retVal) {
-			testEventsCap.setValue("UniversalAdvice_AfterRet");
-			testInstanceCap.setValue(this);
-			testArgsCap.setValue(args);
-			testObjectsCap.setValue(target);
-			testObjectsCap.setValue(retVal);
-			return retVal;
 		}
 	}
 
 	private static class SampleAdvice_Generic_AfterThrow {
 		@Advice(AdviceKind.AFTER_THROW)
-		public void afterThrow(@AllArguments Object[] args, @This Object target, @Thrown Throwable ex) {
+		public void afterThrow(@AllArguments Object[] args, @This Object target, @TargetMethod Method tm,
+				@Thrown Throwable ex) {
 			testEventsCap.setValue("UniversalAdvice_AfterThrow");
 			testInstanceCap.setValue(this);
 			testArgsCap.setValue(args);
 			testObjectsCap.setValue(target);
+			testObjectsCap.setValue(tm);
 			testObjectsCap.setValue(ex);
 		}
 	}
@@ -256,7 +240,9 @@ public class TestMethodWeaver {
 		Class<?> advisedClass = weaveClass(aopManager, SampleClass.class, methodName,
 				SampleAdvice_Generic_Before.class, SampleAdvice_Generic_AfterRet.class);
 
-		Object retVal = advisedClass.getDeclaredMethod(methodName).invoke(null);
+
+		Method targetMethod = advisedClass.getDeclaredMethod(methodName);
+		Object retVal = targetMethod.invoke(null);
 		assertEquals("emptyStatic", retVal);
 
 		assertTrue(testEventsCap.hasCaptured());
@@ -264,10 +250,14 @@ public class TestMethodWeaver {
 		assertEquals(asList("UniversalAdvice_Before", "UniversalAdvice_AfterRet"), testEventsCap.getValues());
 
 		assertTrue(testObjectsCap.hasCaptured());
-		assertEquals(3, testObjectsCap.getValues().size());
+		assertEquals(5, testObjectsCap.getValues().size());
 		assertNull(testObjectsCap.getValues().get(0));
-		assertNull(testObjectsCap.getValues().get(1));
-		assertEquals("emptyStatic", testObjectsCap.getValues().get(2));
+
+		Method expectedTarget = findMethod(SampleClass.class, "emptyStatic");
+		assertEquals(expectedTarget, testObjectsCap.getValues().get(1));
+		assertNull(testObjectsCap.getValues().get(2));
+		assertEquals(expectedTarget, testObjectsCap.getValues().get(3));
+		assertEquals("emptyStatic", testObjectsCap.getValues().get(4));
 	}
 
 	/*
@@ -443,9 +433,11 @@ public class TestMethodWeaver {
 		assertEquals("UniversalAdvice_AfterThrow", testEventsCap.getValue());
 
 		assertTrue(testObjectsCap.hasCaptured());
-		assertEquals(2, testObjectsCap.getValues().size());
+		assertEquals(3, testObjectsCap.getValues().size());
 		assertEquals(sampleInst, testObjectsCap.getValues().get(0));
-		Throwable ex = (Throwable) testObjectsCap.getValues().get(1);
+		assertEquals(findMethod(SampleClass.class, methodName), testObjectsCap.getValues().get(1));
+
+		Throwable ex = (Throwable) testObjectsCap.getValues().get(2);
 		assertTrue(ex instanceof XmxRuntimeException);
 		assertEquals("sampleException2", ex.getMessage());
 

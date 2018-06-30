@@ -9,7 +9,7 @@ package com.gilecode.xmx.aop.impl;
 public class AdviceArgument {
 
 	public enum Kind {
-		ARGUMENT, ALL_ARGUMENTS, THIS, RETVAL, THROWN
+		ARGUMENT, ALL_ARGUMENTS, THIS, RETVAL, THROWN, TARGET
 	}
 
 	/**
