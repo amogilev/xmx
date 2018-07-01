@@ -94,6 +94,7 @@
     <module>xmx-boot</module>
     <module>xmx-aop-api</module>
     <module>xmx-core</module>
+    <module>xmx-core-opt-j8</module>
     <module>xmx-agent</module>
     <module>xmx-webui</module>
     <module>xmx-advices</module>

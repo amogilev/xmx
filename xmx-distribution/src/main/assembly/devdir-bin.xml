@@ -24,6 +24,7 @@
         <include>com.gilecode.xmx:xmx-boot:jar</include>
         <include>com.gilecode.xmx:xmx-aop-api:jar</include>
         <include>com.gilecode.xmx:xmx-core:jar</include>
+        <include>com.gilecode.xmx:xmx-core-opt-j8:jar</include>
         <include>com.gilecode.xmx:xmx-server-jetty:jar</include>
       </includes>
     </dependencySet>

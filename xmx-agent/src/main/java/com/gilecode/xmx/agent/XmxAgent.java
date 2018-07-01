@@ -71,10 +71,12 @@ public class XmxAgent {
 				
 
 			File agentLibDir = new File(agentHomeDir, "lib");
-			appendJarsToBootstrapClassLoader(instr, agentLibDir, "xmx-boot", "xmx-aop-api");
+			String[] agentLibFilenames = agentLibDir.list();
+			String xmxVersion = findLatestLibraryVersion(agentLibFilenames, "xmx-boot");
+			appendJarsToBootstrapClassLoader(instr, agentLibDir, agentLibFilenames, xmxVersion, "xmx-boot", "xmx-aop-api");
 			
 			// from this moment we can use xmx-boot classes
-			boolean success = initializeLoader(agentProperties, agentHomeDir.getAbsoluteFile());
+			boolean success = initializeLoader(agentProperties, agentHomeDir.getAbsoluteFile(), xmxVersion);
 			if (success) {
 				// initialize transformer
 				instr.addTransformer(new XmxClassTransformer());
@@ -85,11 +87,12 @@ public class XmxAgent {
 		}
 	}
 
-	private static void appendJarsToBootstrapClassLoader(Instrumentation instr, File agentLibDir, String... libNames) throws IOException {
-		String[] filenames = agentLibDir.list();
+	private static void appendJarsToBootstrapClassLoader(Instrumentation instr, File libDir,
+			String[] filenames, String xmxVersion, String... libNames) throws IOException {
+		String suffix = xmxVersion == null || xmxVersion.isEmpty() ? ".jar" : "-" + xmxVersion + ".jar";
 		for (String libName : libNames) {
-			String fileName = findLatestLibraryJar(filenames, libName);
-			File f = fileName == null ? null : new File(agentLibDir, fileName);
+			String fileName = findLibraryJar(filenames, libName + suffix);
+			File f = fileName == null ? null : new File(libDir, fileName);
 			if (fileName == null || !f.isFile()) {
 				throw new RuntimeException("Failed to determine proper XMX home directory. Please make sure " +
 						"that xmx-agent.jar resides in XMX_HOME/bin");
@@ -99,18 +102,38 @@ public class XmxAgent {
 	}
 
 	/**
+	 * Finds and returns the file with the name case-insensitively equal to the specified JAR name.
+	 *
+	 * @param filenames a list of filenames
+	 * @param jarName the jar name, e.g. "xmx-boot-0.3.jar"
+	 *
+	 * @return the file name to use, or {@code null} if missing
+	 */
+	private static String findLibraryJar(String[] filenames, String jarName) {
+		for (String fname : filenames) {
+			if (fname.equalsIgnoreCase(jarName)) {
+				return fname;
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Among the specifiied filenames, selects the JAR name which corresponds to the latest version of the specified
-	 * library.
+	 * library and returns this version.
 	 *
 	 * @param filenames a list of filenames
 	 * @param libNameLC the library name (must be in lower case), e.g. "xmx-boot"
 	 *
-	 * @return the JAR file name to use, or {@code null} if missing
+	 * @return the version if the JAR to use, or {@code null} if missing
 	 */
-	private static String findLatestLibraryJar(String[] filenames, String libNameLC) {
-		String found = null;
-		String foundMaxVersion = null;
+	private static String findLatestLibraryVersion(String[] filenames, String libNameLC) {
+		if (filenames == null) {
+			return null;
+		}
 
+		String foundMaxVersion = null;
 		Comparator<String> libVersionsComparator = new SemVerComparator();
 
 		for (String fname : filenames) {
@@ -128,17 +151,16 @@ public class XmxAgent {
 
 				if (foundMaxVersion == null || libVersionsComparator.compare(foundMaxVersion, version) < 0) {
 					foundMaxVersion = version;
-					found = fname;
 				}
 			}
 		}
 
-		return found;
+		return foundMaxVersion;
 	}
 
-	private static boolean initializeLoader(Map<String, String> agentProperties, File xmxHome) {
+	private static boolean initializeLoader(Map<String, String> agentProperties, File xmxHome, String xmxVersion) {
 		// no additional errors required if failed or disabled - all printed by XmxProxy
-		return XmxProxy.initialize(agentProperties, xmxHome);
+		return XmxProxy.initialize(agentProperties, xmxHome, xmxVersion);
 	}
 
 	private static Map<String, String> parseArguments(String agentArgs) {

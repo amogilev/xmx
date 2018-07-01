@@ -26,6 +26,11 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>xmx-core-opt-j8</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>xmx-webui</artifactId>
       <version>${project.version}</version>
       <type>war</type>
