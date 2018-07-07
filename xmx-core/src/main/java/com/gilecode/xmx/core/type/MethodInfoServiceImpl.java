@@ -20,11 +20,16 @@ public class MethodInfoServiceImpl implements IMethodInfoService {
 	}
 
 	@Override
-	public String[] getMethodParameters(Method m) {
+	public String[] getMethodParameterNames(Method m) {
+		return null;
+	}
+
+	@Override
+	public String[] getMethodParameterDescriptions(Method m) {
 		Class<?>[] params = m.getParameterTypes();
 		String[] ret = new String[params.length];
 		for (int j = 0; j < params.length; j++) {
-			ret[j] = params[j].getName();
+			ret[j] = params[j].getSimpleName();
 		}
 		return ret;
 	}

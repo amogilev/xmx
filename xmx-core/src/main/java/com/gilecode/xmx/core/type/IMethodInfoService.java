@@ -11,6 +11,15 @@ public interface IMethodInfoService {
 	 */
 	String getMethodNameTypeSignature(Method m);
 
-	String[] getMethodParameters(Method m);
+	/**
+	 * Returns the textual descriptions of the method parameters, which consist of the (short) type name, followed
+	 * by an optional parameter name (if real parameter name is not known, it is skipped).
+	 */
+	String[] getMethodParameterDescriptions(Method m);
+
+	/**
+	 * Return parameter names, if known, or {@code null} otherwise
+	 */
+	String[] getMethodParameterNames(Method m);
 
 }

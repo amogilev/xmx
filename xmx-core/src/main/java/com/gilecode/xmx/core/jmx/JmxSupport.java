@@ -4,7 +4,9 @@ package com.gilecode.xmx.core.jmx;
 
 import com.gilecode.xmx.cfg.IXmxPropertiesSource;
 import com.gilecode.xmx.core.XmxClassManager;
+import com.gilecode.xmx.core.type.IMethodInfoService;
 import com.gilecode.xmx.service.IXmxService;
+import com.gilecode.xmx.service.XmxServiceRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +34,7 @@ public class JmxSupport {
 		// TODO: check if JMX is enabled for class
 		// TODO: check JMX visibility level, and separate fields/methods
 
+		IMethodInfoService methodInfoService = XmxServiceRegistry.getMethodInfoService();
 		try {
 			ArrayList<ModelMBeanOperationInfo> operations = new ArrayList<>();
 			for (Map.Entry<String, Method> e : managedMethods.entrySet()) {
@@ -49,9 +52,9 @@ public class JmxSupport {
 				final MBeanParameterInfo[] signature =
 						new MBeanParameterInfo[paramClasses.length];
 
+				String[] parameterNames = methodInfoService.getMethodParameterNames(m);
 				for (int i = 0; i < paramClasses.length; i++) {
-					// TODO: try extract parameter names (debug info during load, or Java8, see Spring's ParameterNameDiscoverer)
-					final String pn = "p" + (i + 1);
+					final String pn = parameterNames == null ? "p" + (i + 1) : parameterNames[i];
 					String type = getJmxType(paramClasses[i]);
 					signature[i] = new MBeanParameterInfo(pn, type, "", null);
 				}

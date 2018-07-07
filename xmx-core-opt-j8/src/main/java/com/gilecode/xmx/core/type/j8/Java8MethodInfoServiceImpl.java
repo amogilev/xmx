@@ -13,12 +13,26 @@ import java.lang.reflect.Parameter;
 public class Java8MethodInfoServiceImpl extends MethodInfoServiceImpl {
 
 	@Override
-	public String[] getMethodParameters(Method m) {
+	public String[] getMethodParameterNames(Method m) {
 		Parameter[] params = m.getParameters();
 		String[] ret = new String[params.length];
 		for (int j = 0; j < params.length; j++) {
 			Parameter p = params[j];
-			ret[j] = p.getType().getSimpleName() + ' ' + p.getName();
+			if (!p.isNamePresent()) {
+				return null;
+			}
+			ret[j] = p.getName();
+		}
+		return ret;
+	}
+
+	@Override
+	public String[] getMethodParameterDescriptions(Method m) {
+		Parameter[] params = m.getParameters();
+		String[] ret = new String[params.length];
+		for (int j = 0; j < params.length; j++) {
+			Parameter p = params[j];
+			ret[j] = p.getType().getSimpleName() + (p.isNamePresent() ? " " + p.getName() : "");
 		}
 		return ret;
 	}

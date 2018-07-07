@@ -16,7 +16,18 @@ public class XmxServiceRegistry {
 	}
 
 	private static class MethodInfoServiceHolder {
-		final static IMethodInfoService serviceInstance = new MethodInfoServiceImpl();
+		final static IMethodInfoService serviceInstance = create();
+
+		private static IMethodInfoService create() {
+			IMethodInfoService svc = null;
+			if (getMajorJavaVersion() >= 8) {
+				svc = tryCreateInstance("com.gilecode.xmx.core.type.j8.Java8MethodInfoServiceImpl");
+			}
+			if (svc == null) {
+				svc = new MethodInfoServiceImpl();
+			}
+			return svc;
+		}
 	}
 
 	public static IMethodInfoService getMethodInfoService() {
@@ -29,5 +40,25 @@ public class XmxServiceRegistry {
 
 	public static IMapperService getMapperService() {
 		return MapperServiceHolder.serviceInstance;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <T> T tryCreateInstance(String className) {
+		try {
+			Class<?> clazz = Class.forName(className);
+			return (T)clazz.getDeclaredConstructor().newInstance();
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	static int getMajorJavaVersion() {
+		String[] parts = System.getProperty("java.version").split("[._]");
+		int firstVer = Integer.parseInt(parts[0]);
+		if (firstVer == 1 && parts.length > 1) {
+			return Integer.parseInt(parts[1]);
+		} else {
+			return firstVer;
+		}
 	}
 }

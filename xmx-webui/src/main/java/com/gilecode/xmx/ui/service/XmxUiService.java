@@ -149,7 +149,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			}
 			String methodNameTypeSignature = methodInfoService.getMethodNameTypeSignature(m);
 			ExtendedObjectInfoDto.MethodInfo mi = new ExtendedObjectInfoDto.MethodInfo(methodId, m.getName(), methodNameTypeSignature,
-					methodInfoService.getMethodParameters(m), m.getModifiers());
+					methodInfoService.getMethodParameterDescriptions(m), m.getModifiers());
 			classMethodsInfo.add(mi);
 		}
 		return methodsByClass;
