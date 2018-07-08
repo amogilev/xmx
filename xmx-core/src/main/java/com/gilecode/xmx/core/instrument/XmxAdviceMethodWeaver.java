@@ -48,6 +48,7 @@ public class XmxAdviceMethodWeaver extends AdviceAdapter {
 	public XmxAdviceMethodWeaver(int access, String name, String desc, MethodVisitor mv,
 	                             WeavingContext ctx) {
 		super(Opcodes.ASM5, mv, access, name, desc);
+		System.out.println("Method name = " + name + ", desc=" + desc);
 		this.ctx = ctx;
 		this.hasAfterThrowAdvices = hasAdvices(AdviceKind.AFTER_THROW);
 		paramTypes = getArgumentTypes();

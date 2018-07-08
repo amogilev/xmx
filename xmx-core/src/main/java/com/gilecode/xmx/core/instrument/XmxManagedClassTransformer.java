@@ -12,6 +12,8 @@ import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.cfg.PropertyValue;
 import com.gilecode.xmx.cfg.pattern.MethodSpec;
 import com.gilecode.xmx.core.ManagedClassLoaderWeakRef;
+import com.gilecode.xmx.core.params.IParamNamesConsumer;
+import com.gilecode.xmx.core.params.ParamNamesCache;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -64,16 +66,22 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 	private final ManagedClassLoaderWeakRef classLoaderRef;
 
 	/**
+	 * Whether parameter names shall be extracted, if provided in LVT (and not available in Reflection parameters)
+	 */
+	private boolean extractParamNames;
+
+	/**
 	 * Supplier of the target class, initialized lazily. Used for implementing @TargetMethod advice arguments.
 	 */
 	private WeakCachedSupplier<Class<?>> targetClassSupplier;
 
 	public XmxManagedClassTransformer(ClassVisitor cv, int classId, String bcClassName,
-	                                  String javaClassName,
-	                                  AdviceLoadResult loadedAdvices,
-	                                  IAppPropertiesSource appConfig,
-	                                  IXmxAopLoader xmxAopManager,
-	                                  ManagedClassLoaderWeakRef classLoaderRef) {
+			String javaClassName,
+			AdviceLoadResult loadedAdvices,
+			IAppPropertiesSource appConfig,
+			IXmxAopLoader xmxAopManager,
+			ManagedClassLoaderWeakRef classLoaderRef,
+			boolean extractParamNames) {
 		super(Opcodes.ASM5, cv);
 		this.classId = classId;
 		this.bcClassName = bcClassName;
@@ -82,18 +90,37 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 		this.appConfig = appConfig;
 		this.xmxAopManager = xmxAopManager;
 		this.classLoaderRef = classLoaderRef;
+		this.extractParamNames = extractParamNames;
 	}
 
-
 	@Override
-	public MethodVisitor visitMethod(final int access, String name, final String desc, String signature, String[] exceptions) {
+	public MethodVisitor visitMethod(final int access, final String name, final String desc, String signature, String[] exceptions) {
 		MethodVisitor parentVisitor = super.visitMethod(access, name, desc, signature, exceptions);
 
 		if (name.startsWith(CONSTR_NAME)) {
 			// add registering managed objects to constructors
 			return new XmxManagedConstructorTransformer(classId, bcClassName, parentVisitor);
+		}
 
-		} else if (!loadedAdvices.isEmpty()) {
+		Type[] argumentTypes = Type.getArgumentTypes(desc);
+		if (extractParamNames && argumentTypes.length > 0) {
+			parentVisitor = new LocalVariableTableParamNamesExtractor(access, parentVisitor, argumentTypes,
+					new IParamNamesConsumer() {
+				@Override
+				public void consume(String[] argNames) {
+					ParamNamesCache paramNamesCache = classLoaderRef.getParamNamesCache();
+					boolean found = argNames != null && argNames.length > 0 && argNames[0] != null;
+					if (found) {
+						paramNamesCache.store(javaClassName, name, desc, argNames);
+					} else {
+						paramNamesCache.storeMissingClassInfo(javaClassName);
+						extractParamNames = false;
+					}
+				}
+			});
+		}
+
+		if (!loadedAdvices.isEmpty()) {
 			// weave advices
 			MethodSpec spec = MethodSpec.of(access, name, desc);
 			PropertyValue advices = appConfig.getMethodProperty(javaClassName, spec, Properties.M_ADVICES);

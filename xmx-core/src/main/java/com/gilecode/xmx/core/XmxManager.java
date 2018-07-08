@@ -21,6 +21,7 @@ import com.gilecode.xmx.model.XmxClassInfo;
 import com.gilecode.xmx.model.XmxObjectInfo;
 import com.gilecode.xmx.model.XmxRuntimeException;
 import com.gilecode.xmx.server.IXmxServerLauncher;
+import com.gilecode.xmx.service.IXmxCoreService;
 import com.gilecode.xmx.service.IXmxService;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -43,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
-public final class XmxManager implements IXmxService, IXmxBootService {
+public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootService {
 
 	private final static Logger logger = LoggerFactory.getLogger(XmxManager.class);
 
@@ -345,6 +346,13 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 		}
 	}
 
+	@Override
+	public ManagedClassLoaderWeakRef getOrInitManagedClassLoader(ClassLoader classLoader) {
+		String appName = obtainAppNameByLoader(classLoader);
+		ManagedAppInfo appInfo = getOrInitAppInfo(appName);
+		return appInfo.getOrInitManagedClassLoaderInfo(classLoader, managedClassLoadersRefQueue);
+	}
+
 	private byte[] _transformClassIfInterested(ClassLoader classLoader, String bcClassName,
 			byte[] classBuffer, Class<?> classBeingRedefined) {
 		String appName = obtainAppNameByLoader(classLoader);
@@ -367,9 +375,9 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 			return classBuffer;
 		}
 
-		ManagedAppInfo appInfo = getOrInitAppInfo(appName);
-		ManagedClassLoaderWeakRef classLoaderInfo = appInfo.getOrInitManagedClassLoaderInfo(classLoader, managedClassLoadersRefQueue);
-		
+		ManagedClassLoaderWeakRef classLoaderInfo = getOrInitManagedClassLoader(classLoader);
+		ManagedAppInfo appInfo = classLoaderInfo.getAppInfo();
+
 		int classId;
 		if (classBeingRedefined != null) {
 			// currently the hot code replacement cannot add, remove or change signature of fields and methods
@@ -409,7 +417,7 @@ public final class XmxManager implements IXmxService, IXmxBootService {
 				supportAdvices ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS,
 				classLoader);
 		XmxManagedClassTransformer transformer = new XmxManagedClassTransformer(cw, classId, bcClassName,
-				className, adviceLoadResult, appConfig, xmxAopManager, classLoaderInfo);
+				className, adviceLoadResult, appConfig, xmxAopManager, classLoaderInfo, jmxServer != null);
 
 		cr.accept(transformer, supportAdvices ? ClassReader.SKIP_FRAMES : 0);
 		return cw.toByteArray();

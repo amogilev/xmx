@@ -17,9 +17,4 @@ public interface IMethodInfoService {
 	 */
 	String[] getMethodParameterDescriptions(Method m);
 
-	/**
-	 * Return parameter names, if known, or {@code null} otherwise
-	 */
-	String[] getMethodParameterNames(Method m);
-
 }

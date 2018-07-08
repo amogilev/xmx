@@ -8,7 +8,6 @@ import com.gilecode.xmx.cfg.IXmxConfig;
 import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.cfg.impl.XmxIniConfig;
 import com.gilecode.xmx.log.LogbackConfigurator;
-import com.gilecode.xmx.service.IXmxService;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -40,7 +39,7 @@ public class XmxLoader {
 	}
 
 	// invoked from Web UI
-	public static IXmxService getServiceInstance() {
+	public static XmxManager getServiceInstance() {
 		if (instance == null) {
 			throw new IllegalStateException("XMX is not initialized yet");
 		}

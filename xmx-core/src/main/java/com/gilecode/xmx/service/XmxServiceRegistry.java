@@ -3,6 +3,8 @@
 package com.gilecode.xmx.service;
 
 import com.gilecode.xmx.core.XmxLoader;
+import com.gilecode.xmx.core.params.IParamNamesFetcher;
+import com.gilecode.xmx.core.params.ParamNamesFetcher;
 import com.gilecode.xmx.core.type.IMethodInfoService;
 import com.gilecode.xmx.core.type.MethodInfoServiceImpl;
 
@@ -11,23 +13,36 @@ import com.gilecode.xmx.core.type.MethodInfoServiceImpl;
  */
 public class XmxServiceRegistry {
 
+	private final static int majorJavaVersion = obtainMajorJavaVersion();
+
+	static int obtainMajorJavaVersion() {
+		String[] parts = System.getProperty("java.version").split("[._]");
+		int firstVer = Integer.parseInt(parts[0]);
+		if (firstVer == 1 && parts.length > 1) {
+			return Integer.parseInt(parts[1]);
+		} else {
+			return firstVer;
+		}
+	}
+
+	public static int getMajorJavaVersion() {
+		return majorJavaVersion;
+	}
+
 	public static IXmxService getXmxService() {
 		return XmxLoader.getServiceInstance();
 	}
 
-	private static class MethodInfoServiceHolder {
-		final static IMethodInfoService serviceInstance = create();
+	private static class ParamNamesFetcherHolder {
+		final static IParamNamesFetcher serviceInstance = new ParamNamesFetcher(XmxLoader.getServiceInstance());
+	}
 
-		private static IMethodInfoService create() {
-			IMethodInfoService svc = null;
-			if (getMajorJavaVersion() >= 8) {
-				svc = tryCreateInstance("com.gilecode.xmx.core.type.j8.Java8MethodInfoServiceImpl");
-			}
-			if (svc == null) {
-				svc = new MethodInfoServiceImpl();
-			}
-			return svc;
-		}
+	public static IParamNamesFetcher getParamNamesFetcher() {
+		return ParamNamesFetcherHolder.serviceInstance;
+	}
+
+	private static class MethodInfoServiceHolder {
+		final static IMethodInfoService serviceInstance = new MethodInfoServiceImpl(getParamNamesFetcher());
 	}
 
 	public static IMethodInfoService getMethodInfoService() {
@@ -40,25 +55,5 @@ public class XmxServiceRegistry {
 
 	public static IMapperService getMapperService() {
 		return MapperServiceHolder.serviceInstance;
-	}
-
-	@SuppressWarnings("unchecked")
-	private static <T> T tryCreateInstance(String className) {
-		try {
-			Class<?> clazz = Class.forName(className);
-			return (T)clazz.getDeclaredConstructor().newInstance();
-		} catch (Exception e) {
-			return null;
-		}
-	}
-
-	static int getMajorJavaVersion() {
-		String[] parts = System.getProperty("java.version").split("[._]");
-		int firstVer = Integer.parseInt(parts[0]);
-		if (firstVer == 1 && parts.length > 1) {
-			return Integer.parseInt(parts[1]);
-		} else {
-			return firstVer;
-		}
 	}
 }

@@ -2,10 +2,18 @@
 
 package com.gilecode.xmx.core.type;
 
+import com.gilecode.xmx.core.params.IParamNamesFetcher;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public class MethodInfoServiceImpl implements IMethodInfoService {
+
+	private final IParamNamesFetcher paramNamesFetcher;
+
+	public MethodInfoServiceImpl(IParamNamesFetcher paramNamesFetcher) {
+		this.paramNamesFetcher = paramNamesFetcher;
+	}
 
 	@Override
 	public String getMethodNameTypeSignature(Method m) {
@@ -20,16 +28,16 @@ public class MethodInfoServiceImpl implements IMethodInfoService {
 	}
 
 	@Override
-	public String[] getMethodParameterNames(Method m) {
-		return null;
-	}
-
-	@Override
 	public String[] getMethodParameterDescriptions(Method m) {
 		Class<?>[] params = m.getParameterTypes();
+		String[] paramNames = paramNamesFetcher.getMethodParameterNames(m);
 		String[] ret = new String[params.length];
 		for (int j = 0; j < params.length; j++) {
-			ret[j] = params[j].getSimpleName();
+			String desc = params[j].getSimpleName();
+			if (paramNames != null && j < paramNames.length) {
+				desc += ' ' + paramNames[j];
+			}
+			ret[j] = desc;
 		}
 		return ret;
 	}

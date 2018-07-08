@@ -59,4 +59,6 @@ public class SampleClass {
 			return arg1 + arg2;
 		}
 	}
+
+	public void params1(int i, double d, long l, Double d2, Long l2, String...s) {}
 }

@@ -3,6 +3,7 @@
 package com.gilecode.xmx.core;
 
 import com.gilecode.xmx.aop.impl.WeakCachedSupplier;
+import com.gilecode.xmx.core.params.ParamNamesCache;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -130,14 +131,20 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 	 */
 	private final Map<String, WeakCachedSupplier<Class<?>>> verifiedAdvicesByDesc = new ConcurrentHashMap<>();
 
+	private final ParamNamesCache paramNamesCache = new ParamNamesCache();
+
 	private ManagedClassLoaderWeakRef(ClassLoader referent, ReferenceQueue<? super ClassLoader> q, 
 			ManagedAppInfo appInfo, ConcurrentMap<String, Integer> classIdsByName) {
-		super(referent, q);
+		super(referent = handleNullCL(referent), q);
 		this.hashCode = referent.hashCode();
 		this.appInfo = appInfo;
 		this.classIdsByName = classIdsByName;
 	}
-	
+
+	private static ClassLoader handleNullCL(ClassLoader referent) {
+		return referent == null ? NULL_CL : referent;
+	}
+
 	public ManagedClassLoaderWeakRef(ClassLoader referent, ReferenceQueue<? super ClassLoader> q, 
 			ManagedAppInfo appInfo) {
 		this(referent, q, appInfo, new ConcurrentHashMap<String, Integer>(1024));
@@ -212,6 +219,10 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 				}
 			}
 		}
+	}
+
+	public ParamNamesCache getParamNamesCache() {
+		return paramNamesCache;
 	}
 
 	@Override
