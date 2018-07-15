@@ -84,12 +84,12 @@ public class XmxClassManager {
 	 * Cached list of managed methods mapped by unique IDs.
 	 */
 	// volatile // not actually required, as Map values are always the same
-	private Reference<Map<String, Method>> cachedManagedMethodsRef;
+	private WeakReference<Map<String, Method>> cachedManagedMethodsRef;
 
 	/**
 	 * Cached list of managed methods mapped by unique IDs.
 	 */
-	private Reference<Map<String, Field>> cachedManagedFieldsRef;
+	private WeakReference<Map<String, Field>> cachedManagedFieldsRef;
 
 	private boolean disabledByMaxInstances; // TODO maybe extend to custom flags
 

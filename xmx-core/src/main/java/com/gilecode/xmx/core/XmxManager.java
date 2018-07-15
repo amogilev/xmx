@@ -378,37 +378,7 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 		ManagedClassLoaderWeakRef classLoaderInfo = getOrInitManagedClassLoader(classLoader);
 		ManagedAppInfo appInfo = classLoaderInfo.getAppInfo();
 
-		int classId;
-		if (classBeingRedefined != null) {
-			// currently the hot code replacement cannot add, remove or change signature of fields and methods
-			// so, we can continue using existing ManagedClassInfo
-			// May require re-visiting in Java 11 and further!
-			
-			XmxClassManager classInfo = getManagedClassInfo(classLoaderInfo, classBeingRedefined.getName());
-			assert classInfo != null : "Should have been transformed already: " + classBeingRedefined;
-			classId = classInfo.getId();
-		} else {
-			// initialize known properties of managed class, e.g. class ID and name
-			// other properties may require Class itself, and will be initialized later
-			classId = managedClassesCounter.getAndIncrement();
-			int maxInstances = getMaxInstances(appConfig, className);
-			String jmxObjectNamePart = null;
-			if (jmxServer != null) {
-				jmxObjectNamePart = JmxSupport.createClassObjectNamePart(className, appName);
-			}
-			XmxClassManager classInfo = new XmxClassManager(classId, className,
-					classLoaderInfo, maxInstances, jmxObjectNamePart, config);
-			
-			classesInfoById.put(classId, classInfo);
-			appInfo.registerClass(classLoaderInfo, className, classId);
-		}
-		String action = classBeingRedefined == null ? "transformClass" : "re-transformClass";
-		if (logger.isDebugEnabled()) {
-			logger.info("{}: {} (classId={})", action, className, classId);
-		} else {
-			logger.info("{}: {}", action, className);
-		}
-
+		int classId = registerManagedClass(classBeingRedefined, appName, appConfig, className, classLoaderInfo, appInfo);
 		AdviceLoadResult adviceLoadResult = loadPotentialAdvices(appConfig, className, classLoaderInfo);
 
 		// actually transform the class - add registerObject to constructors and advices
@@ -421,6 +391,36 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 
 		cr.accept(transformer, supportAdvices ? ClassReader.SKIP_FRAMES : 0);
 		return cw.toByteArray();
+	}
+
+	private int registerManagedClass(Class<?> classBeingRedefined, String appName, IAppPropertiesSource appConfig, String className, ManagedClassLoaderWeakRef classLoaderInfo, ManagedAppInfo appInfo) {
+		if (classBeingRedefined != null) {
+			// currently the hot code replacement cannot add, remove or change signature of fields and methods
+			// so, we can continue using existing class manager (if any)
+			// May require re-visiting in Java 11 and further!
+			XmxClassManager classInfo = findClassManager(classLoaderInfo, classBeingRedefined.getName());
+			if (classInfo != null) { // // may be null if original class was created before XMX initialization
+			    int classId = classInfo.getId();
+                logger.info("re-transformClass: {} (classId={})", className, classId);
+				return classId;
+			}
+		}
+
+        // initialize known properties of managed class, e.g. class ID and name
+		// other properties may require Class itself, and will be initialized later
+		int classId = managedClassesCounter.getAndIncrement();
+		int maxInstances = getMaxInstances(appConfig, className);
+		String jmxObjectNamePart = null;
+		if (jmxServer != null) {
+			jmxObjectNamePart = JmxSupport.createClassObjectNamePart(className, appName);
+		}
+		XmxClassManager classInfo = new XmxClassManager(classId, className,
+				classLoaderInfo, maxInstances, jmxObjectNamePart, config);
+
+		classesInfoById.put(classId, classInfo);
+		appInfo.registerClass(classLoaderInfo, className, classId);
+        logger.info("transformClass: {}", className);
+		return classId;
 	}
 
 	private AdviceLoadResult loadPotentialAdvices(IAppPropertiesSource appConfig, String className, ManagedClassLoaderWeakRef classLoaderInfo) {
@@ -632,11 +632,10 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 		}
 	}
 
-	private XmxClassManager getManagedClassInfo(ManagedClassLoaderWeakRef loaderInfo, String className) {
+	private XmxClassManager findClassManager(ManagedClassLoaderWeakRef loaderInfo, String className) {
 		Integer classId = loaderInfo.getClassIdsByName().get(className);
-		
 		if (classId == null) {
-			throw new XmxRuntimeException("Class is not managed: " + className); 
+			return null;
 		}
 		
 		XmxClassManager classInfo = classesInfoById.get(classId);
