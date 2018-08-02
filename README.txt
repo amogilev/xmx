@@ -45,13 +45,39 @@ package managed:
 Managed=true
 ---
 
-== Features ==
+== Web UI Features ==
 
 In the Web UI, you can do the following:
 - list all instances of all managed classes;
 - for each instance, view values of all fields as JSON or toString;
 - set a new value for any field (primitive values and JSON are accepted);
 - run any method, specifying primitive values or JSON as the arguments.
+
+== AOP Advices ==
+
+XMX provides a possibility to specify custom AOP-like "advices" to be executed before or after 
+some "target" methods, with full access to arguments, return value or thrown exception, called
+method and object etc. In order to do that:
+- create an advice class and advice methods, using annotations provided in `xmx-aop-api.jar`
+(available at 'XMX_HOME/lib/'). Make sure the advice methods are marked by the @Advice annotation;
+- put the JAR file with your advices into 'XMX_HOME/lib/advices/';
+- in 'xmx.ini', add the method-level configuration section like
+
+---
+[App=*; Class=org.example.MyClassToManage; Method="foo(int,String)"]
+Advices=yourAdvices.jar:org.example.YourAdvicesClass
+---
+
+In this example, all advice methods found in `YourAdvicesClass` will be bound to the target method
+`foo`. It is also possible to bound the advices to the multiple target methods, using method
+patterns which match the multiple methods, like
+  "*"               - matches all methods
+  "public *"        - matches all public methods
+  "!static *"       - matches all non-static methods
+  "String get*()"   - matches all String-returning getters
+
+The detailed specification of the method patterns with extra examples may be found in Wiki:
+https://bitbucket.org/amogilev/xmx/wiki/xmx.ini%20configuration%20file%20format
 
 == How to build  ==
 
