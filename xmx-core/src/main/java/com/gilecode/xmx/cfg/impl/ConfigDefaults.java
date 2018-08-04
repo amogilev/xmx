@@ -64,6 +64,13 @@ public interface ConfigDefaults {
 			"the matching classes.",
 	};
 
+	String[] SECTION_SAMPLEADVICE_COMMENTS = {
+			"",
+			"This sample section shows how to specify custom AOP-like advices for the",
+			"specified target method(s) in the managed class. For more details, see the",
+			"section \"AOP Advices\" in README.txt",
+	};
+
 	SectionDescription SECTION_SYSTEM_DESC = new SectionDescription(SectionsNamespace.SECTION_SYSTEM,
 			SECTION_SYSTEM_COMMENTS,
 			new OptionDescription(Properties.GLOBAL_ENABLED, true, "Whether to enable XMX at all"),
@@ -96,8 +103,14 @@ public interface ConfigDefaults {
 			new OptionDescription(Properties.SP_MANAGED, false, "Specifies whether the matching classes shall be managed or not")
 	);
 
+	SectionDescription SECTION_SAMPLEADVICE_DESC = new SectionDescription("App=sampleapp; Class=org.example.MyClassToManage; Method=\"foo(int,String)\"",
+            SECTION_SAMPLEADVICE_COMMENTS,
+			new OptionDescription(Properties.M_ADVICES, "yourAdvices.jar:org.example.YourAdvicesClass", "Specifies the JAR file and class with the advices to use for the target method(s)")
+	);
+
 	List<SectionDescription> ALL_SECTIONS = Collections.unmodifiableList(Arrays.asList(
-			SECTION_SYSTEM_DESC, SECTION_ALLAPPS_DESC, SECTION_ALLCLASSES_DESC, SECTION_SAMPLECLASS_DESC));
+			SECTION_SYSTEM_DESC, SECTION_ALLAPPS_DESC, SECTION_ALLCLASSES_DESC,
+            SECTION_SAMPLECLASS_DESC, SECTION_SAMPLEADVICE_DESC));
 
 	//
 	// Hidden (internal) options
