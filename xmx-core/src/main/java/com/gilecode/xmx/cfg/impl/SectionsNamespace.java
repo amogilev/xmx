@@ -14,8 +14,11 @@ public interface SectionsNamespace {
 	
 	/** The common [App=*] section*/
 	String SECTION_ALLAPPS = "App=*";
-	
-	/** Parts keys of the comlex section headers, like in [App=Foo;Class=Bar;Method="public  *"] */
+
+	/** The common [App=*] section*/
+	String SECTION_ALLCLASSES = "App=*; Class=*";
+
+	/** Parts keys of the complex section headers, like in [App=Foo;Class=Bar;Method="public  *"] */
 	String PART_APP = "App";
 	String PART_CLASS = "Class";
 	String PART_METHOD = "Method";

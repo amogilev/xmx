@@ -37,18 +37,33 @@ public interface ConfigDefaults {
 	
 	String[] SECTION_ALLAPPS_COMMENTS = {
 			"",
-			"Per-application settings sections follow, marked as [App=app_name_pattern],",
-			"where app_name_pattern is Java RegEx pattern (or simple app name).",
+			"Per-application an per-class settings sections follow, marked as either",
+			"[App=app_name_pattern] or [App=app_name_pattern;Class=class_name_pattern],",
+			"respectively. These patterns may be just names with optional '*' for simple",
+            "cases, or Java RegEx full patterns enclosed in ^$, e.g. \"^(a|bc)[def].*$\".",
+            "",
+			"Currently the app names are recognized only for the web applications",
+			"deployed to Tomcat or Jetty application servers.",
 			"",
-			"Supported are: native application names (like 'tomcat7') and web application",
-			"names running in supported servlet containers (e.g. 'MyWebUI')",
+			"As the application/class names may match several patterns, the settings",
+			"override each other, and the latest matching setting wins.",
 			"",
-			"As the application name may match several patterns, the settings override",
-			"each other, and the latest matching setting wins.",
-			"",
-			"[App=*] section contains the default settings for all applications"
+			"[App=*] section contains the default settings for all applications."
 	};
 	
+	String[] SECTION_ALLCLASSES_COMMENTS = {
+			"",
+			"This section contains the default settings for all managed classes in all",
+			"managed applications."
+	};
+
+	String[] SECTION_SAMPLECLASS_COMMENTS = {
+			"",
+			"This sample section shows how to override 'Managed'/'ManagedClasses'",
+			"options in the previous sections and disable or enable the management of",
+			"the matching classes.",
+	};
+
 	SectionDescription SECTION_SYSTEM_DESC = new SectionDescription(SectionsNamespace.SECTION_SYSTEM,
 			SECTION_SYSTEM_COMMENTS,
 			new OptionDescription(Properties.GLOBAL_ENABLED, true, "Whether to enable XMX at all"),
@@ -68,12 +83,21 @@ public interface ConfigDefaults {
 			new OptionDescription(Properties.APP_ENABLED, true, "Whether the management is enabled for the application"),
 			new OptionDescription(Properties.specialClassesForm(Properties.SP_MANAGED), 
 					"^.*(Service|(?<![rR]eference)Manager|Engine|DataSource)\\d*(Impl\\d*)?$", 
-					"Determines instances of which application classes are managed by XMX"),
-			new OptionDescription(Properties.CLASS_MAX_INSTANCES, 10, "Max number of managed instances by class")
+					"Determines instances of which application classes are managed by XMX")
 			);
-	
+
+	SectionDescription SECTION_ALLCLASSES_DESC = new SectionDescription(SectionsNamespace.SECTION_ALLCLASSES,
+			SECTION_ALLCLASSES_COMMENTS,
+			new OptionDescription(Properties.CLASS_MAX_INSTANCES, 10, "Max number of managed instances per class")
+	);
+
+	SectionDescription SECTION_SAMPLECLASS_DESC = new SectionDescription("App=sampleapp; Class=com.example.SampleService",
+			SECTION_SAMPLECLASS_COMMENTS,
+			new OptionDescription(Properties.SP_MANAGED, false, "Specifies whether the matching classes shall be managed or not")
+	);
+
 	List<SectionDescription> ALL_SECTIONS = Collections.unmodifiableList(Arrays.asList(
-			SECTION_SYSTEM_DESC, SECTION_ALLAPPS_DESC));
+			SECTION_SYSTEM_DESC, SECTION_ALLAPPS_DESC, SECTION_ALLCLASSES_DESC, SECTION_SAMPLECLASS_DESC));
 
 	//
 	// Hidden (internal) options

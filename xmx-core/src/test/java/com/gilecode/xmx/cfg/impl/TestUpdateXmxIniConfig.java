@@ -127,23 +127,20 @@ public class TestUpdateXmxIniConfig {
 	public void testUpdateWithOptionOverrideByUncommenting() throws Exception {
 		Map<String, List<String>> optionsOverrides = new HashMap<>();
 		
-		String mngOptName = Properties.specialClassesForm(Properties.SP_MANAGED);
-		optionsOverrides.put(mngOptName, 
-				makeOptionLinesWithOverrideValue(SECTION_ALLAPPS_DESC, mngOptName, "*Connection", true));
 		optionsOverrides.put(Properties.CLASS_MAX_INSTANCES,
-				makeOptionLinesWithOverrideValue(SECTION_ALLAPPS_DESC, Properties.CLASS_MAX_INSTANCES, "123", false));
-		
-		List<String> overrideLines = makeSectionLinesWithOptionsOverride(SECTION_ALLAPPS_DESC, 
+				makeOptionLinesWithOverrideValue(SECTION_ALLCLASSES_DESC, Properties.CLASS_MAX_INSTANCES, "123", false));
+
+		List<String> overrideLines = makeSectionLinesWithOptionsOverride(SECTION_ALLCLASSES_DESC,
 				optionsOverrides);
-		List<String> initialLines = makeIniLinesWithSectionOverride(SECTION_ALLAPPS_DESC.getName(), 
+		List<String> initialLines = makeIniLinesWithSectionOverride(SECTION_ALLCLASSES_DESC.getName(),
 				overrideLines);
 		
 		// expected contents after the update
 		optionsOverrides.put(Properties.CLASS_MAX_INSTANCES,
-				makeOptionLinesWithOverrideValue(SECTION_ALLAPPS_DESC, Properties.CLASS_MAX_INSTANCES, "123", true));
-		overrideLines = makeSectionLinesWithOptionsOverride(SECTION_ALLAPPS_DESC, 
+				makeOptionLinesWithOverrideValue(SECTION_ALLCLASSES_DESC, Properties.CLASS_MAX_INSTANCES, "123", true));
+		overrideLines = makeSectionLinesWithOptionsOverride(SECTION_ALLCLASSES_DESC,
 				optionsOverrides);
-		List<String> expectedLines = makeIniLinesWithSectionOverride(SECTION_ALLAPPS_DESC.getName(), 
+		List<String> expectedLines = makeIniLinesWithSectionOverride(SECTION_ALLCLASSES_DESC.getName(),
 				overrideLines);
 		
 		checkUpdateRequiredForLines(initialLines, expectedLines);
