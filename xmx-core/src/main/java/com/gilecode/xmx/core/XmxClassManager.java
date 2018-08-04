@@ -3,7 +3,6 @@
 package com.gilecode.xmx.core;
 
 import com.gilecode.xmx.cfg.IXmxConfig;
-import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.core.jmx.JmxSupport;
 import com.gilecode.xmx.service.ISignatureService;
 import com.gilecode.xmx.service.IXmxClassMembersLookup;
@@ -294,10 +293,7 @@ public class XmxClassManager {
 		Class<?> c = clazz;
 		while (c != null) {
 			Field[] declaredFields = c.getDeclaredFields();
-			if (config.getSystemProperty(Properties.GLOBAL_SORT_FIELDS).asBool()) {
-				// optionally sort fields declared in one class
-				Arrays.sort(declaredFields, ReflectionUtils.FIELD_COMPARATOR);
-			}
+			Arrays.sort(declaredFields, ReflectionUtils.FIELD_COMPARATOR);
 
 			for (Field f : declaredFields) {
 				// TODO: check if managed (e.g. by level or pattern)

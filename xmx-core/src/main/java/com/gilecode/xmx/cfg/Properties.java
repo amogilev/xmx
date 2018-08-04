@@ -22,7 +22,6 @@ public final class Properties {
 	public static final String GLOBAL_EMB_SERVER_IMPL = "EmbeddedWebServer.Impl";
 	public static final String GLOBAL_EMB_SERVER_PORT = "EmbeddedWebServer.Port";
 	public static final String GLOBAL_JMX_ENABLED = "JMX.Bridge.Enabled";
-	public static final String GLOBAL_SORT_FIELDS = "Sort.Fields";
 	public static final String GLOBAL_LOG_LEVEL = "Log.Level";
 	public static final String GLOBAL_LOG_DIR = "Log.Dir";
 	public static final String GLOBAL_LOG_CFG_FILE = "Log.LogbackCfg.File";
@@ -52,7 +51,7 @@ public final class Properties {
 	// all known names of System-level properties
 	private static final Set<String> ALL_SYSTEM_PROPNAMES = new HashSet<>(Arrays.asList(
 			GLOBAL_ENABLED, GLOBAL_EMB_SERVER_ENABLED, GLOBAL_EMB_SERVER_IMPL, GLOBAL_EMB_SERVER_PORT, 
-			GLOBAL_JMX_ENABLED, GLOBAL_SORT_FIELDS, GLOBAL_LOG_LEVEL, GLOBAL_LOG_DIR, GLOBAL_LOG_CFG_FILE));
+			GLOBAL_JMX_ENABLED, GLOBAL_LOG_LEVEL, GLOBAL_LOG_DIR, GLOBAL_LOG_CFG_FILE));
 	
 	// all known names of Class-level properties
 	private static final Set<String> ALL_CLASS_PROPNAMES = new HashSet<>(Arrays.asList(
