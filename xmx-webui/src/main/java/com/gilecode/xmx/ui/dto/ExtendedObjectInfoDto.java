@@ -2,7 +2,6 @@
 
 package com.gilecode.xmx.ui.dto;
 
-import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
 
@@ -12,113 +11,6 @@ import static com.gilecode.xmx.ui.UIConstants.ARRAY_PAGE_LENGTH;
  * A detailed object information. The basic information is extended with fields, methods and array details.
  */
 public class ExtendedObjectInfoDto extends ObjectInfoDto {
-	/**
-	 * Information about a single field.
-	 */
-	public static class FieldInfo {
-
-		/**
-		 * Field ID, unique within the managed object.
-		 */
-		private final String id;
-
-		/**
-		 * Field name.
-		 */
-		private final String name;
-
-		/**
-		 * Field modifiers
-		 */
-		private final int modifiers;
-
-		/**
-		 * The text representation of the field value.
-		 */
-		private final XmxObjectTextRepresentation text;
-
-		public FieldInfo(String fid, String name, int modifiers, XmxObjectTextRepresentation text) {
-			super();
-			this.id = fid;
-			this.name = name;
-			this.modifiers = modifiers;
-			this.text = text;
-		}
-
-		public String getId() {
-			return id;
-		}
-
-		public String getName() {
-			return name;
-		}
-
-		public XmxObjectTextRepresentation getText() {
-			return text;
-		}
-
-		public boolean isStaticField() {
-			return (modifiers & Modifier.STATIC) != 0;
-		}
-	}
-
-	/**
-	 * Information about a single method.
-	 */
-	public static class MethodInfo {
-
-		/**
-		 * Method ID, unique within the managed object.
-		 */
-		private final String id;
-
-		/**
-		 * Simple method name. Several methods with same name may exist.
-		 */
-		private final String name;
-
-		/**
-		 * Method signature, return type and name. Really is a part of signature before ()
-		 */
-		private final String nameTypeSignature;
-
-		private final String[] parameters;
-
-		/**
-		 * Method modifiers
-		 */
-		private final int modifiers;
-
-		public MethodInfo(String id, String name, String nameTypeSignature, String[] parameters,
-						  int modifiers) {
-			super();
-			this.id = id;
-			this.name = name;
-			this.nameTypeSignature = nameTypeSignature;
-			this.parameters = parameters;
-			this.modifiers = modifiers;
-		}
-
-		public String getId() {
-			return id;
-		}
-
-		public String getName() {
-			return name;
-		}
-
-		public String getNameTypeSignature() {
-			return nameTypeSignature;
-		}
-
-		public String[] getParameters() {
-			return parameters;
-		}
-
-		public boolean isStaticMethod() {
-			return (modifiers & Modifier.STATIC) != 0;
-		}
-	}
 
 	/**
 	 * Names of the object class and all its superclasses,
@@ -133,12 +25,12 @@ public class ExtendedObjectInfoDto extends ObjectInfoDto {
 	/**
 	 * Lists of fields for object and its parents, mapped by the class name.
 	 */
-	final private Map<String, List<FieldInfo>> fieldsByClass;
+	final private Map<String, List<XmxFieldInfo>> fieldsByClass;
 
 	/**
 	 * Lists of methods for object and its parents.
 	 */
-	final private Map<String, List<MethodInfo>> methodsByClass;
+	final private Map<String, List<XmxMethodInfo>> methodsByClass;
 
 	/**
 	 * The current page of the array, only valid if this object is an array.
@@ -199,8 +91,8 @@ public class ExtendedObjectInfoDto extends ObjectInfoDto {
 	public ExtendedObjectInfoDto(int objectId, ClassInfoDto classInfo,
 	                             XmxObjectTextRepresentation text,
 	                             List<String> classesNames,
-	                             Map<String, List<FieldInfo>> fieldsByClass,
-	                             Map<String, List<MethodInfo>> methodsByClass,
+	                             Map<String, List<XmxFieldInfo>> fieldsByClass,
+	                             Map<String, List<XmxMethodInfo>> methodsByClass,
 	                             ArrayPageDetails arrayPage, String permaRefPath) {
 		super(objectId, classInfo, text);
 		this.classesNames = classesNames;
@@ -214,11 +106,11 @@ public class ExtendedObjectInfoDto extends ObjectInfoDto {
 		return classesNames;
 	}
 
-	public Map<String, List<FieldInfo>> getFieldsByClass() {
+	public Map<String, List<XmxFieldInfo>> getFieldsByClass() {
 		return fieldsByClass;
 	}
 
-	public Map<String, List<MethodInfo>> getMethodsByClass() {
+	public Map<String, List<XmxMethodInfo>> getMethodsByClass() {
 		return methodsByClass;
 	}
 

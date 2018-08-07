@@ -104,8 +104,8 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		Object obj = objectInfo.getValue();
 
 		ExtendedObjectInfoDto.ArrayPageDetails arrayPage = getArrayPageDetails(obj, arrPageNum);
-		Map<String, List<ExtendedObjectInfoDto.FieldInfo>> fieldsByClass = fillFieldsInfoByClass(objectInfo);
-		Map<String, List<ExtendedObjectInfoDto.MethodInfo>> methodsByClass = fillMethodsInfoByClass(objectInfo);
+		Map<String, List<XmxFieldInfo>> fieldsByClass = fillFieldsInfoByClass(objectInfo);
+		Map<String, List<XmxMethodInfo>> methodsByClass = fillMethodsInfoByClass(objectInfo);
 
 		List<String> classNames = new ArrayList<>();
 		if (obj != null) {
@@ -134,30 +134,33 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return null;
 	}
 
-	private Map<String, List<ExtendedObjectInfoDto.MethodInfo>> fillMethodsInfoByClass(XmxObjectInfo objectInfo) {
-		Map<String, List<ExtendedObjectInfoDto.MethodInfo>> methodsByClass = new LinkedHashMap<>();
+	private Map<String, List<XmxMethodInfo>> fillMethodsInfoByClass(XmxObjectInfo objectInfo) {
+		Map<String, List<XmxMethodInfo>> methodsByClass = new LinkedHashMap<>();
 		Map<String, Method> managedMethods = objectInfo.getMembersLookup().listManagedMethods();
 		for (Map.Entry<String, Method> e : managedMethods.entrySet()) {
 			String methodId = e.getKey();
 			Method m = e.getValue();
 			String declaringClassName = m.getDeclaringClass().getName();
 
-			List<ExtendedObjectInfoDto.MethodInfo> classMethodsInfo = methodsByClass.get(declaringClassName);
+			List<XmxMethodInfo> classMethodsInfo = methodsByClass.get(declaringClassName);
 			if (classMethodsInfo == null) {
 				classMethodsInfo = new ArrayList<>();
 				methodsByClass.put(declaringClassName, classMethodsInfo);
 			}
-			String methodNameTypeSignature = methodInfoService.getMethodNameTypeSignature(m);
-			ExtendedObjectInfoDto.MethodInfo mi = new ExtendedObjectInfoDto.MethodInfo(methodId, m.getName(), methodNameTypeSignature,
-					methodInfoService.getMethodParameterDescriptions(m), m.getModifiers());
-			classMethodsInfo.add(mi);
+			classMethodsInfo.add(toMethodInfo(methodId, m));
 		}
 		return methodsByClass;
 	}
 
-	private Map<String, List<ExtendedObjectInfoDto.FieldInfo>> fillFieldsInfoByClass(XmxObjectInfo objectInfo) {
+	private XmxMethodInfo toMethodInfo(String methodId, Method m) {
+		String methodNameTypeSignature = methodInfoService.getMethodNameTypeSignature(m);
+		return new XmxMethodInfo(methodId, m.getName(), methodNameTypeSignature,
+				methodInfoService.getMethodParameterDescriptions(m), m.getModifiers());
+	}
+
+	private Map<String, List<XmxFieldInfo>> fillFieldsInfoByClass(XmxObjectInfo objectInfo) {
 		Object obj = objectInfo.getValue();
-		Map<String, List<ExtendedObjectInfoDto.FieldInfo>> fieldsByClass = new LinkedHashMap<>();
+		Map<String, List<XmxFieldInfo>> fieldsByClass = new LinkedHashMap<>();
 		if (obj != null) {
 			Map<String, Field> managedFields = objectInfo.getMembersLookup().listManagedFields();
 			for (Map.Entry<String, Field> e : managedFields.entrySet()) {
@@ -167,14 +170,14 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 				String declaringClassName = f.getDeclaringClass().getName();
 
-				List<ExtendedObjectInfoDto.FieldInfo> classFieldsInfo = fieldsByClass.get(declaringClassName);
+				List<XmxFieldInfo> classFieldsInfo = fieldsByClass.get(declaringClassName);
 				if (classFieldsInfo == null) {
 					classFieldsInfo = new ArrayList<>();
 					fieldsByClass.put(declaringClassName, classFieldsInfo);
 				}
 
 				XmxObjectTextRepresentation textValue = safeFieldToText(obj, f, OBJ_FIELDS_JSON_CHARS_LIMIT);
-				ExtendedObjectInfoDto.FieldInfo fi = new ExtendedObjectInfoDto.FieldInfo(fid, f.getName(),
+				XmxFieldInfo fi = new XmxFieldInfo(fid, f.getName(),
 						f.getModifiers(), textValue);
 				classFieldsInfo.add(fi);
 			}
@@ -358,7 +361,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public XmxObjectTextRepresentation invokeObjectMethod(String refpath, String methodId, String[] argsArr) throws Throwable {
+	public XmxMethodResult invokeObjectMethod(String refpath, String methodId, String[] argsArr) throws Throwable {
 		SearchObjectResult searchResult = findObject(refpath);
 		XmxObjectInfo objectInfo = searchResult.foundObjectInfo;
 		Object obj = objectInfo.getValue();
@@ -370,6 +373,10 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		}
 		reflAccessor.makeAccessible(m);
 
+		String methodDesc = m.getName();
+		XmxMethodInfo methodInfo = toMethodInfo(methodId, m);
+		XmxMethodResult resultInfo = new XmxMethodResult(m.getDeclaringClass().getName(), methodInfo);
+
 		// set context class loader to enable functionality which depends on it, like JNDI
 		ClassLoader prevClassLoader = Thread.currentThread().getContextClassLoader();
 		Thread.currentThread().setContextClassLoader(chooseContextClassLoader(searchResult));
@@ -379,14 +386,13 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			Object[] args = translateArgs(argsArr, m, chooseContextClassLoader(searchResult));
 			Object result = m.invoke(obj, args);
 			resultText = toText(result, 0);
+			resultInfo.setResult(resultText);
 		} catch (InvocationTargetException e) {
-			// re-throw cause
-			// alternatively, a special page may be created for exception result, but it seems unnecessary now
-			throw e.getCause();
+			resultInfo.setException(e.getCause());
 		} finally {
 			Thread.currentThread().setContextClassLoader(prevClassLoader);
 		}
-		return resultText;
+		return resultInfo;
 	}
 
 	/**

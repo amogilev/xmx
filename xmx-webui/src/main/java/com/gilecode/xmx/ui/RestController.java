@@ -6,7 +6,7 @@ import com.gilecode.xmx.model.NotSingletonException;
 import com.gilecode.xmx.ui.dto.ExtendedClassInfoDto;
 import com.gilecode.xmx.ui.dto.ExtendedObjectInfoDto;
 import com.gilecode.xmx.ui.dto.ObjectInfoDto;
-import com.gilecode.xmx.ui.dto.XmxObjectTextRepresentation;
+import com.gilecode.xmx.ui.dto.XmxMethodResult;
 import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.service.MissingObjectException;
 import com.gilecode.xmx.ui.service.RefPathSyntaxException;
@@ -179,10 +179,10 @@ public class RestController implements UIConstants {
 		refpath = decode(refpath);
 		boolean permanent = checkSessionId(sessionId, refpath);
 
-		XmxObjectTextRepresentation resultText = xmxUiService.invokeObjectMethod(refpath, methodId, argsArr);
+		XmxMethodResult resultInfo = xmxUiService.invokeObjectMethod(refpath, methodId, argsArr);
 
 		model.addAttribute("refpath", refpath);
-		model.addAttribute("result", resultText);
+		model.addAttribute("methodAndResult", resultInfo);
 		model.addAttribute(ATTR_SESSION_ID, permanent ? "" : sessionId);
 		return "methodResult";
 	}

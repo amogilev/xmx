@@ -7,7 +7,7 @@ import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.dto.ExtendedClassInfoDto;
 import com.gilecode.xmx.ui.dto.ExtendedObjectInfoDto;
 import com.gilecode.xmx.ui.dto.ObjectInfoDto;
-import com.gilecode.xmx.ui.dto.XmxObjectTextRepresentation;
+import com.gilecode.xmx.ui.dto.XmxMethodResult;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -55,7 +55,7 @@ public interface IXmxUiService {
 	 */
 	SearchObjectResult findObject(String refpath) throws MissingObjectException, RefPathSyntaxException, NotSingletonException;
 
-	XmxObjectTextRepresentation invokeObjectMethod(String refpath, String methodId, String[] argsArr)
+	XmxMethodResult invokeObjectMethod(String refpath, String methodId, String[] argsArr)
 			throws MissingObjectException, RefPathSyntaxException, Throwable;
 
 	/**
