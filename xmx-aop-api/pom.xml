@@ -3,7 +3,7 @@
   <parent>
     <groupId>com.gilecode.xmx</groupId>
     <artifactId>xmx-parent</artifactId>
-    <version>0.3.1</version>
+    <version>0.4-SNAPSHOT</version>
   </parent>  
 
   <artifactId>xmx-aop-api</artifactId>
