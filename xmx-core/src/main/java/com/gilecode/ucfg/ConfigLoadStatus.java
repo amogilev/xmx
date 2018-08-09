@@ -29,5 +29,9 @@ public enum ConfigLoadStatus {
 	/**
 	 * The configuration file was read, no update required.
 	 */
-	SUCCESS
+	SUCCESS;
+
+	public String message() {
+		return this == FAIL ? "FAIL: default options are used" : name();
+	}
 }

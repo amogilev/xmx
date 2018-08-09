@@ -1,4 +1,4 @@
-// Copyright © 2017 Andrey Mogilev. All rights reserved.
+// Copyright © 2017-2018 Andrey Mogilev. All rights reserved.
 
 package com.gilecode.xmx.core;
 
@@ -25,8 +25,7 @@ public class XmxLoader {
 			throw new IllegalStateException("XMX is already initialized");
 		}
 
-		XmxIniConfig config = XmxIniConfig.getDefault();
-		config.overrideSystemProperties(overrideSystemProps);
+		XmxIniConfig config = XmxIniConfig.getDefault(overrideSystemProps);
 		configureLogging(config);
 
 		instance = new XmxManager(config, homeDir);
@@ -65,7 +64,7 @@ public class XmxLoader {
 		sb.append(prefix).append("XMX Agent ").append(implVersion).append(" is started using configuration in ")
 				.append(config.getConfigurationFile());
 		if (cfgStatus != ConfigLoadStatus.SUCCESS) {
-			sb.append(" (").append(cfgStatus).append(")");
+			sb.append(" (").append(cfgStatus.message()).append(")");
 		}
 		sb.append(newline);
 

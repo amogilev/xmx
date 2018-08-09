@@ -28,6 +28,7 @@ public class XmxAgent {
 	// no spaces in override_props, names are case-insensitive.
 	// Examples:
 	// -javaagent:path\xmx-agent.jar=enabled=false
+	// -javaagent:path\xmx-agent.jar=config=/home/tomcat/.xmx/xmx2.ini
 	// -javaagent:path\xmx-agent.jar=enabled=true,EmbeddedWebServer.enabled=false
 	// -javaagent:path\xmx-agent.jar=enabled=true,embeddedwebserver.enabled=true,EmbeddedWebServer.Port=8082
 	

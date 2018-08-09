@@ -1,11 +1,10 @@
-// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
+// Copyright © 2015-2018 Andrey Mogilev. All rights reserved.
 
 package com.gilecode.xmx.cfg;
 
 import com.gilecode.ucfg.ConfigLoadStatus;
 
 import java.io.File;
-import java.util.Map;
 
 /**
  * Interface to XMX configuration. Provides the following different types of access:
@@ -28,19 +27,6 @@ import java.util.Map;
  */
 public interface IXmxConfig extends IXmxPropertiesSource /*, IConfigManager */ {
 	
-	/**
-	 * Overrides known global (XMX [System]) configuration properties
-	 * <p/>
-	 * Property names are compared case-insensitively, so any case of override
-	 * properties is accepted.
-	 * <p/>
-	 * As most of properties are used only at startup, the override takes place
-	 * only if done before the actual use of those properties.
-	 * 
-	 * @param properties properties to override
-	 */
-	void overrideSystemProperties(Map<String, String> properties);
-
 	/**
 	 * Return the configuration file used
 	 */

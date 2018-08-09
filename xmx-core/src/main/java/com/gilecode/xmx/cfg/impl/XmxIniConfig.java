@@ -1,4 +1,4 @@
-// Copyright © 2015-2017 Andrey Mogilev. All rights reserved.
+// Copyright © 2015-2018 Andrey Mogilev. All rights reserved.
 
 package com.gilecode.xmx.cfg.impl;
 
@@ -13,7 +13,6 @@ import com.gilecode.xmx.util.Pair;
 import org.ini4j.Ini;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,7 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 
-	private static final String XMX_INI = "xmx.ini";
+	static final String XMX_INI = "xmx.ini";
+	static final String CUSTOM_CONFIG_FILE = "config";
 
 	@SuppressWarnings("unused")
 	private final Ini ini;
@@ -95,23 +95,35 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		return new XmxIniConfig(result.getRawConfig(), systemOptions, sections, result.getStatus());
 	}
 
-
 	/**
 	 * Loads xmx.ini file from '${user.home}/.xmx/' location, or creates
 	 * it and fills with default values.
 	 *
+	 * @param overrideSystemProps (optional) properties to override; or {@code null}
 	 * @return the configuration to use
-	 *
-	 * @throws IOException if the xmx.ini file is corrupted, or cannot be written
 	 */
-	public static XmxIniConfig getDefault() {
-		File xmxDir = new File(System.getProperty("user.home") +
-				File.separator + ".xmx");
-		if (!xmxDir.exists()) {
-			xmxDir.mkdirs();
+	public static XmxIniConfig getDefault(Map<String, String> overrideSystemProps) {
+		File iniFile;
+		File configDir;
+		if (overrideSystemProps != null && overrideSystemProps.containsKey(CUSTOM_CONFIG_FILE)) {
+			iniFile = new File(overrideSystemProps.get(CUSTOM_CONFIG_FILE));
+			configDir = iniFile.getParentFile();
+		} else {
+			configDir = defaultConfigDir();
+			iniFile = new File(configDir, XMX_INI);
 		}
-		File iniFile = new File(xmxDir, XMX_INI);
-		return load(iniFile, true);
+		if (configDir != null && !configDir.exists()) {
+			configDir.mkdirs();
+		}
+		XmxIniConfig config = load(iniFile, true);
+		if (overrideSystemProps != null) {
+			config.overrideSystemProperties(overrideSystemProps);
+		}
+		return config;
+	}
+
+	public static File defaultConfigDir() {
+		return new File(System.getProperty("user.home") + File.separator + ".xmx");
 	}
 
 
@@ -149,8 +161,18 @@ public class XmxIniConfig implements IXmxConfig, SectionsNamespace {
 		}
 	}
 
-	@Override
-	public void overrideSystemProperties(Map<String, String> properties) {
+	/**
+	 * Overrides known global (XMX [System]) configuration properties
+	 * <p/>
+	 * Property names are compared case-insensitively, so any case of override
+	 * properties is accepted.
+	 * <p/>
+	 * As most of properties are used only at startup, the override takes place
+	 * only if done before the actual use of those properties.
+	 *
+	 * @param properties properties to override
+	 */
+	private void overrideSystemProperties(Map<String, String> properties) {
 		if (properties.isEmpty()) {
 			return;
 		}
