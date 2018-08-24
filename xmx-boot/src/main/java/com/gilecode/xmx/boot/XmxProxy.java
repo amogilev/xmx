@@ -142,6 +142,17 @@ public class XmxProxy {
 			xmxService.registerObject(obj, classId);
 		}
 	}
+
+	public static IXmxSpringProxyAware getSpringProxyRegistrator() {
+		return new IXmxSpringProxyAware() {
+			@Override
+			public void registerProxy(Object target, Object proxy) {
+				if (xmxService != null) {
+					xmxService.registerProxyObject(target, proxy);
+				}
+			}
+		};
+	}
 	
 	private static String ERR_PREFIX = "[XMX ERROR!] ";
 	private static void logError(String message) {

@@ -98,8 +98,12 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 		MethodVisitor parentVisitor = super.visitMethod(access, name, desc, signature, exceptions);
 
 		if (name.startsWith(CONSTR_NAME)) {
-			// add registering managed objects to constructors
-			return new XmxManagedConstructorTransformer(classId, bcClassName, parentVisitor);
+			if (needTraceInstances()) {
+				// add registering managed objects to constructors
+				return new XmxManagedConstructorTransformer(classId, bcClassName, parentVisitor);
+			} else {
+				return parentVisitor;
+			}
 		}
 
 		Type[] argumentTypes = Type.getArgumentTypes(desc);
@@ -138,6 +142,10 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 		}
 
 		return parentVisitor;
+	}
+
+	private boolean needTraceInstances() {
+		return classId > 0;
 	}
 
 	private WeakCachedSupplier<Class<?>> getTargetClassSupplier() {

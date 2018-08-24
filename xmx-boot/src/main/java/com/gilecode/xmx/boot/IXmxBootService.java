@@ -32,6 +32,12 @@ public interface IXmxBootService {
 	void registerObject(Object obj, int classId);
 
 	/**
+	 * Registers a proxy object (e.g. Spring bean proxy) to a target managed object.
+	 * Is supposed to be ignored if the target is not managed.
+	 */
+	void registerProxyObject(Object target, Object proxy);
+
+	/**
 	 * Returns whether XMX is globally enabled in the configuration. 
 	 */
 	boolean isEnabled();

@@ -5,7 +5,9 @@ package com.gilecode.xmx.aop;
 import java.lang.annotation.*;
 
 /**
- * Specifies which argument of the intercepted method is mapped to the annotated parameter of the advice method.
+ * Specifies which argument of the intercepted method is mapped to the annotated parameter of the advice method,
+ * by specifying its index (starting from 0).
+ *
  * <p/>
  * NOTE: the type of the annotated parameter shall be either {@code Object}, or equal to the corresponding parameter
  * of the target method.

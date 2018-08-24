@@ -119,6 +119,21 @@ public interface ConfigDefaults {
 	SectionDescription INTERNAL_SECTION_XMX_WEBAPP = new SectionDescription("App=\"" + IXmxServerLauncher.APPNAME + "\"",
 			null, new OptionDescription(Properties.APP_ENABLED, false));
 
+	// TODO: maybe make full-qualified classes with advices auto-managed, or "hiddenly" managed
+	SectionDescription INTERNAL_SPRING_ADVICES_SECTION1 = new SectionDescription(
+			"App=*;" +
+			"Class=org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory",
+			null,
+			new OptionDescription(Properties.SP_MANAGED, true));
+
+	SectionDescription INTERNAL_SPRING_ADVICES_SECTION2 = new SectionDescription(
+			"App=*;" +
+			"Class=org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory;" +
+			"Method=\"protected Object initializeBean(String beanName, Object bean, RootBeanDefinition mbd)\"",
+			null,
+			new OptionDescription(Properties.M_ADVICES,
+					"xmx-advices.jar:com.gilecode.xmx.advices.SpringBeanProxyInterceptor"));
+
 	List<SectionDescription> HIDDEN_INTERNAL_SECTIONS = Collections.unmodifiableList(Arrays.asList(
-			INTERNAL_SECTION_XMX_WEBAPP));
+			INTERNAL_SECTION_XMX_WEBAPP, INTERNAL_SPRING_ADVICES_SECTION1, INTERNAL_SPRING_ADVICES_SECTION2));
 }

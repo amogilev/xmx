@@ -365,25 +365,35 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 		boolean isManaged = appConfig.getAppProperty(Properties.APP_ENABLED).asBool() &&
 				config.getAppConfig(appName).getClassProperty(className, Properties.SP_MANAGED).asBool();
 
+		// TODO: also check explicit AOP advices
 		if (!isManaged) {
 			return classBuffer;
 		}
 
 		ClassReader cr = new ClassReader(classBuffer);
 		int access = cr.getAccess();
-		if ((access & (Opcodes.ACC_ENUM | Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT)) > 0) {
+		if ((access & (Opcodes.ACC_ENUM | Opcodes.ACC_INTERFACE)) > 0) {
+			// FIXME: maybe re-consider managing abstract classes! (because of AbstractAutowireCapableBeanFactory - required for advices)
 			// only instrument non-abstract classes
 			return classBuffer;
 		}
 
 		ManagedClassLoaderWeakRef classLoaderInfo = getOrInitManagedClassLoader(classLoader);
 		ManagedAppInfo appInfo = classLoaderInfo.getAppInfo();
-
-		int classId = registerManagedClass(classBeingRedefined, appName, appConfig, className, classLoaderInfo, appInfo);
 		AdviceLoadResult adviceLoadResult = loadPotentialAdvices(appConfig, className, classLoaderInfo);
 
-		// actually transform the class - add registerObject to constructors and advices
+		int classId = 0;
+		boolean isAopOnly = (access & Opcodes.ACC_ABSTRACT) > 0;
 		boolean supportAdvices = !adviceLoadResult.isEmpty();
+		if (isAopOnly) {
+			if (!supportAdvices) {
+				return classBuffer;
+			}
+		} else {
+			classId = registerManagedClass(classBeingRedefined, appName, appConfig, className, classLoaderInfo, appInfo);
+		}
+
+		// actually transform the class - add registerObject to constructors and advices
 		ClassWriter cw = new ClassWriterWithCustomLoader(
 				supportAdvices ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS,
 				classLoader);
@@ -760,6 +770,12 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 		startupThread.start();
 
 		logger.debug("XMX Web UI StartupThread is started with delay {} ms", UI_START_DELAY);
+	}
+
+	@Override
+	public void registerProxyObject(Object target, Object proxy) {
+		// TODO
+		logger.warn("Proxy detected for " + target + "; proxy class = " + proxy.getClass().getName());
 	}
 
     @Override
