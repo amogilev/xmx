@@ -3,10 +3,15 @@
 package com.gilecode.xmx.aop.impl;
 
 import com.gilecode.xmx.aop.*;
+import com.gilecode.xmx.aop.data.AnnotatedTypeInfo;
+import com.gilecode.xmx.aop.data.AnnotationInfo;
+import com.gilecode.xmx.aop.data.MethodDeclarationInfo;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -33,115 +38,147 @@ public class AdviceVerifier extends BasicAdviceArgumentsProcessor {
 				Argument.class, AllArguments.class, TargetMethod.class, This.class, Thrown.class)));
 	}
 
+	private static final Type OBJECT_TYPE = Type.getType(Object.class);
+	private static final Type OBJECT_ARRAY_TYPE = Type.getType(Object[].class);
+	private static final Type THROWABLE_TYPE = Type.getType(Throwable.class);
+	private static final Type METHOD_TYPE = Type.getType(Method.class);
+
+	// "boxed" object types for primitive types
+	private static final Type BYTE_OBJTYPE = Type.getType(Byte.class);
+	private static final Type BOOLEAN_OBJTYPE = Type.getType(Boolean.class);
+	private static final Type SHORT_OBJTYPE = Type.getType(Short.class);
+	private static final Type CHARACTER_OBJTYPE = Type.getType(Character.class);
+	private static final Type INTEGER_OBJTYPE = Type.getType(Integer.class);
+	private static final Type FLOAT_OBJTYPE = Type.getType(Float.class);
+	private static final Type LONG_OBJTYPE = Type.getType(Long.class);
+	private static final Type DOUBLE_OBJTYPE = Type.getType(Double.class);
+
 	/**
-	 * Verifies that a given advice class has at least one advice method, and all advice methods could be potentially
-	 * applied at least to some target methods, i.e. that all parameters are correctly annotated.
+	 * Verifies that a given class (represented by InputSream) contains at least one advice method,
+	 * and all advice methods could be potentially applied at least to some target methods, i.e.
+	 * that all parameters are correctly annotated.
+	 *
+	 * @param classAsStream the input stream which contain the class byte code
+	 * @return the methods declared in the class verified to be advice candidates
 	 *
 	 * @throws BadAdviceException if any of verification problems is found
 	 */
-	public void verifyAdviceClass(Class<?> c) throws BadAdviceException {
-		for (Method advice : c.getDeclaredMethods()) {
-			Advice adviceAnnotation = advice.getAnnotation(Advice.class);
+	public List<MethodDeclarationInfo> verifyAdviceClass(InputStream classAsStream) throws BadAdviceException, IOException {
+		List<MethodDeclarationInfo> declaredMethods = MethodDeclarationAsmReader.readMethodDeclarations(classAsStream);
+
+		List<MethodDeclarationInfo> adviceMethods = new ArrayList<>();
+		for (MethodDeclarationInfo adviceCandidate : declaredMethods) {
+			AnnotationInfo adviceAnnotation = adviceCandidate.getAnnotation(Advice.class);
 			if (adviceAnnotation != null) {
 				AdviceKind adviceKind = adviceAnnotation.value();
 				Set<Class<? extends Annotation>> allowedArgAnnotations = allowedArgAnnotationsByKind.get(adviceKind);
 
-				Annotation[][] parametersAnnotations = advice.getParameterAnnotations();
-				Class<?>[] parameterTypes = advice.getParameterTypes();
-				for (int paramIdx = 0; paramIdx < parametersAnnotations.length; paramIdx++) {
-					Annotation[] parameterAnnotations = parametersAnnotations[paramIdx];
-					Class<?> parameterType = parameterTypes[paramIdx];
-					Annotation foundArgAnnotation = null;
-					for (Annotation annotation : parameterAnnotations) {
-						Class<? extends Annotation> annotationClass = annotation.annotationType();
+				AnnotatedTypeInfo[] parameters = adviceCandidate.getParameters();
+				for (int paramIdx = 0; paramIdx < parameters.length; paramIdx++) {
+					AnnotatedTypeInfo parameter = parameters[paramIdx];
+					AnnotationInfo foundArgAnnotation = null;
+					for (AnnotationInfo annotation : parameter.getAnnotations()) {
+						Class<? extends Annotation> annotationClass = annotation.getAnnotationClass();
+						Type parameterType = parameter.getType();
 						if (knownArgAnnotations.contains(annotationClass)) {
 							if (!allowedArgAnnotations.contains(annotationClass) ||
-									(annotation instanceof AllArguments && adviceKind != AdviceKind.BEFORE &&
-											((AllArguments) annotation).modifiable())) {
-								throw new BadAdviceException(advice, annotation, "is not allowed for advice kind " + adviceKind);
+									(annotationClass == AllArguments.class && adviceKind != AdviceKind.BEFORE &&
+											annotation.isFlagSet("modifiable"))) {
+								throw new BadAdviceException(adviceCandidate, annotation, "is not allowed for advice kind " + adviceKind);
 							}
-							if (annotation instanceof AllArguments && !parameterType.equals(Object[].class)) {
-								throw new BadAdviceException(advice, annotation, "requires Object[] type");
+							if (annotationClass == AllArguments.class && !parameterType.equals(OBJECT_ARRAY_TYPE)) {
+								throw new BadAdviceException(adviceCandidate, annotation, "requires Object[] type");
 							}
-							if (annotation instanceof Argument || annotation instanceof ModifiableArgument) {
+							if (annotationClass == Argument.class || annotationClass == ModifiableArgument.class) {
 								int idx = getArgumentIdx(annotation);
 								if (idx < 0 || idx >= 255) {
-									throw new BadAdviceException(advice, annotation, "has invalid parameter index " + idx);
+									throw new BadAdviceException(adviceCandidate, annotation, "has invalid parameter index " + idx);
 								}
-								if (annotation instanceof ModifiableArgument && !parameterType.isArray()) {
-									throw new BadAdviceException(advice, annotation, "requires array type");
+								if (annotationClass == ModifiableArgument.class && parameterType.getSort() != Type.ARRAY) {
+									throw new BadAdviceException(adviceCandidate, annotation, "requires array type");
 								}
 							}
-							if (annotation instanceof Thrown && !parameterType.equals(Throwable.class)) {
-								throw new BadAdviceException(advice, annotation, "requires java.lang.Throwable type");
+							if (annotationClass ==  Thrown.class && !parameterType.equals(THROWABLE_TYPE)) {
+								throw new BadAdviceException(adviceCandidate, annotation, "requires java.lang.Throwable type");
 							}
-							if (annotation instanceof TargetMethod && !parameterType.equals(Method.class)) {
-								throw new BadAdviceException(advice, annotation, "requires java.lang.reflect.Method type");
+							if (annotationClass == TargetMethod.class && !parameterType.equals(METHOD_TYPE)) {
+								throw new BadAdviceException(adviceCandidate, annotation, "requires java.lang.reflect.Method type");
 							}
 							if (foundArgAnnotation != null) {
-								throw new BadAdviceException(advice, annotation, "overwrites annotation " + foundArgAnnotation);
+								throw new BadAdviceException(adviceCandidate, annotation, "overwrites annotation " + foundArgAnnotation);
 							}
 							foundArgAnnotation = annotation;
 						}
 					}
 					if (foundArgAnnotation == null) {
-						throw new BadAdviceException(advice, null, "no argument annotations found for parameter " + paramIdx);
+						throw new BadAdviceException(adviceCandidate, null, "no argument annotations found for parameter " + paramIdx);
 					}
 				}
 
-				OverrideRetVal annotation = advice.getAnnotation(OverrideRetVal.class);
+				AnnotationInfo annotation = adviceCandidate.getAnnotation(OverrideRetVal.class);
 				if (annotation != null) {
 					if (adviceKind != AdviceKind.AFTER_RETURN) {
-						throw new BadAdviceException(advice, annotation, "is not allowed for advice kind " + adviceKind);
+						throw new BadAdviceException(adviceCandidate, annotation, "is not allowed for advice kind " + adviceKind);
 					}
-					if (advice.getReturnType().equals(void.class)) {
-						throw new BadAdviceException(advice, annotation, "is not allowed for void methods");
+					if (adviceCandidate.getReturnType().getSort() == Type.VOID) {
+						throw new BadAdviceException(adviceCandidate, annotation, "is not allowed for void methods");
 					}
 				}
+				// verified
+				adviceMethods.add(adviceCandidate);
 			}
 		}
+		return adviceMethods;
+	}
+
+	private static Type getArrayComponentType(Type arrType) {
+		assert arrType.getSort() == Type.ARRAY : "Array type is expected";
+		// NOTE: arrType.getElementType() does not work here, as it removes all array dimensions, not just one
+		return Type.getType(arrType.getDescriptor().substring(1));
 	}
 
 	/**
 	 * Checks whether the advice method is compatible (by types) to the specified target method. Log DEBUG-level
 	 * message if the advice is not compatible.
 	 * <p/>
-	 * <strong>NOTE:</strong> The advice class MUST be verified with {@link #verifyAdviceClass(Class)} before
+	 * <strong>NOTE:</strong> The advice class MUST be verified with {@link #verifyAdviceClass(InputStream)} before
 	 * this compatibility check!
 	 */
-	public boolean isAdviceCompatibleMethod(Method advice,
+	public boolean isAdviceCompatibleMethod(MethodDeclarationInfo advice,
 	                                        Type[] targetParamTypes, Type targetReturnType,
 	                                        String targetClassName, String targetMethodName) {
-		Annotation[][] parametersAnnotations = advice.getParameterAnnotations();
-		Class<?>[] parameterTypes = advice.getParameterTypes();
-		for (int paramIdx = 0; paramIdx < parametersAnnotations.length; paramIdx++) {
-			Annotation[] parameterAnnotations = parametersAnnotations[paramIdx];
-			Class<?> parameterType = parameterTypes[paramIdx];
-			Annotation argAnnotation = findArgumentAnnotation(parameterAnnotations);
-			Class<?> adviceParamType = null;
+		AnnotatedTypeInfo[] parameters = advice.getParameters();
+		for (int paramIdx = 0; paramIdx < parameters.length; paramIdx++) {
+			AnnotatedTypeInfo parameter = parameters[paramIdx];
+			Type parameterType = parameter.getType();
+			AnnotationInfo argAnnotation = findArgumentAnnotation(parameter);
+			assert argAnnotation != null : "Bad advice: missing arg annotation";
+
+			Class<? extends Annotation> annoClass = argAnnotation.getAnnotationClass();
+
+			Type adviceParamType = null;
 			Type targetType = null;
 			boolean isModifiable = false;
-			if (argAnnotation instanceof Argument || argAnnotation instanceof ModifiableArgument) {
+			if (annoClass == Argument.class || annoClass == ModifiableArgument.class) {
 				int argumentIdx = getArgumentIdx(argAnnotation);
 				if (argumentIdx >= targetParamTypes.length) {
 					logger.debug("Advice method {} cannot be applied to {}.{} as it has not enough arguments",
 							advice, targetClassName, targetMethodName);
 					return false;
 				}
-				if (argAnnotation instanceof ModifiableArgument) {
+				if (annoClass == ModifiableArgument.class) {
 					isModifiable = true;
-					adviceParamType = parameterType.getComponentType();
+					adviceParamType = getArrayComponentType(parameterType);
 				} else {
 					adviceParamType = parameterType;
 				}
 				targetType = targetParamTypes[argumentIdx];
-			} else if (argAnnotation instanceof RetVal) {
+			} else if (annoClass == RetVal.class) {
 				adviceParamType = parameterType;
 				targetType = targetReturnType;
 			}
-			if (adviceParamType != null && !adviceParamType.equals(Object.class) &&
-					!Type.getType(adviceParamType).equals(targetType) &&
-					(isModifiable || !isBoxedTypeFor(targetType, adviceParamType))) {
+			if (adviceParamType != null && !adviceParamType.equals(OBJECT_TYPE) && !adviceParamType.equals(targetType)
+					&& (isModifiable || !isBoxedTypeFor(targetType, adviceParamType))) {
 				logger.debug("Advice method {} cannot be applied to {}.{} as the type of the parameter {} is " +
 								"not compatible with the target",
 						advice, targetClassName, targetMethodName, paramIdx);
@@ -149,9 +186,9 @@ public class AdviceVerifier extends BasicAdviceArgumentsProcessor {
 			}
 		}
 		// check @OverrideRetVal if present
-		OverrideRetVal annotation = advice.getAnnotation(OverrideRetVal.class);
-		if (annotation != null && !advice.getReturnType().equals(Object.class) &&
-				!Type.getType(advice.getReturnType()).equals(targetReturnType)) {
+		AnnotationInfo annotation = advice.getAnnotation(OverrideRetVal.class);
+		if (annotation != null && !advice.getReturnType().equals(OBJECT_TYPE) &&
+				!advice.getReturnType().equals(targetReturnType)) {
 			logger.debug("Advice method {} cannot be applied to {}.{} as its @OverrideRetVal return type is " +
 							"not compatible with the target",
 					advice, targetClassName, targetMethodName);
@@ -161,28 +198,28 @@ public class AdviceVerifier extends BasicAdviceArgumentsProcessor {
 		return true;
 	}
 
-	private boolean isBoxedTypeFor(Type primType, Class<?> boxedType) {
-		return boxedType == getBoxedTypeFor(primType);
+	private boolean isBoxedTypeFor(Type primType, Type boxedType) {
+		return boxedType.equals(getBoxedTypeFor(primType));
 	}
 
-	private Class<?> getBoxedTypeFor(Type primType) {
+	private Type getBoxedTypeFor(Type primType) {
 		switch (primType.getSort()) {
 		case Type.BOOLEAN:
-			return Boolean.class;
+			return BOOLEAN_OBJTYPE;
 		case Type.CHAR:
-			return Character.class;
+			return CHARACTER_OBJTYPE;
 		case Type.BYTE:
-			return Byte.class;
+			return BYTE_OBJTYPE;
 		case Type.SHORT:
-			return Short.class;
+			return SHORT_OBJTYPE;
 		case Type.INT:
-			return Integer.class;
+			return INTEGER_OBJTYPE;
 		case Type.FLOAT:
-			return Float.class;
+			return FLOAT_OBJTYPE;
 		case Type.LONG:
-			return Long.class;
+			return LONG_OBJTYPE;
 		case Type.DOUBLE:
-			return Double.class;
+			return DOUBLE_OBJTYPE;
 		}
 		return null;
 	}

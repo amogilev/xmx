@@ -3,9 +3,11 @@
 package com.gilecode.xmx.aop.impl;
 
 import com.gilecode.xmx.aop.*;
+import com.gilecode.xmx.aop.data.MethodDeclarationInfo;
 import org.junit.Test;
 import org.objectweb.asm.Type;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -166,15 +168,19 @@ public class TestAdviceVerifier {
 		}
 	}
 
-	@Test
-	public void testVerifyGoodAdvice1() throws BadAdviceException {
-		uut.verifyAdviceClass(SampleGoodAdvice1.class);
+	private void verify(Class<?> c) throws IOException, BadAdviceException {
+		uut.verifyAdviceClass(AopTestUtils.getClassAsStream(c));
 	}
 
 	@Test
-	public void testVerifyBad_MultipleArgAnno() {
+	public void testVerifyGoodAdvice1() throws Exception {
+		verify(SampleGoodAdvice1.class);
+	}
+
+	@Test
+	public void testVerifyBad_MultipleArgAnno() throws Exception {
 		try {
-			uut.verifyAdviceClass(SampleBadAdvice_MultiAnno.class);
+			verify(SampleBadAdvice_MultiAnno.class);
 			fail("Expected BadAdviceException");
 		} catch (BadAdviceException e) {
 			checkMessage(e, " overwrites annotation");
@@ -182,9 +188,9 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testVerifyBad_NoArgAnno() {
+	public void testVerifyBad_NoArgAnno() throws Exception {
 		try {
-			uut.verifyAdviceClass(SampleBadAdvice_NoAnno.class);
+			verify(SampleBadAdvice_NoAnno.class);
 			fail("Expected BadAdviceException");
 		} catch (BadAdviceException e) {
 			checkMessage(e, " no argument annotation");
@@ -192,12 +198,12 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testVerifyBad_IllegalAnnoAtBefore() {
+	public void testVerifyBad_IllegalAnnoAtBefore() throws Exception {
 		Class<?>[] adviceClasses = {SampleBadAdvice_NotBeforeAnno1.class, SampleBadAdvice_NotBeforeAnno2.class,
 				SampleBadAdvice_NotBeforeAnno3.class};
 		for (Class<?> c : adviceClasses) {
 			try {
-				uut.verifyAdviceClass(c);
+				verify(c);
 				fail("Expected BadAdviceException");
 			} catch (BadAdviceException e) {
 				checkMessage(e, " is not allowed for advice kind BEFORE");
@@ -206,9 +212,9 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testVerifyBad_IllegalAnnoAtAfterRet() {
+	public void testVerifyBad_IllegalAnnoAtAfterRet() throws Exception {
 		try {
-			uut.verifyAdviceClass(SampleBadAdvice_NotAfterRetAnno.class);
+			verify(SampleBadAdvice_NotAfterRetAnno.class);
 			fail("Expected BadAdviceException");
 		} catch (BadAdviceException e) {
 			checkMessage(e, " is not allowed for advice kind AFTER_RETURN");
@@ -216,11 +222,11 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testVerifyBad_IllegalAnnoAtAfterThrow() {
+	public void testVerifyBad_IllegalAnnoAtAfterThrow() throws Exception {
 		Class<?>[] adviceClasses = {SampleBadAdvice_NotAfterThrowAnno1.class, SampleBadAdvice_NotAfterThrowAnno2.class};
 		for (Class<?> c : adviceClasses) {
 			try {
-				uut.verifyAdviceClass(c);
+				verify(c);
 				fail("Expected BadAdviceException");
 			} catch (BadAdviceException e) {
 				checkMessage(e, " is not allowed for advice kind AFTER_THROW");
@@ -229,15 +235,15 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testVerifyBad_ModifiableRequiresArray() {
+	public void testVerifyBad_ModifiableRequiresArray() throws Exception {
 		try {
-			uut.verifyAdviceClass(SampleBadAdvice_ModArgNotArray1.class);
+			verify(SampleBadAdvice_ModArgNotArray1.class);
 			fail("Expected BadAdviceException");
 		} catch (BadAdviceException e) {
 			checkMessage(e, " requires array type");
 		}
 		try {
-			uut.verifyAdviceClass(SampleBadAdvice_ModArgNotArray2.class);
+			verify(SampleBadAdvice_ModArgNotArray2.class);
 			fail("Expected BadAdviceException");
 		} catch (BadAdviceException e) {
 			checkMessage(e, " requires Object[] type");
@@ -245,12 +251,12 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testVerifyBad_ModifiableRequiresBefore() {
+	public void testVerifyBad_ModifiableRequiresBefore() throws IOException {
 		Class<?>[] adviceClasses = {SampleBadAdvice_ModNotAtBefore1.class, SampleBadAdvice_ModNotAtBefore1.class,
 				SampleBadAdvice_ModNotAtBefore3.class};
 		for (Class<?> c : adviceClasses) {
 			try {
-				uut.verifyAdviceClass(c);
+				verify(c);
 				fail("Expected BadAdviceException");
 			} catch (BadAdviceException e) {
 				String expectedMsgPart = " is not allowed for advice kind";
@@ -260,9 +266,9 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testVerifyBad_ThrownNotThrowable() {
+	public void testVerifyBad_ThrownNotThrowable() throws IOException {
 		try {
-			uut.verifyAdviceClass(SampleBadAdvice_ThrownNotThrowable.class);
+			verify(SampleBadAdvice_ThrownNotThrowable.class);
 			fail("Expected BadAdviceException");
 		} catch (BadAdviceException e) {
 			checkMessage(e, " requires java.lang.Throwable type");
@@ -270,9 +276,9 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testVerifyBad_TargetNotMethod() {
+	public void testVerifyBad_TargetNotMethod() throws IOException {
 		try {
-			uut.verifyAdviceClass(SampleBadAdvice_TargetNotMethod.class);
+			verify(SampleBadAdvice_TargetNotMethod.class);
 			fail("Expected BadAdviceException");
 		} catch (BadAdviceException e) {
 			checkMessage(e, " requires java.lang.reflect.Method type");
@@ -280,12 +286,12 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testVerifyBad_IllegalArgIndex() {
+	public void testVerifyBad_IllegalArgIndex() throws IOException {
 		Class<?>[] adviceClasses = {SampleBadAdvice_BadArgIndex1.class, SampleBadAdvice_BadArgIndex2.class,
 				SampleBadAdvice_BadArgIndex3.class};
 		for (Class<?> c : adviceClasses) {
 			try {
-				uut.verifyAdviceClass(c);
+				verify(c);
 				fail("Expected BadAdviceException");
 			} catch (BadAdviceException e) {
 				String expectedMsgPart = " has invalid parameter index";
@@ -340,7 +346,7 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testCompatibility_TypeMatch() throws BadAdviceException {
+	public void testCompatibility_TypeMatch() throws Exception {
 		Class<?> c = SampleAdvice_TypeMatch.class;
 
 		assertTrue(checkCompatibility(c, "matchExact", "target2"));
@@ -368,7 +374,7 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testCompatibility_Empty() throws BadAdviceException {
+	public void testCompatibility_Empty() throws Exception {
 		assertTrue(checkCompatibility(SampleAdvice_Empty.class, "adviceBefore", "target1"));
 		assertTrue(checkCompatibility(SampleAdvice_Empty.class, "adviceAfterReturn", "target1"));
 		assertTrue(checkCompatibility(SampleAdvice_Empty.class, "adviceAfterThrow", "target1"));
@@ -394,7 +400,7 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testCompatibility_Universal() throws BadAdviceException {
+	public void testCompatibility_Universal() throws Exception {
 		assertTrue(checkCompatibility(SampleAdvice_Generic.class, "adviceBefore", "target1"));
 		assertTrue(checkCompatibility(SampleAdvice_Generic.class, "adviceAfterReturn", "target1"));
 		assertTrue(checkCompatibility(SampleAdvice_Generic.class, "adviceAfterThrow", "target1"));
@@ -417,7 +423,7 @@ public class TestAdviceVerifier {
 	}
 
 	@Test
-	public void testCompatibility_ArgNum() throws BadAdviceException {
+	public void testCompatibility_ArgNum() throws Exception {
 		assertFalse(checkCompatibility(SampleAdvice_ArgNum.class, "arg0", "target1"));
 		assertFalse(checkCompatibility(SampleAdvice_ArgNum.class, "arg1", "target1"));
 		assertFalse(checkCompatibility(SampleAdvice_ArgNum.class, "arg2", "target1"));
@@ -428,10 +434,10 @@ public class TestAdviceVerifier {
 		assertFalse(checkCompatibility(SampleAdvice_ArgNum.class, "arg2", "target2"));
 	}
 
-	private boolean checkCompatibility(Class<?> adviceClass, String adviceMethodName, String testMethodName) throws BadAdviceException {
-		uut.verifyAdviceClass(adviceClass);
+	private boolean checkCompatibility(Class<?> adviceClass, String adviceMethodName, String testMethodName) throws Exception {
+		verify(adviceClass);
 		Method target = AopTestUtils.findMethod(TestAdviceVerifier.class, testMethodName);
-		Method advice = AopTestUtils.findMethod(adviceClass, adviceMethodName);
+		MethodDeclarationInfo advice = AopTestUtils.findMethodDeclaration(adviceClass, adviceMethodName);
 		return uut.isAdviceCompatibleMethod(advice, Type.getArgumentTypes(target), Type.getReturnType(target),
 				TestAdviceVerifier.class.getName(), testMethodName);
 	}

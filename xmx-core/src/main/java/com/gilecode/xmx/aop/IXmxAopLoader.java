@@ -2,6 +2,8 @@
 
 package com.gilecode.xmx.aop;
 
+import com.gilecode.xmx.aop.data.AdviceClassInfo;
+import com.gilecode.xmx.aop.data.AdviceLoadResult;
 import com.gilecode.xmx.aop.impl.WeakCachedSupplier;
 import com.gilecode.xmx.aop.impl.WeavingContext;
 import com.gilecode.xmx.core.ManagedClassLoaderWeakRef;
@@ -28,7 +30,7 @@ public interface IXmxAopLoader {
 	 * methods they shall be proxied etc.
 	 */
 	WeavingContext prepareMethodAdvicesWeaving(Collection<String> adviceDescs,
-	                                           Map<String, WeakCachedSupplier<Class<?>>> adviceClassesByDesc,
+	                                           Map<String, AdviceClassInfo> adviceClassesByDesc,
 	                                           Type[] targetParamTypes, Type targetReturnType,
 	                                           String targetClassName, String targetMethodName, WeakCachedSupplier<Class<?>> targetClassSupplier);
 }

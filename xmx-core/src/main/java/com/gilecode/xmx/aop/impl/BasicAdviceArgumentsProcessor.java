@@ -3,6 +3,8 @@
 package com.gilecode.xmx.aop.impl;
 
 import com.gilecode.xmx.aop.*;
+import com.gilecode.xmx.aop.data.AnnotatedTypeInfo;
+import com.gilecode.xmx.aop.data.AnnotationInfo;
 
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
@@ -36,9 +38,28 @@ class BasicAdviceArgumentsProcessor {
 		}
 	}
 
-	protected static Annotation findArgumentAnnotation(Annotation[] parameterAnnotations) {
-		for (Annotation annotation : parameterAnnotations) {
-			Class<? extends Annotation> annotationType = annotation.annotationType();
+	protected static AdviceArgument.Kind getAdviceArgumentKind(AnnotationInfo argAnnotation) {
+		Class<? extends Annotation> aClass = argAnnotation.getAnnotationClass();
+		if (aClass == This.class) {
+			return AdviceArgument.Kind.THIS;
+		} else if (aClass == AllArguments.class) {
+			return AdviceArgument.Kind.ALL_ARGUMENTS;
+		} else if (aClass == RetVal.class) {
+			return AdviceArgument.Kind.RETVAL;
+		} else if (aClass == Thrown.class) {
+			return AdviceArgument.Kind.THROWN;
+		} else if (aClass == TargetMethod.class) {
+			return AdviceArgument.Kind.TARGET;
+		} else if (aClass == Argument.class || aClass == ModifiableArgument.class) {
+			return AdviceArgument.Kind.ARGUMENT;
+		} else {
+			throw new IllegalArgumentException("Unknown argument annotation: " + argAnnotation);
+		}
+	}
+
+	protected static AnnotationInfo findArgumentAnnotation(AnnotatedTypeInfo annotatedTypeInfo) {
+		for (AnnotationInfo annotation : annotatedTypeInfo.getAnnotations()) {
+			Class<? extends Annotation> annotationType = annotation.getAnnotationClass();
 			if (knownArgAnnotations.contains(annotationType)) {
 				return annotation;
 			}
@@ -46,11 +67,10 @@ class BasicAdviceArgumentsProcessor {
 		return null;
 	}
 
-	protected static int getArgumentIdx(Annotation annotation) {
-		if (annotation instanceof Argument) {
-			return ((Argument) annotation).value();
-		} else if (annotation instanceof ModifiableArgument) {
-			return ((ModifiableArgument) annotation).value();
+	protected static int getArgumentIdx(AnnotationInfo annotation) {
+		if (annotation.getAnnotationClass() == Argument.class
+				|| annotation.getAnnotationClass() == ModifiableArgument.class) {
+			return annotation.value();
 		}
 		throw new IllegalArgumentException();
 	}

@@ -4,7 +4,7 @@ package com.gilecode.xmx.core;
 
 
 import com.gilecode.specr.SpeculativeProcessorFactory;
-import com.gilecode.xmx.aop.AdviceLoadResult;
+import com.gilecode.xmx.aop.data.AdviceLoadResult;
 import com.gilecode.xmx.aop.impl.XmxAopManager;
 import com.gilecode.xmx.boot.IXmxAopService;
 import com.gilecode.xmx.boot.IXmxBootService;

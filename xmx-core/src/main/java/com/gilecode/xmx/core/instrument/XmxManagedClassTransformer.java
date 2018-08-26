@@ -2,8 +2,8 @@
 
 package com.gilecode.xmx.core.instrument;
 
-import com.gilecode.xmx.aop.AdviceLoadResult;
 import com.gilecode.xmx.aop.IXmxAopLoader;
+import com.gilecode.xmx.aop.data.AdviceLoadResult;
 import com.gilecode.xmx.aop.impl.AdviceVerifier;
 import com.gilecode.xmx.aop.impl.WeakCachedSupplier;
 import com.gilecode.xmx.aop.impl.WeavingContext;
@@ -49,7 +49,7 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 	 * Which advice classes from this map shall be applied to which method is defined by the
 	 * configuration.
 	 * <br/>
-	 * All advice classes here are loaded and verified (by {@link AdviceVerifier#verifyAdviceClass(Class)}
+	 * All advice classes here are loaded and verified (by {@link AdviceVerifier#verifyAdviceClass(java.io.InputStream)}
 	 * <br/>
 	 * The use of {@link AdviceLoadResult} prevents early GC of weak refs to the advice classes.
 	 */

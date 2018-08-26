@@ -4,7 +4,7 @@ package com.gilecode.xmx.core.instrument;
 
 import com.gilecode.xmx.aop.AdviceKind;
 import com.gilecode.xmx.aop.impl.InterceptedArgument;
-import com.gilecode.xmx.aop.impl.WeavingAdviceInfo;
+import com.gilecode.xmx.aop.data.WeavingAdviceInfo;
 import com.gilecode.xmx.aop.impl.WeavingContext;
 import com.gilecode.xmx.boot.XmxAopProxy;
 import org.objectweb.asm.Label;
@@ -48,7 +48,6 @@ public class XmxAdviceMethodWeaver extends AdviceAdapter {
 	public XmxAdviceMethodWeaver(int access, String name, String desc, MethodVisitor mv,
 	                             WeavingContext ctx) {
 		super(Opcodes.ASM5, mv, access, name, desc);
-		System.out.println("Method name = " + name + ", desc=" + desc);
 		this.ctx = ctx;
 		this.hasAfterThrowAdvices = hasAdvices(AdviceKind.AFTER_THROW);
 		paramTypes = getArgumentTypes();

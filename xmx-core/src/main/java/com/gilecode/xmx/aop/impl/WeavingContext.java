@@ -3,6 +3,7 @@
 package com.gilecode.xmx.aop.impl;
 
 import com.gilecode.xmx.aop.AdviceKind;
+import com.gilecode.xmx.aop.data.WeavingAdviceInfo;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;

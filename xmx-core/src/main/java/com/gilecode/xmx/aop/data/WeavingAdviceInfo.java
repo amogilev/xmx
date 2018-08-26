@@ -1,10 +1,12 @@
 // Copyright © 2018 Andrey Mogilev. All rights reserved.
 
-package com.gilecode.xmx.aop.impl;
+package com.gilecode.xmx.aop.data;
 
 import com.gilecode.xmx.aop.AdviceKind;
 import com.gilecode.xmx.aop.BadAdviceException;
 import com.gilecode.xmx.aop.ISupplier;
+import com.gilecode.xmx.aop.impl.AdviceArgument;
+import com.gilecode.xmx.aop.impl.WeavingContext;
 import com.gilecode.xmx.model.XmxRuntimeException;
 
 import java.lang.reflect.Method;

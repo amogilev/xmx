@@ -2,7 +2,7 @@
 
 package com.gilecode.xmx.core;
 
-import com.gilecode.xmx.aop.impl.WeakCachedSupplier;
+import com.gilecode.xmx.aop.data.AdviceClassInfo;
 import com.gilecode.xmx.core.params.ParamNamesCache;
 
 import java.lang.ref.ReferenceQueue;
@@ -129,7 +129,7 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 	/**
 	 * The cache of successfully verified advice classes, mapped by advice descriptor.
 	 */
-	private final Map<String, WeakCachedSupplier<Class<?>>> verifiedAdvicesByDesc = new ConcurrentHashMap<>();
+	private final Map<String, AdviceClassInfo> verifiedAdvicesByDesc = new ConcurrentHashMap<>();
 
 	private final ParamNamesCache paramNamesCache = new ParamNamesCache();
 
@@ -170,7 +170,7 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 		return knownBadAdviceDescs;
 	}
 
-	public Map<String, WeakCachedSupplier<Class<?>>> getVerifiedAdvicesByDesc() {
+	public Map<String, AdviceClassInfo> getVerifiedAdvicesByDesc() {
 		return verifiedAdvicesByDesc;
 	}
 

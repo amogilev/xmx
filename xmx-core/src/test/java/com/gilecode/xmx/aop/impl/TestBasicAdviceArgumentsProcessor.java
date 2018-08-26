@@ -3,12 +3,17 @@
 package com.gilecode.xmx.aop.impl;
 
 import com.gilecode.xmx.aop.*;
+import com.gilecode.xmx.aop.data.AnnotatedTypeInfo;
+import com.gilecode.xmx.aop.data.AnnotationInfo;
+import com.gilecode.xmx.aop.data.MethodDeclarationInfo;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class TestBasicAdviceArgumentsProcessor extends BasicAdviceArgumentsProcessor {
 
@@ -34,36 +39,45 @@ public class TestBasicAdviceArgumentsProcessor extends BasicAdviceArgumentsProce
 	}
 
 	@Test
-	public void testFindArgumentAnnotation() {
-		Method m = AopTestUtils.findMethod(TestBasicAdviceArgumentsProcessor.class, "sampleMethod");
-		Annotation[][] annotations = m.getParameterAnnotations();
+	public void testFindArgumentAnnotation() throws IOException {
+		MethodDeclarationInfo m = AopTestUtils.findMethodDeclaration(TestBasicAdviceArgumentsProcessor.class, "sampleMethod");
+		AnnotatedTypeInfo[] params = m.getParameters();
 
-		assertEquals(annotations[0][0], findArgumentAnnotation(annotations[0]));
-		assertEquals(annotations[1][0], findArgumentAnnotation(annotations[1]));
-		assertEquals(annotations[2][0], findArgumentAnnotation(annotations[2]));
-		assertEquals(annotations[3][0], findArgumentAnnotation(annotations[3]));
-		assertEquals(annotations[4][0], findArgumentAnnotation(annotations[4]));
-		assertEquals(annotations[5][0], findArgumentAnnotation(annotations[5]));
-		assertEquals(annotations[7][0], findArgumentAnnotation(annotations[7]));
+		assertEquals(firstAnno(params[0]), findArgumentAnnotation(params[0]));
+		assertEquals(firstAnno(params[1]), findArgumentAnnotation(params[1]));
+		assertEquals(firstAnno(params[2]), findArgumentAnnotation(params[2]));
+		assertEquals(firstAnno(params[3]), findArgumentAnnotation(params[3]));
+		assertEquals(firstAnno(params[4]), findArgumentAnnotation(params[4]));
+		assertEquals(firstAnno(params[5]), findArgumentAnnotation(params[5]));
+		assertEquals(firstAnno(params[6]), findArgumentAnnotation(params[6]));
+		assertEquals(firstAnno(params[7]), findArgumentAnnotation(params[7]));
+	}
 
-		Annotation found = findArgumentAnnotation(annotations[6]);
-		assertTrue(found instanceof Argument);
-		assertEquals(annotations[6][1], found);
+	public AnnotationInfo firstAnno(AnnotatedTypeInfo param) {
+		return getAnno(param, 0);
+	}
+
+	public AnnotationInfo getAnno(AnnotatedTypeInfo param, int idx) {
+		return param.getAnnotations().get(idx);
 	}
 
 	@Test
-	public void testGetArgumentIdx() {
-		Method m = AopTestUtils.findMethod(TestBasicAdviceArgumentsProcessor.class, "sampleMethod");
-		Annotation[][] annotations = m.getParameterAnnotations();
+	public void testGetArgumentIdx() throws IOException {
+		MethodDeclarationInfo m = AopTestUtils.findMethodDeclaration(TestBasicAdviceArgumentsProcessor.class, "sampleMethod");
+		AnnotatedTypeInfo[] params = m.getParameters();
 
-		assertEquals(0, getArgumentIdx(annotations[0][0]));
-		assertEquals(1, getArgumentIdx(annotations[1][0]));
+
+		assertEquals(0, getArgumentIdx(firstAnno(params[0])));
+		assertEquals(1, getArgumentIdx(firstAnno(params[1])));
+		assertEquals(6, getArgumentIdx(firstAnno(params[6])));
 		for (int i = 2; i < 7; i++) {
-			try {
-				getArgumentIdx(annotations[i][0]);
-				fail("Exception expected");
-			} catch (IllegalArgumentException e) {
-				// expected
+			if (i != 6) {
+				try {
+					getArgumentIdx(firstAnno(params[i]));
+					fail("Exception expected");
+				} catch (IllegalArgumentException e) {
+					// expected
+				}
 			}
 		}
 	}

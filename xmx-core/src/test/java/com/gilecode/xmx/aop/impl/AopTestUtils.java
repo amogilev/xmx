@@ -2,10 +2,14 @@
 
 package com.gilecode.xmx.aop.impl;
 
-import com.gilecode.xmx.aop.BadAdviceException;
+import com.gilecode.xmx.aop.data.AdviceClassInfo;
+import com.gilecode.xmx.aop.data.MethodDeclarationInfo;
 import org.objectweb.asm.Type;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,33 +36,62 @@ public class AopTestUtils {
 		return found;
 	}
 
+	/**
+	 * Find declared method by a unique name. (no arg types required)
+	 */
+	public static MethodDeclarationInfo findMethodDeclaration(Class<?> c, String uniqueMethodName) throws IOException {
+		List<MethodDeclarationInfo> methodDeclarations = getMethodDeclarations(c);
+		MethodDeclarationInfo found = null;
+		for (MethodDeclarationInfo m : methodDeclarations) {
+			if (m.getMethodName().equals(uniqueMethodName)) {
+				assertNull("Expected unique method name", found);
+				found = m;
+			}
+		}
+		assertNotNull("Method not found: " + uniqueMethodName, found);
+		return found;
+	}
+
 	public static  WeavingContext prepareTestWeavingContext(XmxAopManager aopManager, final Method target,
-	                                                        final Class<?>...adviceClasses) {
+	                                                        final Class<?>...adviceClasses) throws IOException {
 		List<String> adviceDescs = new ArrayList<>();
-		Map<String, WeakCachedSupplier<Class<?>>> adviceClassesByDesc = new HashMap<>();
+		Map<String, AdviceClassInfo> adviceClassesByDesc = new HashMap<>();
 		for (int i = 0; i < adviceClasses.length; i++) {
 			Class<?> adviceClass = adviceClasses[i];
 			String desc = ":" + adviceClass.getName();
 			adviceDescs.add(desc);
 			final int classIdx = i;
-			adviceClassesByDesc.put(desc, new WeakCachedSupplier<Class<?>>() {
+			WeakCachedSupplier<Class<?>> adviceClassSupplier = new WeakCachedSupplier<Class<?>>() {
 				@Override
 				protected Class<?> load() {
 					return adviceClasses[classIdx];
 				}
-			});
+			};
+			adviceClassesByDesc.put(desc, new AdviceClassInfo(adviceClassSupplier, getMethodDeclarations(adviceClass)));
 		}
 
 
 		WeakCachedSupplier<Class<?>> targetClassSupplier = new WeakCachedSupplier<Class<?>>() {
 			@Override
-			protected Class<?> load() throws BadAdviceException {
+			protected Class<?> load() {
 				return target.getDeclaringClass();
 			}
 		};
 		return aopManager.prepareMethodAdvicesWeaving(adviceDescs, adviceClassesByDesc,
 				Type.getArgumentTypes(target), Type.getReturnType(target),
 				target.getDeclaringClass().getName(), target.getName(), targetClassSupplier);
+	}
+
+	public static List<MethodDeclarationInfo> getMethodDeclarations(Class<?> adviceClass) throws IOException {
+		try (InputStream classStream = getClassAsStream(adviceClass)) {
+			return MethodDeclarationAsmReader.readMethodDeclarations(classStream);
+		}
+	}
+
+	public static InputStream getClassAsStream(Class<?> adviceClass) throws IOException {
+		URL classFile = adviceClass.getClassLoader().getResource(Type.getInternalName(adviceClass) + ".class");
+		assertNotNull("Broken test: class file not found", classFile);
+		return classFile.openStream();
 	}
 
 }

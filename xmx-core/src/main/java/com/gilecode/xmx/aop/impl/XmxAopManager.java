@@ -3,6 +3,7 @@
 package com.gilecode.xmx.aop.impl;
 
 import com.gilecode.xmx.aop.*;
+import com.gilecode.xmx.aop.data.*;
 import com.gilecode.xmx.boot.IXmxAopService;
 import com.gilecode.xmx.boot.XmxURLClassLoader;
 import com.gilecode.xmx.core.ManagedClassLoaderWeakRef;
@@ -12,8 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
-import java.lang.ref.WeakReference;
 import java.lang.reflect.*;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -21,6 +23,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.jar.JarFile;
+import java.util.zip.ZipEntry;
 
 /**
  * Manages loading of advice classes, weaving and invocation of advice methods.
@@ -57,15 +61,14 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 
 	@Override
 	public AdviceLoadResult loadAndVerifyAdvices(Collection<String> adviceDescs, ManagedClassLoaderWeakRef classLoaderRef) {
-		Map<String, WeakCachedSupplier<Class<?>>> adviceClassesByDesc = new HashMap<>(adviceDescs.size());
-		Set<ClassLoader> jarLoaders = new HashSet<>(adviceDescs.size());
+		Map<String, AdviceClassInfo> adviceClassesByDesc = new HashMap<>(adviceDescs.size());
 		for (String desc : adviceDescs) {
-			WeakCachedSupplier<Class<?>> adviceClassSup = loadAndVerifyAdviceClass(desc, classLoaderRef, jarLoaders);
-			if (adviceClassSup != null) {
-				adviceClassesByDesc.put(desc, adviceClassSup);
+			AdviceClassInfo adviceClassInfo = verifyAdviceClass(desc, classLoaderRef);
+			if (adviceClassInfo != null) {
+				adviceClassesByDesc.put(desc, adviceClassInfo);
 			}
 		}
-		return new AdviceLoadResult(adviceClassesByDesc, jarLoaders);
+		return new AdviceLoadResult(adviceClassesByDesc);
 	}
 
 	private static class TargetMethodSupplier extends WeakCachedSupplier<Method> {
@@ -133,46 +136,58 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 	private static class AdviceMethodSupplier extends WeakCachedSupplier<Method> {
 
 		private final ISupplier<Class<?>> classSup;
-		private final int methodIdx;
-		private final String methodName; // used to check that the class is not changed (much)
+		private final MethodDeclarationInfo methodInfo;
 
-		public AdviceMethodSupplier(ISupplier<Class<?>> classSup, int methodIdx, Method initialRef) {
-			super(new WeakReference<>(initialRef));
+		public AdviceMethodSupplier(ISupplier<Class<?>> classSup, MethodDeclarationInfo methodInfo) {
+			super();
 			this.classSup = classSup;
-			this.methodIdx = methodIdx;
-			this.methodName = initialRef.getName();
+			this.methodInfo = methodInfo;
 		}
 
 		@Override
 		protected Method load() throws BadAdviceException {
 			Class<?> adviceClass = classSup.get();
 			Method[] declaredMethods = adviceClass.getDeclaredMethods();
-			if (methodIdx >= declaredMethods.length || !methodName.equals(declaredMethods[methodIdx].getName())) {
-				throw new BadAdviceException("Unexpected concurrent change of the advice class " + adviceClass);
+
+			for (Method declaredMethod : declaredMethods) {
+				if (methodMatches(declaredMethod)) {
+					return declaredMethod;
+				}
 			}
-			return declaredMethods[methodIdx];
+			throw new BadAdviceException("Failed to match the advice method declaration with an actual method. " +
+					"Probably the advice class has changed: " + adviceClass);
+		}
+
+		private boolean methodMatches(Method declaredMethod) {
+			if (!declaredMethod.getName().equals(methodInfo.getMethodName())) {
+				return false;
+			}
+			Class<?>[] declaredParamTypes = declaredMethod.getParameterTypes();
+			AnnotatedTypeInfo[] params = methodInfo.getParameters();
+			return parametersMatches(declaredParamTypes, params);
+		}
+
+		private boolean parametersMatches(Class<?>[] declaredParamTypes, AnnotatedTypeInfo[] params) {
+			if (declaredParamTypes.length != params.length) {
+				return false;
+			}
+			for (int i = 0; i < params.length; i++) {
+				AnnotatedTypeInfo param = params[i];
+				if (!param.getType().equals(Type.getType(declaredParamTypes[i]))) {
+					return false;
+				}
+			}
+			return true;
 		}
 	}
 
-	private WeakCachedSupplier<Class<?>> loadAndVerifyAdviceClass(String desc, ManagedClassLoaderWeakRef classLoaderRef,
-	                                                              Set<ClassLoader> jarLoaders) {
-		Class<?> adviceClass;
-		WeakCachedSupplier<Class<?>> adviceClassSup = classLoaderRef.getVerifiedAdvicesByDesc().get(desc);
-		if (adviceClassSup == null && classLoaderRef.getKnownBadAdviceDescs().contains(desc)) {
+	private AdviceClassInfo verifyAdviceClass(String desc, ManagedClassLoaderWeakRef classLoaderRef) {
+		AdviceClassInfo adviceClassInfo = classLoaderRef.getVerifiedAdvicesByDesc().get(desc);
+		if (adviceClassInfo == null && classLoaderRef.getKnownBadAdviceDescs().contains(desc)) {
 			return null;
-		} else if (adviceClassSup != null) {
-			try {
-				adviceClass = adviceClassSup.get();
-			} catch (BadAdviceException e) {
-				// unexpected: a class was successfully loaded once, but has failed to re-load
-				classLoaderRef.getKnownBadAdviceDescs().add(desc);
-				logger.error("Unexpected: failed to re-load advice '" + desc + "'!", e);
-				return null;
-			}
-
-			// found cached and weak ref is still alive
-			jarLoaders.add(adviceClass.getClassLoader());
-			return adviceClassSup;
+		} else if (adviceClassInfo != null) {
+			// found cached
+			return adviceClassInfo;
 		}
 
 		// load class and verify it if loaded for the first time
@@ -181,12 +196,35 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 			String jarName = n > 0 ? desc.substring(0, n) : null;
 			String className = n >= 0 ? desc.substring(n + 1) : desc;
 
-			adviceClassSup = new JarClassLoadingSupplier(jarName, className, classLoaderRef);
-			adviceClass = adviceClassSup.load();
-			adviceVerifier.verifyAdviceClass(adviceClass);
+			if (jarName == null || className.isEmpty()) {
+				throw new BadAdviceException("Missing JAR or class name");
+			}
 
-			classLoaderRef.getVerifiedAdvicesByDesc().put(desc, adviceClassSup);
-			return adviceClassSup;
+			List<MethodDeclarationInfo> adviceMethods;
+			File f = getJarFile(jarName);
+			try {
+				JarFile jf = new JarFile(f);
+				String entryName = className.replace('.', '/') + ".class";
+				ZipEntry classEntry = jf.getJarEntry(entryName);
+				if (classEntry == null) {
+					throw new BadAdviceException("Entry " + entryName + " is not found in the JAR file");
+				}
+
+				try (InputStream is = jf.getInputStream(classEntry)) {
+					adviceMethods = adviceVerifier.verifyAdviceClass(is);
+				}
+
+			} catch (IOException e) {
+				throw new BadAdviceException("Failed to read the class file from JAR", e);
+			}
+
+			// NOTE: the advice class shall not be loaded at this moment, as it may cause too early
+			//   or duplicate loading of dependent classes!
+			WeakCachedSupplier<Class<?>> sup = new JarClassLoadingSupplier(jarName, className, classLoaderRef);
+
+			adviceClassInfo = new AdviceClassInfo(sup, adviceMethods);
+			classLoaderRef.getVerifiedAdvicesByDesc().put(desc, adviceClassInfo);
+			return adviceClassInfo;
 
 		} catch (BadAdviceException e) {
 			classLoaderRef.getKnownBadAdviceDescs().add(desc);
@@ -210,7 +248,7 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 		ManagedClassLoaderWeakRef.SmartReference<ClassLoader> jarLoaderRef = adviceJarLoaders.get(jarName);
 		ClassLoader jarLoader = jarLoaderRef == null ? null : jarLoaderRef.get();
 		if (jarLoader == null) {
-			URL jarUrl = getJarFile(jarName);
+			URL jarUrl = toUrl(getJarFile(jarName));
 			ClassLoader targetCL = classLoaderRef.get();
 			ClassLoader newJarLoader = new XmxURLClassLoader(new URL[]{jarUrl}, targetCL);
 			ManagedClassLoaderWeakRef.SmartReference<ClassLoader> newJarLoaderRef =
@@ -237,6 +275,15 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 		return jarLoader;
 	}
 
+	private URL toUrl(File f) {
+		try {
+			return f.toURI().toURL();
+		} catch (MalformedURLException e) {
+			// not expected
+			throw new XmxRuntimeException(e);
+		}
+	}
+
 	/**
 	 * Finds a JAR file by its name and return the file URL. If file is missing, throws exception.
 	 * The JAR file is searched by name in XMX_HOME/lib/advices/ and XMX_CONFIG_HOME/advices
@@ -247,7 +294,7 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 	 *
 	 * @throws BadAdviceException if not found
 	 */
-	private URL getJarFile(String jarName) throws BadAdviceException {
+	private File getJarFile(String jarName) throws BadAdviceException {
 		List<File> candidateFiles = new ArrayList<>();
 		boolean isPath = jarName.contains("/") || jarName.contains(File.separator);
 		if (isPath) {
@@ -260,12 +307,7 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 		}
 		for (File candidate : candidateFiles) {
 			if (candidate.isFile()) {
-				try {
-					return candidate.toURI().toURL();
-				} catch (MalformedURLException e) {
-					// not expected
-					throw new XmxRuntimeException(e);
-				}
+				return candidate;
 			}
 		}
 		// not found
@@ -278,7 +320,7 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 
 	@Override
 	public WeavingContext prepareMethodAdvicesWeaving(Collection<String> adviceDescs,
-	                                                  Map<String, WeakCachedSupplier<Class<?>>> adviceClassesByDesc,
+	                                                  Map<String, AdviceClassInfo> adviceClassesByDesc,
 	                                                  Type[] targetParamTypes, Type targetReturnType,
 	                                                  String targetClassName, String targetMethodName,
 	                                                  WeakCachedSupplier<Class<?>> targetClassSupplier) {
@@ -287,25 +329,17 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 		WeavingContext ctx = new WeavingContext(joinPointsCounter.getAndIncrement(), targetMethodSupplier);
 		Map<AdviceKind, List<WeavingAdviceInfo>> adviceInfoByKind = ctx.getAdviceInfoByKind();
 		for (String desc : adviceDescs) {
-			WeakCachedSupplier<Class<?>> adviceClassSup = adviceClassesByDesc.get(desc);
-			Class<?> adviceClass;
-			try {
-				adviceClass = adviceClassSup.get();
-			} catch (BadAdviceException e) {
-				// not expected here
-				logger.error("Unexpected: the advice class shall be cached: {}", desc);
-				continue;
-			}
-			Method[] declaredMethods = adviceClass.getDeclaredMethods();
-			for (int i = 0; i < declaredMethods.length; i++) {
-				Method advice = declaredMethods[i];
-				Advice adviceAnnotation = advice.getAnnotation(Advice.class);
+			AdviceClassInfo adviceClassInfo = adviceClassesByDesc.get(desc);
+			WeakCachedSupplier<Class<?>> adviceClassSup = adviceClassInfo.getClassSupplier();
+
+			for (MethodDeclarationInfo advice : adviceClassInfo.getAdviceMethods()) {
+				AnnotationInfo adviceAnnotation = advice.getAnnotation(Advice.class);
 				if (adviceAnnotation == null || !adviceVerifier.isAdviceCompatibleMethod(advice,
 						targetParamTypes, targetReturnType, targetClassName, targetMethodName)) {
 					continue;
 				}
 
-				AdviceMethodSupplier adviceSup = new AdviceMethodSupplier(adviceClassSup, i, advice);
+				AdviceMethodSupplier adviceSup = new AdviceMethodSupplier(adviceClassSup, advice);
 				AdviceKind adviceKind = adviceAnnotation.value();
 				WeavingAdviceInfo adviceInfo = prepareWeaving(adviceSup, advice, adviceKind, ctx, targetParamTypes.length);
 
@@ -331,24 +365,26 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 	}
 
 	// NOTE: advice class shall be verified and advice method shall be compatible! Checks are not duplicated!
-	private WeavingAdviceInfo prepareWeaving(AdviceMethodSupplier adviceSup, Method advice, AdviceKind adviceKind,
-	                                         WeavingContext ctx, int nTargetParams) {
-		Annotation[][] parametersAnnotations = advice.getParameterAnnotations();
+	private WeavingAdviceInfo prepareWeaving(AdviceMethodSupplier adviceSup, MethodDeclarationInfo advice,
+			AdviceKind adviceKind, WeavingContext ctx, int nTargetParams) {
 
-		List<AdviceArgument> arguments = new ArrayList<>(parametersAnnotations.length);
+		AnnotatedTypeInfo[] parameters = advice.getParameters();
+		List<AdviceArgument> arguments = new ArrayList<>(parameters.length);
 		boolean hasOverrideRetVal;
 
-		for (Annotation[] parameterAnnotations : parametersAnnotations) {
-			Annotation argAnnotation = findArgumentAnnotation(parameterAnnotations);
+		for (AnnotatedTypeInfo parameter : parameters) {
+			AnnotationInfo argAnnotation = findArgumentAnnotation(parameter);
 			assert argAnnotation != null;
+
+			Class<? extends Annotation> argAnnoClass = argAnnotation.getAnnotationClass();
 			AdviceArgument arg;
 
-			if (argAnnotation instanceof Argument || argAnnotation instanceof ModifiableArgument) {
+			if (argAnnoClass == Argument.class || argAnnoClass == ModifiableArgument.class) {
 				int argumentIdx = getArgumentIdx(argAnnotation);
-				boolean modifiable = argAnnotation instanceof ModifiableArgument;
+				boolean modifiable = argAnnoClass == ModifiableArgument.class;
 				arg = AdviceArgument.interceptedArgument(ctx.addInterceptedArgument(argumentIdx, modifiable), modifiable);
-			} else if (argAnnotation instanceof AllArguments) {
-				boolean modifiable = ((AllArguments) argAnnotation).modifiable();
+			} else if (argAnnoClass == AllArguments.class) {
+				boolean modifiable = argAnnotation.isFlagSet("modifiable");
 				arg = AdviceArgument.specialArgument(getAdviceArgumentKind(argAnnotation), modifiable);
 				ctx.makeAllArgumentsIntercepted(modifiable, nTargetParams);
 			} else {
