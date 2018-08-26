@@ -772,10 +772,35 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 		logger.debug("XMX Web UI StartupThread is started with delay {} ms", UI_START_DELAY);
 	}
 
+	/**
+	 * Finds and returns the reference to a managed object instance.
+	 * If the instance is not currently managed, returns {@code null}.
+	 */
+	private ManagedObjectWeakRef findManagedObjectRef(Object obj) {
+		XmxClassManager mci = findManagedClassInfo(obj.getClass());
+		if (mci != null) {
+			// check if the target instance is managed
+			for (Integer id : mci.getObjectIds()) {
+				ManagedObjectWeakRef ref = objectsStorage.get(id);
+				if (ref != null) {
+					Object existingObj = ref.get();
+					if (existingObj == obj) {
+						// already registered, skip
+						return ref;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
 	@Override
 	public void registerProxyObject(Object target, Object proxy) {
-		// TODO
-		logger.warn("Proxy detected for " + target + "; proxy class = " + proxy.getClass().getName());
+		ManagedObjectWeakRef objRef = findManagedObjectRef(target);
+		if (objRef != null) {
+			logger.info("Proxy detected for a managed object {}; proxy class = {}", target, proxy.getClass().getName());
+			// TODO: store in ref
+		}
 	}
 
     @Override
