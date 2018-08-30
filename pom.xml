@@ -16,7 +16,7 @@
     <easymock.version>3.6</easymock.version>
     <tomcat.version>7.0.29</tomcat.version>
     <jetty.version>9.2.6.v20141205</jetty.version>
-    <asm.version>6.2</asm.version>
+    <asm.version>6.2.1</asm.version>
     <logback.version>1.2.3</logback.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
