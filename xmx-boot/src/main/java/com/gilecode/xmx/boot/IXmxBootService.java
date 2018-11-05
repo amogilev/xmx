@@ -30,7 +30,7 @@ public interface IXmxBootService {
 	 * Registers a newly created object, so that it becomes managed by XMX.
 	 */
 	void registerObject(Object obj, int classId);
-	
+
 	/**
 	 * Returns whether XMX is globally enabled in the configuration. 
 	 */
@@ -40,4 +40,11 @@ public interface IXmxBootService {
 	 * Return AOP manager used
 	 */
 	IXmxAopService getAopService();
+
+	/**
+	 * Creates and returns a wrapper to a logger which can be used by advices.
+	 * The returned wrapper will have interface {@link com.gilecode.xmx.aop.log.IAdviceLogger},
+	 * which is not declared to avoid extra dependencies for xmx-boot module.
+	 */
+	Object getAdviceLogger(String name);
 }

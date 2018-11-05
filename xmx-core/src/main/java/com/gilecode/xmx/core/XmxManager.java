@@ -16,6 +16,7 @@ import com.gilecode.xmx.cfg.PropertyValue;
 import com.gilecode.xmx.core.instrument.ClassWriterWithCustomLoader;
 import com.gilecode.xmx.core.instrument.XmxManagedClassTransformer;
 import com.gilecode.xmx.core.jmx.JmxSupport;
+import com.gilecode.xmx.log.AdviceLoggerWrapper;
 import com.gilecode.xmx.model.NotSingletonException;
 import com.gilecode.xmx.model.XmxClassInfo;
 import com.gilecode.xmx.model.XmxObjectInfo;
@@ -126,7 +127,7 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 	private ReferenceQueue<Object> managedObjectsRefQueue = new ReferenceQueue<>();
 	
 	ReferenceQueue<ClassLoader> managedClassLoadersRefQueue = new ReferenceQueue<>();
-	
+
 	private void startCleanerThreads() {
 		Thread objCleanerThread = new Thread("XMX-ObjCleaner") {
 			@Override
@@ -760,4 +761,9 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 
 		logger.debug("XMX Web UI StartupThread is started with delay {} ms", UI_START_DELAY);
 	}
+
+    @Override
+    public Object getAdviceLogger(String name) {
+        return new AdviceLoggerWrapper(LoggerFactory.getLogger(name));
+    }
 }

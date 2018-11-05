@@ -151,4 +151,11 @@ public class XmxProxy {
 		System.err.print(ERR_PREFIX + message + " :: ");
 		e.printStackTrace(System.err);
 	}
+
+	public static Object getAdviceLogger(String name) {
+		if (xmxService == null) {
+			throw new IllegalStateException("Not expected with non-initialized XMX service");
+		}
+		return xmxService.getAdviceLogger(name);
+	}
 }
