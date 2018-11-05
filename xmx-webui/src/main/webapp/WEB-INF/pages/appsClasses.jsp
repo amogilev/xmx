@@ -16,8 +16,16 @@
 
         <c:forEach items="${entry.value}" var="classInfo">
             <tr>
-                <td>${classInfo.className}</td>
-                <td>${classInfo.numberOfObjects} (<a href="${pageContext.request.contextPath}/getClassObjects?classId=${classInfo.id}&className=${classInfo.className}&sid=${sid}">Look</a>)</td>
+                <td>
+                    ${classInfo.className}
+                    <c:if test="${classInfo.singletonWithProxy}"> (SpringProxy: ${classInfo.proxyClass})</c:if>
+                </td>
+                <td>
+                    ${classInfo.numberOfObjects}
+                    (<a href="${pageContext.request.contextPath}/getClassObjects?classId=${classInfo.id}&className=${classInfo.className}&sid=${sid}${classInfo.singletonWithProxy ? '&proxyInformed=true' :''}">
+                        Look
+                    </a>)
+                </td>
             </tr>
         </c:forEach>
     </c:forEach>

@@ -23,11 +23,17 @@ public class XmxObjectInfo {
 	 * The managed object itself.
 	 */
 	private final Object value;
+
+	/**
+	 * The proxy to the object, if detected.
+	 */
+	private final Object proxy;
 	
-	public XmxObjectInfo(int objectId, XmxClassInfo classInfo, Object value) {
+	public XmxObjectInfo(int objectId, XmxClassInfo classInfo, Object value, Object proxy) {
 		this.objectId = objectId;
 		this.classInfo = classInfo;
 		this.value = value;
+		this.proxy = proxy;
 	}
 
 	public int getObjectId() {
@@ -44,5 +50,9 @@ public class XmxObjectInfo {
 
 	public IXmxClassMembersLookup getMembersLookup() {
 		return classInfo.getMembersLookup();
+	}
+
+	public Object getProxy() {
+		return proxy;
 	}
 }

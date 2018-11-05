@@ -3,6 +3,7 @@
 package com.gilecode.xmx.ui.service;
 
 import com.gilecode.xmx.model.NotSingletonException;
+import com.gilecode.xmx.model.XmxObjectInfo;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.dto.ExtendedClassInfoDto;
 import com.gilecode.xmx.ui.dto.ExtendedObjectInfoDto;
@@ -27,7 +28,7 @@ public interface IXmxUiService {
 	 * If there is exactly one alive managed class instance, return its internal ID.
 	 * Otherwise, returns null.
 	 */
-	Integer getManagedClassSingleInstanceId(int classId);
+	XmxObjectInfo getManagedClassSingleInstance(int classId);
 
 	List<ObjectInfoDto> getManagedClassInstancesInfo(Integer classId);
 

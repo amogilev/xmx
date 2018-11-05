@@ -37,6 +37,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -572,7 +573,7 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 		if (ref != null) {
 			Object obj = ref.get();
 			if (obj != null) {
-				return convertToObjectInfo(objectId, obj, ref.classInfo);
+				return convertToObjectInfo(objectId, obj, ref.classInfo, ref.springProxy);
 			}
 		}
 		return null;
@@ -667,14 +668,14 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 			if (ref != null) {
 				Object obj = ref.get();
 				if (obj != null) {
-					result.add(convertToObjectInfo(id, obj, classInfo));
+					result.add(convertToObjectInfo(id, obj, classInfo, ref.springProxy));
 				}
 			}
 		}
 	}
 
-	private XmxObjectInfo convertToObjectInfo(int id, Object obj, XmxClassManager ci) {
-		return new XmxObjectInfo(id, toDto(ci), obj);
+	private XmxObjectInfo convertToObjectInfo(int id, Object obj, XmxClassManager ci, WeakReference<Object> proxyRef) {
+		return new XmxObjectInfo(id, toDto(ci), obj, proxyRef == null ? null : proxyRef.get());
 	}
 	
 	private static XmxClassInfo toDto(XmxClassManager ci) {
@@ -798,8 +799,12 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 	public void registerProxyObject(Object target, Object proxy) {
 		ManagedObjectWeakRef objRef = findManagedObjectRef(target);
 		if (objRef != null) {
-			logger.info("Proxy detected for a managed object {}; proxy class = {}", target, proxy.getClass().getName());
-			// TODO: store in ref
+			logger.info("Proxy detected for a managed object of {}; proxy = {}", target.getClass(), proxy.getClass());
+			if (objRef.springProxy != null) {
+				logger.warn("Overwriting previous proxy for a managed object #{} {}: old={}, new={}", objRef.objectId,
+						target.getClass(), objRef.springProxy.getClass(), proxy.getClass());
+			}
+			objRef.springProxy = new WeakReference<>(proxy);
 		}
 	}
 

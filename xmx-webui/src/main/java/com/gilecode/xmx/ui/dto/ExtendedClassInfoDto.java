@@ -1,4 +1,4 @@
-// Copyright © 2014-2017 Andrey Mogilev. All rights reserved.
+// Copyright © 2014-2018 Andrey Mogilev. All rights reserved.
 
 package com.gilecode.xmx.ui.dto;
 
@@ -13,10 +13,12 @@ public class ExtendedClassInfoDto extends ClassInfoDto {
 	 * Number of managed objects
 	 */
 	private final int numberOfObjects;
+	private final String proxyClass;
 
-	public ExtendedClassInfoDto(XmxClassInfo ci, int numberOfObjects) {
+	public ExtendedClassInfoDto(XmxClassInfo ci, int numberOfObjects, String proxyClass) {
 		super(ci);
 		this.numberOfObjects = numberOfObjects;
+		this.proxyClass = proxyClass;
 	}
 
 	/**
@@ -24,5 +26,13 @@ public class ExtendedClassInfoDto extends ClassInfoDto {
 	 */
 	public int getNumberOfObjects() {
 		return numberOfObjects;
+	}
+
+	public String getProxyClass() {
+		return proxyClass;
+	}
+
+	public boolean isSingletonWithProxy() {
+		return numberOfObjects == 1 && proxyClass != null;
 	}
 }

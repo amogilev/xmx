@@ -12,9 +12,11 @@ import java.lang.ref.WeakReference;
  */
 public class ManagedObjectWeakRef extends WeakReference<Object> {
 	
-	int objectId;
-	XmxClassManager classInfo;
+	final int objectId;
+	final XmxClassManager classInfo;
+
 	ObjectName jmxObjectName;
+	WeakReference<Object> springProxy;
 	
 	public ManagedObjectWeakRef(Object referent, ReferenceQueue<Object> q,
 	                            int objectId, XmxClassManager classInfo, ObjectName jmxObjectName) {

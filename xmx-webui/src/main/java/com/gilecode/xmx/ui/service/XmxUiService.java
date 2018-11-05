@@ -62,8 +62,15 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				if (CollectionUtils.isNotEmpty(managedClassInfos)) {
 					List<ExtendedClassInfoDto> extendedXmxClassInfos = new ArrayList<>(managedClassInfos.size());
 					for (XmxClassInfo managedClassInfo : managedClassInfos) {
-						int numObjects = xmxService.getManagedObjects(managedClassInfo.getId()).size();
-						ExtendedClassInfoDto extendedXmxClassInfo = new ExtendedClassInfoDto(managedClassInfo, numObjects);
+						List<XmxObjectInfo> managedObjects = xmxService.getManagedObjects(managedClassInfo.getId());
+						int numObjects = managedObjects.size();
+						String proxyClass = null;
+						if (numObjects == 1) {
+							// special case - check if proxy is detected
+							Object proxy = managedObjects.get(0).getProxy();
+							proxyClass = proxy == null ? null : proxy.getClass().getName();
+						}
+						ExtendedClassInfoDto extendedXmxClassInfo = new ExtendedClassInfoDto(managedClassInfo, numObjects, proxyClass);
 						extendedXmxClassInfos.add(extendedXmxClassInfo);
 					}
 
@@ -75,10 +82,10 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public Integer getManagedClassSingleInstanceId(int classId) {
+	public XmxObjectInfo getManagedClassSingleInstance(int classId) {
 		List<XmxObjectInfo> managedObjects = xmxService.getManagedObjects(classId);
 		if (managedObjects.size() == 1) {
-			return managedObjects.get(0).getObjectId();
+			return managedObjects.get(0);
 		} else {
 			return null;
 		}
@@ -357,7 +364,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		} else {
 			ci = xmxService.getClassInfo(obj.getClass());
 		}
-		return new XmxObjectInfo(ID_UNMANAGED, ci, obj);
+		return new XmxObjectInfo(ID_UNMANAGED, ci, obj, null);
 	}
 
 	@Override

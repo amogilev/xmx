@@ -3,6 +3,7 @@
 package com.gilecode.xmx.ui;
 
 import com.gilecode.xmx.model.NotSingletonException;
+import com.gilecode.xmx.model.XmxObjectInfo;
 import com.gilecode.xmx.ui.dto.ExtendedClassInfoDto;
 import com.gilecode.xmx.ui.dto.ExtendedObjectInfoDto;
 import com.gilecode.xmx.ui.dto.ObjectInfoDto;
@@ -77,13 +78,17 @@ public class RestController implements UIConstants {
 	}
 
 	@RequestMapping(value = "getClassObjects", method = RequestMethod.GET)
-	public String handleGetClassObjects(ModelMap model, @RequestParam Integer classId, @RequestParam String className,
-	                                    @RequestParam(ATTR_SESSION_ID) String sessionId) {
+	public String handleGetClassObjects(ModelMap model,
+			@RequestParam Integer classId,
+			@RequestParam String className,
+	        @RequestParam(ATTR_SESSION_ID) String sessionId,
+			@RequestParam(required = false) boolean proxyInformed) {
 		checkSessionId(sessionId, "");
-		Integer singletonId = xmxUiService.getManagedClassSingleInstanceId(classId);
-		if (singletonId != null) {
+		XmxObjectInfo singletonObj = xmxUiService.getManagedClassSingleInstance(classId);
+		if (singletonObj != null && (proxyInformed || singletonObj.getProxy() == null)) {
 			// fast path for singletons
-			return "redirect:/getObjectDetails/$" + singletonId + "?" + ATTR_SESSION_ID + "=" + sessionId;
+			String refpath = (singletonObj.getProxy() == null ? "$" : "$SP.$") + singletonObj.getObjectId();
+			return "redirect:/getObjectDetails/" + refpath + "?" + ATTR_SESSION_ID + "=" + sessionId;
 		}
 		List<ObjectInfoDto> extObjectsInfo = xmxUiService.getManagedClassInstancesInfo(classId);
 		model.addAttribute("className", className);
