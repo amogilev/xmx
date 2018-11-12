@@ -18,7 +18,7 @@
             <tr>
                 <td>
                     ${classInfo.className}
-                    <c:if test="${classInfo.singletonWithProxy}"> (SpringProxy: ${classInfo.proxyClass})</c:if>
+                    <c:if test="${classInfo.singletonWithProxy}"> <b>(SpringProxy: ${classInfo.proxyClass})</b></c:if>
                 </td>
                 <td>
                     ${classInfo.numberOfObjects}

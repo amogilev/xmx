@@ -19,10 +19,16 @@ public class ObjectInfoDto {
 
 	private final XmxObjectTextRepresentation text;
 
-	public ObjectInfoDto(int objectId, ClassInfoDto classDto, XmxObjectTextRepresentation text) {
+	/**
+	 * Class of the Spring proxy object, if detected.
+	 */
+	private final String proxyClass;
+
+	public ObjectInfoDto(int objectId, ClassInfoDto classDto, XmxObjectTextRepresentation text, String proxyClass) {
 		this.objectId = objectId;
 		this.classInfo = classDto;
 		this.text = text;
+		this.proxyClass = proxyClass;
 	}
 
 	public XmxObjectTextRepresentation getText() {
@@ -35,5 +41,9 @@ public class ObjectInfoDto {
 
 	public ClassInfoDto getClassInfo() {
 		return classInfo;
+	}
+
+	public String getProxyClass() {
+		return proxyClass;
 	}
 }

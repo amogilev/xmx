@@ -127,7 +127,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return new ExtendedObjectInfoDto(objectInfo.getObjectId(), new ClassInfoDto(objectInfo.getClassInfo()),
 				toText(obj, OBJ_JSON_CHARS_LIMIT),
 				classNames, fieldsByClass, methodsByClass, arrayPage,
-				getPermaRefPath(objectInfo, refpath));
+				getPermaRefPath(objectInfo, refpath), getProxyClass(objectInfo));
 	}
 
 	private String getPermaRefPath(XmxObjectInfo objectInfo, String refpath) {
@@ -527,7 +527,16 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		if (classDto == null) {
 			classDto = new ClassInfoDto(info.getClassInfo());
 		}
-		return new ObjectInfoDto(info.getObjectId(), classDto, toText(info.getValue(), jsonCharsLimit));
+		return new ObjectInfoDto(info.getObjectId(), classDto,
+				toText(info.getValue(), jsonCharsLimit),
+				getProxyClass(info));
+	}
+
+	private String getProxyClass(XmxObjectInfo info) {
+		if (info.getProxy() == null) {
+			return null;
+		}
+		return info.getProxy().getClass().getName();
 	}
 
 	/**

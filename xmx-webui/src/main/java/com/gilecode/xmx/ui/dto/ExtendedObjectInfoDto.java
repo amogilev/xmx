@@ -89,12 +89,12 @@ public class ExtendedObjectInfoDto extends ObjectInfoDto {
 
 
 	public ExtendedObjectInfoDto(int objectId, ClassInfoDto classInfo,
-	                             XmxObjectTextRepresentation text,
-	                             List<String> classesNames,
-	                             Map<String, List<XmxFieldInfo>> fieldsByClass,
-	                             Map<String, List<XmxMethodInfo>> methodsByClass,
-	                             ArrayPageDetails arrayPage, String permaRefPath) {
-		super(objectId, classInfo, text);
+			XmxObjectTextRepresentation text,
+			List<String> classesNames,
+			Map<String, List<XmxFieldInfo>> fieldsByClass,
+			Map<String, List<XmxMethodInfo>> methodsByClass,
+			ArrayPageDetails arrayPage, String permaRefPath, String proxyClass) {
+		super(objectId, classInfo, text, proxyClass);
 		this.classesNames = classesNames;
 		this.fieldsByClass = fieldsByClass;
 		this.methodsByClass = methodsByClass;

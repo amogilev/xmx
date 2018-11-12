@@ -26,9 +26,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Controller
 @RequestMapping("/")
@@ -85,16 +83,54 @@ public class RestController implements UIConstants {
 			@RequestParam(required = false) boolean proxyInformed) {
 		checkSessionId(sessionId, "");
 		XmxObjectInfo singletonObj = xmxUiService.getManagedClassSingleInstance(classId);
+
 		if (singletonObj != null && (proxyInformed || singletonObj.getProxy() == null)) {
 			// fast path for singletons
 			String refpath = (singletonObj.getProxy() == null ? "$" : "$SP.$") + singletonObj.getObjectId();
 			return "redirect:/getObjectDetails/" + refpath + "?" + ATTR_SESSION_ID + "=" + sessionId;
 		}
 		List<ObjectInfoDto> extObjectsInfo = xmxUiService.getManagedClassInstancesInfo(classId);
+
+		Map<String, List<ObjectInfoDto>> proxiedObjects = new TreeMap<>();
+		extObjectsInfo = groupProxiedObjects(extObjectsInfo, proxiedObjects);
+
 		model.addAttribute("className", className);
 		model.addAttribute("objects", extObjectsInfo);
+		model.addAttribute("proxiedObjects", proxiedObjects);
 		model.addAttribute(ATTR_SESSION_ID, sessionId);
 		return "classObjects";
+	}
+
+	private List<ObjectInfoDto> groupProxiedObjects(List<ObjectInfoDto> objects, Map<String, List<ObjectInfoDto>> outProxiedObjects) {
+		// fast path/common case = no proxied objects
+		if (!hasProxiedObjects(objects)) {
+			return objects;
+		}
+		List<ObjectInfoDto> nonProxiedObjects = new ArrayList<>(objects.size() - 1);
+		for (ObjectInfoDto obj : objects) {
+			String proxyClass = obj.getProxyClass();
+			if (proxyClass != null) {
+				List<ObjectInfoDto> proxiedObjects = outProxiedObjects.get(proxyClass);
+				if (proxiedObjects == null) {
+					proxiedObjects = new ArrayList<>();
+					outProxiedObjects.put(proxyClass, proxiedObjects);
+				}
+				proxiedObjects.add(obj);
+			} else {
+				nonProxiedObjects.add(obj);
+			}
+		}
+
+		return nonProxiedObjects;
+	}
+
+	private boolean hasProxiedObjects(List<ObjectInfoDto> objects) {
+		for (ObjectInfoDto obj : objects) {
+			if (obj.getProxyClass() != null) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
