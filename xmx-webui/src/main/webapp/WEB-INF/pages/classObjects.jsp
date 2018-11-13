@@ -17,30 +17,67 @@
 </head>
 
 <body>
+
 <h1>List of ${className} managed objects</h1>
-<table border="2" width="85%">
-    <thead>
-    <tr>
-        <td>ID</td>
-        <td>Value</td>
-    </tr>
-    </thead>
-    <c:forEach items="${objects}" var="object">
+
+<c:forEach var="e" items="${proxiedObjects}">
+    <h2>Objects proxied with <b>${e.key}</b></h2>
+
+    <table border="2" width="85%">
+        <thead>
         <tr>
-            <td>${object.objectId} (<a href="${pageContext.request.contextPath}/getObjectDetails/$${object.objectId}?sid=${sid}">Details</a>)</td>
-            <td class="supportsTruncationWarning">
-                <c:out value="${object.text.smartTextValue}"/>
-                <c:if test="${object.text.smartUsesJson && object.text.jsonTruncated}">
-                    <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
-                        <tr>
-                            <td><img src="/images/alert.red.png" alt="Warning!"/></td>
-                            <td><input type="button" onclick="loadFullJson(${object.objectId});" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
-                        </tr>
-                    </table>
-                </c:if>
-            </td>
+            <td>ID</td>
+            <td>Value</td>
         </tr>
-    </c:forEach>
-</table>
+        </thead>
+        <c:forEach items="${e.value}" var="object">
+            <tr>
+                <td>$SP.$${object.objectId} (<a href="${pageContext.request.contextPath}/getObjectDetails/$SP.$${object.objectId}?sid=${sid}">Details</a>)</td>
+                <td class="supportsTruncationWarning">
+                    <c:out value="${object.text.smartTextValue}"/>
+                    <c:if test="${object.text.smartUsesJson && object.text.jsonTruncated}">
+                        <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
+                            <tr>
+                                <td><img src="/images/alert.red.png" alt="Warning!"/></td>
+                                <td><input type="button" onclick="loadFullJson(${object.objectId});" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
+                            </tr>
+                        </table>
+                    </c:if>
+                </td>
+            </tr>
+        </c:forEach>
+    </table>
+</c:forEach>
+
+<c:if test="${!empty objects}">
+    <c:if test="${!empty proxiedObjects}">
+        <h2>Objects with no proxies</h2>
+    </c:if>
+
+    <table border="2" width="85%">
+        <thead>
+        <tr>
+            <td>ID</td>
+            <td>Value</td>
+        </tr>
+        </thead>
+        <c:forEach items="${objects}" var="object">
+            <tr>
+                <td>${object.objectId} (<a href="${pageContext.request.contextPath}/getObjectDetails/$${object.objectId}?sid=${sid}">Details</a>)</td>
+                <td class="supportsTruncationWarning">
+                    <c:out value="${object.text.smartTextValue}"/>
+                    <c:if test="${object.text.smartUsesJson && object.text.jsonTruncated}">
+                        <table class="truncationWarning" title="<fmt:message key='jsonTruncated.tooltip'/>">
+                            <tr>
+                                <td><img src="/images/alert.red.png" alt="Warning!"/></td>
+                                <td><input type="button" onclick="loadFullJson(${object.objectId});" value="<fmt:message key='jsonTruncated.loadFull'/>" ></td>
+                            </tr>
+                        </table>
+                    </c:if>
+                </td>
+            </tr>
+        </c:forEach>
+    </table>
+</c:if>
 </body>
 </html>
