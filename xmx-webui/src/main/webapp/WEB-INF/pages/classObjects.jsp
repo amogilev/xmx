@@ -32,7 +32,7 @@
         </thead>
         <c:forEach items="${e.value}" var="object">
             <tr>
-                <td>$SP.$${object.objectId} (<a href="${pageContext.request.contextPath}/getObjectDetails/$SP.$${object.objectId}?sid=${sid}">Details</a>)</td>
+                <td>$P:$${object.objectId} (<a href="${pageContext.request.contextPath}/getObjectDetails/$P:$${object.objectId}?sid=${sid}">Details</a>)</td>
                 <td class="supportsTruncationWarning">
                     <c:out value="${object.text.smartTextValue}"/>
                     <c:if test="${object.text.smartUsesJson && object.text.jsonTruncated}">

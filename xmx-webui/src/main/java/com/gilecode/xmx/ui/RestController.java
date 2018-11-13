@@ -8,10 +8,7 @@ import com.gilecode.xmx.ui.dto.ExtendedClassInfoDto;
 import com.gilecode.xmx.ui.dto.ExtendedObjectInfoDto;
 import com.gilecode.xmx.ui.dto.ObjectInfoDto;
 import com.gilecode.xmx.ui.dto.XmxMethodResult;
-import com.gilecode.xmx.ui.service.IXmxUiService;
-import com.gilecode.xmx.ui.service.MissingObjectException;
-import com.gilecode.xmx.ui.service.RefPathSyntaxException;
-import com.gilecode.xmx.ui.service.XmxSessionExpiredException;
+import com.gilecode.xmx.ui.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.propertyeditors.StringArrayPropertyEditor;
 import org.springframework.http.HttpStatus;
@@ -43,6 +40,14 @@ public class RestController implements UIConstants {
 	public ModelAndView missingObject(MissingObjectException ex) {
 		ModelAndView mav = new ModelAndView("missingObject");
 		mav.addObject("refpath", "$" + ex.getMissingObjectId());
+		return mav;
+	}
+
+	@ExceptionHandler(MissingProxyException.class)
+	public ModelAndView missingProxy(MissingProxyException ex) {
+		ModelAndView mav = new ModelAndView("missingProxy");
+		mav.addObject("refpath", "$" + ex.getObjectId());
+		mav.addObject("sid", xmxUiService.getCurrentSessionId());
 		return mav;
 	}
 
@@ -86,7 +91,8 @@ public class RestController implements UIConstants {
 
 		if (singletonObj != null && (proxyInformed || singletonObj.getProxy() == null)) {
 			// fast path for singletons
-			String refpath = (singletonObj.getProxy() == null ? "$" : "$SP.$") + singletonObj.getObjectId();
+			String refpath = (singletonObj.getProxy() == null ? "" : PROXY_PATH_PREFIX)
+					+ "$" + singletonObj.getObjectId();
 			return "redirect:/getObjectDetails/" + refpath + "?" + ATTR_SESSION_ID + "=" + sessionId;
 		}
 		List<ObjectInfoDto> extObjectsInfo = xmxUiService.getManagedClassInstancesInfo(classId);
@@ -174,7 +180,7 @@ public class RestController implements UIConstants {
 				@RequestParam(ATTR_SESSION_ID) String sessionId,
 				@RequestParam(required = false, defaultValue = "SMART") ValuesDisplayKind valKind,
 				@RequestParam(required = false, defaultValue = "0") int arrPage)
-			throws MissingObjectException, RefPathSyntaxException, NotSingletonException {
+			throws MissingObjectException, RefPathSyntaxException, NotSingletonException, MissingProxyException {
 
 		refpath = decode(refpath);
 		boolean permanent = checkSessionId(sessionId, refpath);
@@ -195,7 +201,7 @@ public class RestController implements UIConstants {
 				@PathVariable String refpath,
 				@RequestParam String elementId, @RequestParam String value,
 				@RequestParam(ATTR_SESSION_ID) String sessionId)
-			throws MissingObjectException, RefPathSyntaxException, NotSingletonException {
+			throws MissingObjectException, RefPathSyntaxException, NotSingletonException, MissingProxyException {
 
 		refpath = decode(refpath);
 		boolean permanent = checkSessionId(sessionId, refpath);
@@ -240,7 +246,7 @@ public class RestController implements UIConstants {
 							 @PathVariable String refpath,
 							 @RequestParam(ATTR_SESSION_ID) String sessionId,
 							 @RequestParam(value = "fid", required = false) String fid)
-			throws IOException, RefPathSyntaxException, MissingObjectException, NotSingletonException {
+			throws IOException, RefPathSyntaxException, MissingObjectException, NotSingletonException, MissingProxyException {
 		refpath = decode(refpath);
 		checkSessionId(sessionId, refpath);
 

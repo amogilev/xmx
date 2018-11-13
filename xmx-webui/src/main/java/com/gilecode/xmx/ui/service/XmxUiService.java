@@ -106,7 +106,8 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public ExtendedObjectInfoDto getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException, RefPathSyntaxException, NotSingletonException {
+	public ExtendedObjectInfoDto getExtendedObjectDetails(String refpath, int arrPageNum) throws MissingObjectException,
+			MissingProxyException, RefPathSyntaxException, NotSingletonException {
 		XmxObjectInfo objectInfo = findObject(refpath).foundObjectInfo;
 		Object obj = objectInfo.getValue();
 
@@ -226,12 +227,18 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public SearchObjectResult findObject(String refpath) throws MissingObjectException,
+	public SearchObjectResult findObject(String refpath) throws MissingObjectException, MissingProxyException,
 			RefPathSyntaxException, NotSingletonException {
 
 		String rootPath;
 		String subPath;
 		XmxObjectInfo rootObjectInfo;
+		boolean requireProxy = false;
+
+		if (refpath.startsWith(PROXY_PATH_PREFIX)) {
+			refpath = refpath.substring(PROXY_PATH_PREFIX.length());
+			requireProxy = true;
+		}
 		if (refpath.startsWith(PERMA_PATH_PREFIX)) {
 			// permanent path like "$:APP:CLASS:" or "$:APP:CLASS:.f1.f2"
 			int endClass = refpath.lastIndexOf(':');
@@ -256,6 +263,14 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			rootPath = refId;
 			Integer objectId = parseRefId(refId);
 			rootObjectInfo = getXmxObject(objectId);
+		}
+
+		if (requireProxy) {
+			Object proxy = rootObjectInfo.getProxy();
+			if (proxy == null) {
+				throw new MissingProxyException(rootObjectInfo.getObjectId());
+			}
+			rootObjectInfo = getUnmanagedObjectInfo(proxy);
 		}
 
 		if (subPath.isEmpty()) {
@@ -380,7 +395,6 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		}
 		reflAccessor.makeAccessible(m);
 
-		String methodDesc = m.getName();
 		XmxMethodInfo methodInfo = toMethodInfo(methodId, m);
 		XmxMethodResult resultInfo = new XmxMethodResult(m.getDeclaringClass().getName(), methodInfo);
 
@@ -430,7 +444,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@Override
 	public void setObjectFieldOrElement(String refpath, String elementId, String value)
-			throws MissingObjectException, RefPathSyntaxException, NotSingletonException {
+			throws MissingObjectException, RefPathSyntaxException, NotSingletonException, MissingProxyException {
 		SearchObjectResult searchResult = findObject(refpath);
 		XmxObjectInfo objectInfo = searchResult.foundObjectInfo;
 		Object obj = objectInfo.getValue();
@@ -491,7 +505,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	@Override
-	public void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException, NotSingletonException {
+	public void printFullObjectJson(String refpath, String fid, PrintWriter out) throws IOException, RefPathSyntaxException, MissingObjectException, NotSingletonException, MissingProxyException {
 		XmxObjectInfo objectInfo = findObject(refpath).foundObjectInfo;
 		Object jsonSourceObject;
 		Object obj = objectInfo.getValue();
@@ -567,7 +581,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	 *
 	 * @return the array of objects which may be used to invoke the method
 	 */
-	private Object[] translateArgs(String[] args, Method m, ClassLoader contextCL) throws RefPathSyntaxException, MissingObjectException, NotSingletonException {
+	private Object[] translateArgs(String[] args, Method m, ClassLoader contextCL) throws RefPathSyntaxException, MissingObjectException, NotSingletonException, MissingProxyException {
 		if (args == null) {
 			args = new String[0];
 		}
@@ -595,7 +609,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 
 	private Object deserializeValue(String value, Class<?> formalType, ClassLoader contextCL)
-			throws RefPathSyntaxException, MissingObjectException, NotSingletonException {
+			throws RefPathSyntaxException, MissingObjectException, NotSingletonException, MissingProxyException {
 		if (value.startsWith("$")) {
 			// value is refpath of the actual object
 			return findObject(value).foundObjectInfo.getValue();
