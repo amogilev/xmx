@@ -3,6 +3,7 @@
 package com.gilecode.xmx.service;
 
 import com.gilecode.yagson.YaGson;
+import com.gilecode.yagson.YaGsonBuilder;
 import com.gilecode.yagson.stream.StringOutputLimitExceededException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,11 @@ public class MapperService implements IMapperService {
 	private static YaGson jsonMapper() {
 		// although Gson is thread-safe, do not use single 'static' instance for all work, as its typeTokenCache would
 		//  prevent Class GC for serialized classes
-		return new YaGson();
+
+		// return new YaGson();
+
+		// TODO: set as default in YaGson() instead! And need to support in JsonTreeWriter.java:191
+		return new YaGsonBuilder().serializeSpecialFloatingPointValues().create();
 	}
 
 	/**

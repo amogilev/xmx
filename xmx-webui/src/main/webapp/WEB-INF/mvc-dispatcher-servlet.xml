@@ -13,6 +13,9 @@
     <mvc:resources mapping="/css/**" location="/resources/css/" />
     <mvc:resources mapping="/js/**" location="/resources/js/" />
     <mvc:resources mapping="/font/**" location="/resources/font/" />
+    <mvc:resources mapping="/smx/*.html" location="/resources/static/smx/" />
+
+    <mvc:view-controller path="/smx/" view-name="forward:/smx/index.html" />
 
     <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
         <property name="prefix" value="/WEB-INF/pages/"/>

@@ -8,6 +8,8 @@ import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.service.XmxServiceRegistry;
 import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.service.XmxUiService;
+import com.gilecode.xmx.ui.smx.service.ISmxUiService;
+import com.gilecode.xmx.ui.smx.service.SmxUiService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -33,4 +35,10 @@ public class Config {
 	public IXmxUiService xmxUiService() {
 		return new XmxUiService(methodInfoService(), xmxService(), mapperService());
 	}
+
+	@Bean
+	public ISmxUiService smxUiService() {
+		return new SmxUiService(xmxUiService(), xmxService());
+	}
+
 }
