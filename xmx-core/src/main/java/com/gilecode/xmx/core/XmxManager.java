@@ -408,7 +408,7 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 
         // initialize known properties of managed class, e.g. class ID and name
 		// other properties may require Class itself, and will be initialized later
-		int classId = managedClassesCounter.getAndIncrement();
+		int classId = managedClassesCounter.incrementAndGet();
 		int maxInstances = getMaxInstances(appConfig, className);
 		String jmxObjectNamePart = null;
 		if (jmxServer != null) {
