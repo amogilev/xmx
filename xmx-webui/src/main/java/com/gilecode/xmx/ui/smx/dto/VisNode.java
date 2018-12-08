@@ -8,16 +8,26 @@ public class VisNode {
     private final String group;
     private final String label;
     private final String title;
+    private final String parentId;
 
-    public VisNode(String id, String group, String label) {
-        this (id, group, label, null);
-    }
-
-    public VisNode(String id, String group, String label, String title) {
+    private VisNode(String id, String group, String label, String title, String parentId) {
         this.id = id;
         this.group = group;
         this.label = label;
         this.title = title;
+        this.parentId = parentId;
+    }
+
+    public static VisNode bean(String id, String label, String contextId) {
+        return new VisNode(id, "bean", label, null, contextId);
+    }
+
+    public static VisNode app(String id, String label) {
+        return new VisNode(id, "app", label, null, null);
+    }
+
+    public static VisNode context(String id, String label, String title, boolean isRoot, String parentId) {
+        return new VisNode(id, isRoot ? "rootCtx" : "childCtx", label, title, parentId);
     }
 
     public String getId() {
@@ -34,5 +44,9 @@ public class VisNode {
 
     public String getTitle() {
         return title;
+    }
+
+    public String getParentId() {
+        return parentId;
     }
 }
