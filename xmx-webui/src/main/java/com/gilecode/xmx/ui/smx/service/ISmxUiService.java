@@ -3,9 +3,11 @@
 package com.gilecode.xmx.ui.smx.service;
 
 import com.gilecode.xmx.service.IXmxService;
+import com.gilecode.xmx.ui.smx.dto.BeanInfoDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Handles all accesses to {@link IXmxService} from XMX UI, wraps them with additional logic
@@ -18,4 +20,8 @@ public interface ISmxUiService {
 	String getCurrentSessionId();
 
 	VisData getVisData(boolean showAllBeans, Integer showBeansContextId, String filter);
+
+    List<String> getAppNames();
+
+	List<BeanInfoDto> getBeans(String appName);
 }

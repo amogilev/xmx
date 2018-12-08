@@ -1,21 +1,30 @@
 <!-- Copyright © 2018 Andrey Mogilev. All rights reserved. -->
-
+<!doctype html>
 <html>
 <head>
     <!--TODO: use 'min' or 'slim' versions!-->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.css" rel="stylesheet" type="text/css" />
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.2/css/bootstrap-select.min.css">
 
     <!--<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>-->
     <!--<link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css" />-->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.css" rel="stylesheet" type="text/css" />
 
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
 
+    <!-- Bootstrap -->
+    <!--<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+
+    <!-- Bootstrap Select -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.2/js/bootstrap-select.min.js"></script>
 
     <style type="text/css">
         #mynetwork {
             width: 100%;
-            height: 80%;
+            height: 70vh;
             border: 1px solid lightgray;
         }
     </style>
@@ -23,10 +32,54 @@
     <title>SpringMX: Contexts Hierarchy</title>
 </head>
 <body>
+
+<div class="container-fluid">
+
 <h1>Contexts Hierarchy</h1>
-<div id="mynetwork"></div>
+
+
+<form>
+    <div class="form-row">
+        <div class="form-group col-md-2">
+            <div class="row">
+                <div class="col-md-12">
+                    <label for="selApp">App</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                <select id="selApp" name="app" class="selectpicker form-control">
+                    <option>Loading...</option>
+                </select>
+                </div>
+            </div>
+        </div>
+        <div class="form-group col-md-6 offset-md-1">
+            <div class="row">
+                <div class="col-md-12">
+                    <label for="selBean">Bean</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <select id="selBean" name="bean" class="selectpicker form-control" data-live-search="true">
+                        <option>Loading...</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</form>
+
+    <div id="mynetwork">
+    </div>
+
+</div>
+
 
 <script type="text/javascript">
+
 	// create a network
 	var container = document.getElementById('mynetwork');
 
@@ -102,7 +155,7 @@
         });
     }
 
-    function loadAndDraw() {
+    function loadAndDrawNetwork() {
 		$.get("/smxs/visdata", {test1 : 'foo'}, function(data) {
 		    networkData.update(data);
 
@@ -139,7 +192,39 @@
 		// network.setData(data);
     }
 
-    loadAndDraw();
+    function loadApps() {
+        // TODO: global vars for $('#selApp') (make everything to onReady?)
+        $.get("/smxs/apps", function(data) {
+            var $sel = $('#selApp').empty();
+            $sel.append($('<option></option>').attr("value", "null").text("All"));
+            data.forEach(function(appName) {
+                var option = $('<option></option>').attr("value", appName).text(appName ? appName : 'Global');
+                $sel.append(option);
+            });
+            $('#selApp').selectpicker('refresh');
+        });
+    }
+
+    function loadBeanNames() {
+        $.get("/smxs/beanNames", function(data) {
+            var $sel = $('#selBean').empty();
+            $sel.append($('<option></option>').attr("value", "").text("All"));
+            data.forEach(function(beanInfo) {
+                var option = $('<option></option>').attr("value", beanInfo.id).text(beanInfo.name);
+                $sel.append(option);
+            });
+            $('#selBean').selectpicker('refresh');
+        });
+    }
+
+    $(document).ready(function () {
+        $('.selectpicker').selectpicker();
+
+        loadApps();
+        loadBeanNames();
+        loadAndDrawNetwork();
+    });
+
 
 </script>
 </body>

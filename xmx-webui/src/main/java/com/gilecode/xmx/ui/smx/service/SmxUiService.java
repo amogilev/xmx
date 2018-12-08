@@ -6,6 +6,7 @@ import com.gilecode.xmx.model.XmxClassInfo;
 import com.gilecode.xmx.model.XmxObjectInfo;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.service.IXmxUiService;
+import com.gilecode.xmx.ui.smx.dto.BeanInfoDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +76,7 @@ public class SmxUiService implements ISmxUiService {
         for (String appName : xmxService.getApplicationNames()) {
 
             // TODO: maybe provide more restrictive better pattern
-            List<XmxClassInfo> contextClassInfos = xmxService.findManagedClassInfos(appName, ".*ApplicationContext");
+            List<XmxClassInfo> contextClassInfos = getContextClasses(appName);
             if (contextClassInfos.size() > 0) {
                 data.addApp(appName);
 
@@ -96,7 +97,7 @@ public class SmxUiService implements ISmxUiService {
 
                     for (BeanInfo bi : ci.beans) {
                         // TODO: maybe add custom title (e.g. toString(), not sure yet)
-                        data.addBean(ci.id, bi.name, makeBeanLabel(bi));
+                        data.addBean(ci.id, makeBeanPath(ci, bi), makeBeanLabel(bi));
                     }
                 }
             }
@@ -104,6 +105,51 @@ public class SmxUiService implements ISmxUiService {
 
 
         return data;
+    }
+
+    private String makeBeanPath(ContextInfo ci, BeanInfo bi) {
+        return ci.id + ".#" + bi.name;
+    }
+
+    public List<XmxClassInfo> getContextClasses(String appName) {
+        return xmxService.findManagedClassInfos(appName, ".*ApplicationContext");
+    }
+
+    @Override
+    public List<String> getAppNames() {
+        // TODO: skip apps with no contexts
+        return xmxService.getApplicationNames();
+    }
+
+    @Override
+    public List<BeanInfoDto> getBeans(String appName) {
+        List<BeanInfoDto> result = new ArrayList<>();
+        if (appName == null) {
+            for (String appName2 : getAppNames()) {
+                fillBeans(appName2, result);
+            }
+        } else {
+            fillBeans(appName, result);
+        }
+        Collections.sort(result, new Comparator<BeanInfoDto>() {
+            @Override
+            public int compare(BeanInfoDto o1, BeanInfoDto o2) {
+                return o1.getName().compareToIgnoreCase(o2.getName());
+            }
+        });
+        return result;
+    }
+
+    private void fillBeans(String appName, List<BeanInfoDto> result) {
+        for (XmxClassInfo classInfo : getContextClasses(appName)) {
+            for (XmxObjectInfo ctxObjInfo : xmxService.getManagedObjects(classInfo.getId())) {
+                // TODO: refactor - we only need bean infos and ctx id, nothing else
+                ContextInfo ci = transformContext(ctxObjInfo, null);
+                for (BeanInfo bi : ci.beans) {
+                    result.add(new BeanInfoDto(makeBeanPath(ci, bi), bi.name));
+                }
+            }
+        }
     }
 
     private String makeBeanLabel(BeanInfo bi) {
@@ -247,7 +293,7 @@ public class SmxUiService implements ISmxUiService {
             if (isSingleton) {
                 // TODO check isAbstract?
                 // TODO: do we need bean here? Why? (maybe class name?)
-                Object bean = safeInvokeMethod(mGetSingleton, beanFactory, name);
+//                Object bean = safeInvokeMethod(mGetSingleton, beanFactory, name);
 //                    safeInvokeMethod()
             }
             ci.beans.add(new BeanInfo(name, scope));

@@ -41,8 +41,7 @@ public class VisData {
 
     }
 
-    public void addBean(String contextId, String name, String label) {
-        String path = contextId + "#" + name;
+    public void addBean(String contextId, String path, String label) {
         nodes.add(VisNode.bean(path, label, contextId));
         edges.add(new VisEdge(contextId, path));
     }
