@@ -70,41 +70,50 @@ public class SmxUiService implements ISmxUiService {
     }
 
     @Override
-    public VisData getVisData(boolean showAllBeans, Integer showBeansContextId, String filter) {
+    public VisData getVisData(String appNameOrNull, String beanIdOrNull) {
         VisData data = new VisData();
+        if (appNameOrNull == null) {
+            for (String appName2 : xmxService.getApplicationNames()) {
+                fillVisData(data, appName2, beanIdOrNull);
+            }
+        } else {
+            fillVisData(data, appNameOrNull, beanIdOrNull);
+        }
+        return data;
+    }
 
-        for (String appName : xmxService.getApplicationNames()) {
+    private void fillVisData(VisData data, String appName, String beanIdOrNull) {
+        // TODO: maybe provide more restrictive better pattern
+        List<XmxClassInfo> contextClassInfos = getContextClasses(appName);
+        if (contextClassInfos.size() > 0) {
+            data.addApp(appName);
 
-            // TODO: maybe provide more restrictive better pattern
-            List<XmxClassInfo> contextClassInfos = getContextClasses(appName);
-            if (contextClassInfos.size() > 0) {
-                data.addApp(appName);
+            List<XmxObjectInfo> ctxObjectInfos = new LinkedList<>();
+            for (XmxClassInfo classInfo : contextClassInfos) {
+                ctxObjectInfos.addAll(xmxService.getManagedObjects(classInfo.getId()));
+            }
 
-                List<XmxObjectInfo> ctxObjectInfos = new LinkedList<>();
-                for (XmxClassInfo classInfo : contextClassInfos) {
-                    ctxObjectInfos.addAll(xmxService.getManagedObjects(classInfo.getId()));
+            // transform all contexts to ContextInfo starting from root ones
+            Collection<ContextInfo> contextInfos = transformContexts(ctxObjectInfos);
+            for (ContextInfo ci : contextInfos) {
+                // TODO: make multi-line label
+                if (ci.parentId == null) {
+                    data.addRootContext(appName, ci.id, makeContextLabel(ci), ci.text);
+                } else {
+                    data.addChildContext(ci.parentId, ci.id, makeContextLabel(ci), ci.text);
                 }
 
-                // transform all contexts to ContextInfo starting from root ones
-                Collection<ContextInfo> contextInfos = transformContexts(ctxObjectInfos);
-                for (ContextInfo ci : contextInfos) {
-                    // TODO: make multi-line label
-                    if (ci.parentId == null) {
-                        data.addRootContext(appName, ci.id, makeContextLabel(ci), ci.text);
-                    } else {
-                        data.addChildContext(ci.parentId, ci.id, makeContextLabel(ci), ci.text);
-                    }
-
+                if (beanIdOrNull == null || beanIdOrNull.startsWith(ci.id)) {
                     for (BeanInfo bi : ci.beans) {
                         // TODO: maybe add custom title (e.g. toString(), not sure yet)
-                        data.addBean(ci.id, makeBeanPath(ci, bi), makeBeanLabel(bi));
+                        if (beanIdOrNull == null || beanIdOrNull.equals(makeBeanPath(ci, bi))) {
+                            // FIXME: also add all "sourcepath" beans! Probably dynamic beans set is needed...
+                            data.addBean(ci.id, makeBeanPath(ci, bi), makeBeanLabel(bi));
+                        }
                     }
                 }
             }
         }
-
-
-        return data;
     }
 
     private String makeBeanPath(ContextInfo ci, BeanInfo bi) {
@@ -122,14 +131,14 @@ public class SmxUiService implements ISmxUiService {
     }
 
     @Override
-    public List<BeanInfoDto> getBeans(String appName) {
+    public List<BeanInfoDto> getBeans(String appNameOrNull) {
         List<BeanInfoDto> result = new ArrayList<>();
-        if (appName == null) {
-            for (String appName2 : getAppNames()) {
-                fillBeans(appName2, result);
+        if (appNameOrNull == null) {
+            for (String appName : getAppNames()) {
+                fillBeans(appName, result);
             }
         } else {
-            fillBeans(appName, result);
+            fillBeans(appNameOrNull, result);
         }
         Collections.sort(result, new Comparator<BeanInfoDto>() {
             @Override
@@ -181,6 +190,7 @@ public class SmxUiService implements ISmxUiService {
 
     private Collection<ContextInfo> transformContexts(List<XmxObjectInfo> ctxObjectInfos) {
         Map<Object, ContextInfo> contextInfosMap = new IdentityHashMap<>();
+        List<ContextInfo> contextInfos = new ArrayList<>(); // ordered parent-first
         while (!ctxObjectInfos.isEmpty()) {
             boolean foundNext = false;
             Iterator<XmxObjectInfo> it = ctxObjectInfos.iterator();
@@ -194,7 +204,10 @@ public class SmxUiService implements ISmxUiService {
                     foundNext = true;
                     it.remove();
 
-                    contextInfosMap.put(ctxObj, transformContext(ctxObjInfo, ctxParent));
+
+                    ContextInfo ci = transformContext(ctxObjInfo, ctxParent);
+                    contextInfosMap.put(ctxObj, ci);
+                    contextInfos.add(ci);
                 }
             }
 
@@ -202,7 +215,7 @@ public class SmxUiService implements ISmxUiService {
                 throw new IllegalStateException("Found contexts with unknown parents, [0]=" + ctxObjectInfos.get(0).getValue());
             }
         }
-        return contextInfosMap.values();
+        return contextInfos;
     }
 
     private Object findParent(Object ctxObj) {

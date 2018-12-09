@@ -126,6 +126,9 @@
     };
 	var network = new vis.Network(container, networkData, options);
 
+	var $selApp = $("#selApp"), $selBean = $("#selBean");
+    var filterAppName = null, filterBeanId = null;
+
 	network.on('doubleClick', function(params) {
         if (params.nodes.length === 1) {
             var nodeId = params.nodes[0];
@@ -155,8 +158,19 @@
         });
     }
 
+    function queryParams(appName, beanId) {
+        var p = {};
+        if (appName !== null) {
+            p.appName = appName;
+        }
+        if (beanId !== null) {
+            p.beanId = beanId;
+        }
+        return p;
+    }
+
     function loadAndDrawNetwork() {
-		$.get("/smxs/visdata", {test1 : 'foo'}, function(data) {
+		$.get("/smxs/visdata", queryParams(filterAppName, filterBeanId), function(data) {
 		    networkData.update(data);
 
             data.nodes.forEach(function (n) {
@@ -165,6 +179,7 @@
                 }
             });
         });
+
 		// var nodes = [
 		// 	{id: 1, group: 'app', label: 'ROOT'},
 		// 	{id: 2, group : 'rootCtx', label: 'Root \nWebApplicationContext'},
@@ -193,27 +208,45 @@
     }
 
     function loadApps() {
-        // TODO: global vars for $('#selApp') (make everything to onReady?)
         $.get("/smxs/apps", function(data) {
-            var $sel = $('#selApp').empty();
+            var $sel = $selApp.empty();
             $sel.append($('<option></option>').attr("value", "null").text("All"));
             data.forEach(function(appName) {
                 var option = $('<option></option>').attr("value", appName).text(appName ? appName : 'Global');
                 $sel.append(option);
             });
-            $('#selApp').selectpicker('refresh');
+            $selApp.selectpicker('refresh');
         });
     }
 
     function loadBeanNames() {
-        $.get("/smxs/beanNames", function(data) {
-            var $sel = $('#selBean').empty();
+        $.get("/smxs/beanNames", queryParams(filterAppName), function(data) {
+            var $sel = $selBean.empty();
             $sel.append($('<option></option>').attr("value", "").text("All"));
             data.forEach(function(beanInfo) {
                 var option = $('<option></option>').attr("value", beanInfo.id).text(beanInfo.name);
                 $sel.append(option);
             });
-            $('#selBean').selectpicker('refresh');
+            $selBean.selectpicker('refresh');
+        });
+    }
+
+    function reloadBeans() {
+        loadBeanNames();
+        loadAndDrawNetwork();
+    }
+
+    function wireSelectChangedEvents() {
+        $("#selApp").on("changed.bs.select", function(e, clickedIndex, isSelected, oldValue) {
+            var newValue = $selApp.val();
+            filterAppName = newValue === 'null' ? null : newValue;
+            filterBeanId = null;
+            reloadBeans();
+        });
+        $("#selBean").on("changed.bs.select", function(e, clickedIndex, isSelected, oldValue) {
+            var newValue = $selBean.val();
+            filterBeanId = newValue ? newValue : null;
+            loadAndDrawNetwork();
         });
     }
 
@@ -222,6 +255,7 @@
 
         loadApps();
         loadBeanNames();
+        wireSelectChangedEvents();
         loadAndDrawNetwork();
     });
 

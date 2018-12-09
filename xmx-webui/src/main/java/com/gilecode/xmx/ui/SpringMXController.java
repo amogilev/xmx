@@ -27,10 +27,9 @@ public class SpringMXController implements UIConstants {
 
     @GetMapping(path="visdata", produces = "application/json")
     @ResponseBody
-    public VisData data(@RequestParam(name="showAllBeans", required = false, defaultValue = "false") boolean showAllBeans,
-                        @RequestParam(name="showBeansContextId", required = false) Integer showBeansContextId,
-                        @RequestParam(name="filter", required = false) String filter) {
-        return smxUiService.getVisData(showAllBeans, showBeansContextId, filter);
+    public VisData data(@RequestParam(name="appName", required = false) String appName,
+                        @RequestParam(name="beanId", required = false) String beanId) {
+        return smxUiService.getVisData(appName, beanId);
     }
 
     @GetMapping(path="apps", produces = "application/json")
@@ -41,7 +40,7 @@ public class SpringMXController implements UIConstants {
 
     @GetMapping(path="beanNames", produces = "application/json")
     @ResponseBody
-    public List<BeanInfoDto> beanNames(@RequestParam(name="app", required = false) String appName) {
+    public List<BeanInfoDto> beanNames(@RequestParam(name="appName", required = false) String appName) {
         return smxUiService.getBeans("null".equals(appName) ? null : appName);
     }
 

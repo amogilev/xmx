@@ -19,9 +19,9 @@ public interface ISmxUiService {
 
 	String getCurrentSessionId();
 
-	VisData getVisData(boolean showAllBeans, Integer showBeansContextId, String filter);
-
     List<String> getAppNames();
 
 	List<BeanInfoDto> getBeans(String appName);
+
+	VisData getVisData(String appNameOrNull, String beanNameOrNull);
 }
