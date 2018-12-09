@@ -88,15 +88,15 @@
 			hierarchical : {
 				enabled : true,
 				direction : 'LR',
-                levelSeparation : 300
+                levelSeparation : 100
 			}
         },
 		groups : {
 			app : { color:{background:'#ffffcc'}, level:0, title:"Web Application"},
-			rootCtx : { color:{background:'#ffffcc'}, level:1, shape:'box'},
-			childCtx : { color:{background:' #ffff80'}, level:2, shape:'box'},
-			bean : { color:{background:'#f2f2f2'}, level:3, shape:'box', title:"Bean", },
-            beanCluster : { color:{background:'#f2f2f2'}, level:3, shape:'box', title:"Beans Cluster", borderWidth:4, shadow:true},
+			rootCtx : { color:{background:'#ffffcc'}, level:2, shape:'box'},
+			childCtx : { color:{background:' #ffff80'}, level:5, shape:'box'},
+			bean : { color:{background:'#f2f2f2'}, level:8, shape:'box', title:"Bean", },
+            beanCluster : { color:{background:'#f2f2f2'}, level:8, shape:'box', title:"Beans Cluster", borderWidth:4, shadow:true},
         },
         edges : {
 			arrows : {
@@ -139,6 +139,7 @@
                 if (n.group === 'rootCtx' || n.group === 'childCtx') {
                     clusterContextBeans(n);
                 } else if (n.group === 'bean') {
+                    window.open('/smxs/bean/' + encodeURIComponent(n.id) + "?mode=def", '_blank');
                     window.open('/smxs/bean/' + encodeURIComponent(n.id), '_blank');
                 }
             }
@@ -175,11 +176,18 @@
 		$.get("/smxs/visdata", queryParams(filterAppName, filterBeanId), function(data) {
 		    networkData.update(data);
 
+		    var beansCount = 0, beanNode;
             data.nodes.forEach(function (n) {
                 if (n.group === 'rootCtx' || n.group === 'childCtx') {
                     clusterContextBeans(n);
                 }
             });
+
+            if (filterBeanId) {
+                // move a single bean below so that contexts edges do not overlap
+                var position = network.getPositions([filterBeanId])[filterBeanId];
+                network.moveNode(filterBeanId, position.x, position.y + 100);
+            }
         });
 
 		// var nodes = [

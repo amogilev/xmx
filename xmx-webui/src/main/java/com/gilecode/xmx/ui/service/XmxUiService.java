@@ -27,6 +27,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 
+import static com.gilecode.xmx.util.ReflectionUtils.safeFindMethod;
+
 public class XmxUiService implements IXmxUiService, UIConstants {
 
 	@SuppressWarnings("unused")
@@ -357,14 +359,27 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 				throw new RefPathSyntaxException("Expects a Spring ApplicationContext as parent object but got " + c + " instead",
 						buildPath(rootPath, parts, level));
 			}
-			String beanName = pathPart.substring(1);
-			Method mGetBean = ReflectionUtils.safeFindMethod(beanFactory, "org.springframework.beans.factory.support.AbstractBeanFactory", "getBean", String.class);
-			Object bean = ReflectionUtils.safeInvokeMethod(mGetBean, beanFactory, beanName);
-			if (bean == null) {
-				throw new RefPathSyntaxException("Failed to get bean named '" + beanName + "' in " + source,
-						buildPath(rootPath, parts, level));
+			if (pathPart.length() > 1 && pathPart.charAt(1) == '#') {
+				// look for a bean definition
+				String beanName = pathPart.substring(2);
+				Method mGetBeanDefinition = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
+				Object bd = ReflectionUtils.safeInvokeMethod(mGetBeanDefinition, beanFactory, beanName);
+				if (bd == null) {
+					throw new RefPathSyntaxException("Failed to get bean definition named '" + beanName + "' in " + source,
+							buildPath(rootPath, parts, level));
+				}
+				source = bd;
+			} else {
+				// look for a bean
+				String beanName = pathPart.substring(1);
+				Method mGetBean = ReflectionUtils.safeFindMethod(beanFactory, "org.springframework.beans.factory.support.AbstractBeanFactory", "getBean", String.class);
+				Object bean = ReflectionUtils.safeInvokeMethod(mGetBean, beanFactory, beanName);
+				if (bean == null) {
+					throw new RefPathSyntaxException("Failed to get bean named '" + beanName + "' in " + source,
+							buildPath(rootPath, parts, level));
+				}
+				source = bean;
 			}
-			source = bean;
 
 		} else {
 			// expect a path part to indicate a field

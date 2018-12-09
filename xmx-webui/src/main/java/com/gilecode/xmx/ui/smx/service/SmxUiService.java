@@ -8,16 +8,17 @@ import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.smx.dto.BeanInfoDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
-import com.gilecode.xmx.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.beans.factory.support.AbstractBeanDefinition;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
+
+import static com.gilecode.xmx.util.ReflectionUtils.*;
+import static org.springframework.beans.factory.config.BeanDefinition.*;
 
 public class SmxUiService implements ISmxUiService {
 
@@ -61,12 +62,15 @@ public class SmxUiService implements ISmxUiService {
     static class BeanInfo {
         final String name;
         final String scope;
+        final Integer role;
+        final String beanClassName;
 //        final String text;
-//        final String className;
 
-        public BeanInfo(String name, String scope) {
+        public BeanInfo(String name, String scope, Integer role, String beanClassName) {
             this.name = name;
             this.scope = scope;
+            this.role = role;
+            this.beanClassName = beanClassName;
         }
     }
 
@@ -168,11 +172,30 @@ public class SmxUiService implements ISmxUiService {
     }
 
     private String makeBeanLabel(BeanInfo bi) {
-        StringBuilder sb = new StringBuilder(100);
+        StringBuilder sb = new StringBuilder(512);
         sb.append("<b>").append(bi.name).append("</b>\n\n");
-        sb.append("<b>Scope:</b>").append(bi.scope).append("\n");
-        // TODO role, class etc.
+
+        sb.append("<b>Class:</b>").append(bi.beanClassName).append("\n");
+        if (bi.scope.equalsIgnoreCase(ConfigurableBeanFactory.SCOPE_PROTOTYPE)) {
+            sb.append("<b>Scope:</b>").append(bi.scope).append("\n");
+        }
+        if (bi.role != null) {
+            sb.append("<b>Role:</b>").append(getRoleName(bi.role)).append("\n");
+        }
         return sb.toString();
+    }
+
+    private String getRoleName(int role) {
+        switch (role) {
+        case ROLE_APPLICATION:
+            return "application";
+        case ROLE_INFRASTRUCTURE:
+            return "infrastructure";
+        case ROLE_SUPPORT:
+            return "support";
+        default:
+            return Integer.toString(role);
+        }
     }
 
     private String makeContextLabel(ContextInfo ci) {
@@ -248,7 +271,7 @@ public class SmxUiService implements ISmxUiService {
 
         if (className.endsWith("WebApplicationContext")) {
             // TODO move class names to constants?
-            Object configLocations = ReflectionUtils.safeFindInvokeMethod(ctxObj, "org.springframework.web.context.support.AbstractRefreshableWebApplicationContext", "getConfigLocations");
+            Object configLocations = safeFindInvokeMethod(ctxObj, "org.springframework.web.context.support.AbstractRefreshableWebApplicationContext", "getConfigLocations");
             if (configLocations != null) {
                 ci.details.put("configLocations", configLocations);
             }
@@ -256,26 +279,39 @@ public class SmxUiService implements ISmxUiService {
         // TODO: extract details for ClassPathXmlApplicationContext (configResources)
         // TODO: extract details for annotationDriven (annotatedClasses + basePackages)
 
-        Object beanFactory = ReflectionUtils.safeFindInvokeMethod(ctxObj, "org.springframework.context.support.AbstractApplicationContext", "getBeanFactory");
-        String[] bdNames = (String[]) ReflectionUtils.safeFindInvokeMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinitionNames");
+        Object beanFactory = safeFindInvokeMethod(ctxObj, "org.springframework.context.support.AbstractApplicationContext", "getBeanFactory");
+        String[] bdNames = (String[]) safeFindInvokeMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinitionNames");
 
-        Method mGetBeanDefinition = ReflectionUtils.safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
-        Method mGetSingleton = ReflectionUtils.safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultSingletonBeanRegistry", "getSingleton", String.class);
+        Method mGetBeanDefinition = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
+        Method mGetSingleton = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultSingletonBeanRegistry", "getSingleton", String.class);
 
         for (String name : bdNames) {
-            Object bd = ReflectionUtils.safeInvokeMethod(mGetBeanDefinition, beanFactory, name);
+            Object bd = safeInvokeMethod(mGetBeanDefinition, beanFactory, name);
 
-            String scope = (String) ReflectionUtils.safeFindInvokeMethod(bd, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getScope");
+            String scope = (String) safeFindInvokeMethod(bd, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getScope");
             if (scope == null) {
                 scope = "ERROR";
             }
-            boolean isSingleton = ConfigurableBeanFactory.SCOPE_SINGLETON.equals(scope) || AbstractBeanDefinition.SCOPE_DEFAULT.equals(scope);
-            if (isSingleton) {
-                // TODO use different groups for instantiated singletons, not instantiated singletons, abstract beans and prototypes
-//                Object bean = safeInvokeMethod(mGetSingleton, beanFactory, name);
-//                    safeInvokeMethod()
-            }
-            ci.beans.add(new BeanInfo(name, scope));
+
+            Integer role = (Integer) safeFindInvokeMethod(bd, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getRole");
+
+//            Object instance = null;
+//            boolean isSingleton = ConfigurableBeanFactory.SCOPE_SINGLETON.equals(scope) || AbstractBeanDefinition.SCOPE_DEFAULT.equals(scope);
+//            if (isSingleton) {
+//                // TODO use different groups for instantiated singletons, not instantiated singletons, abstract beans and prototypes
+//                instance = safeInvokeMethod(mGetSingleton, beanFactory, name);
+//            }
+//
+//            // FIXME seems source is useless, maybe check attributes instead
+//            Object source =  safeFindInvokeMethod(bd, "org.springframework.beans.BeanMetadataAttributeAccessor", "getSource");
+//            if (source != null) {
+//                logger.info("source={}", source);
+//            }
+
+            // TODO think : maybe use actual class from the instance
+            String beanClassName = (String) safeFindInvokeMethod(bd, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getBeanClassName");
+
+            ci.beans.add(new BeanInfo(name, scope, role, beanClassName));
         }
 
         return ci;
