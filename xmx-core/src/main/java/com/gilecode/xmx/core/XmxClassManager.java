@@ -7,6 +7,7 @@ import com.gilecode.xmx.core.jmx.JmxSupport;
 import com.gilecode.xmx.service.ISignatureService;
 import com.gilecode.xmx.service.IXmxClassMembersLookup;
 import com.gilecode.xmx.service.SignatureService;
+import com.gilecode.xmx.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

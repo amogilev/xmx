@@ -138,6 +138,8 @@
                 var n = networkData.nodes.get(nodeId);
                 if (n.group === 'rootCtx' || n.group === 'childCtx') {
                     clusterContextBeans(n);
+                } else if (n.group === 'bean') {
+                    window.open('/smxs/bean/' + encodeURIComponent(n.id), '_blank');
                 }
             }
         }

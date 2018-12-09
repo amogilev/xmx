@@ -8,6 +8,7 @@ import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.smx.dto.BeanInfoDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
+import com.gilecode.xmx.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -117,7 +118,12 @@ public class SmxUiService implements ISmxUiService {
     }
 
     private String makeBeanPath(ContextInfo ci, BeanInfo bi) {
-        return ci.id + ".#" + bi.name;
+        return ci.id + "." + encodeBeanNamePathPart(bi.name);
+    }
+
+    // TODO: move to core? (+ decode there)
+    private String encodeBeanNamePathPart(String beanName) {
+        return "#'" + beanName.replace("'", "''") + "'";
     }
 
     public List<XmxClassInfo> getContextClasses(String appName) {
@@ -232,45 +238,6 @@ public class SmxUiService implements ISmxUiService {
         }
     }
 
-    private Object safeFindInvokeMethod(Object obj, String className, String methodName) {
-        Method m = safeFindMethod(obj, className, methodName);
-        return safeInvokeMethod(m, obj);
-    }
-
-    private Object safeInvokeMethod(Method m, Object obj, Object...args) {
-        if (m == null) {
-            return null;
-        }
-        try {
-            return m.invoke(obj, args);
-        } catch (Exception e) {
-            logger.warn("Failed to invoke method " + m + " on obj " + obj, e);
-            return null;
-        }
-    }
-
-    private Method safeFindMethod(Object obj, String className, String methodName, Class<?>...parameterTypes) {
-        if (obj == null) {
-            return null;
-        }
-        Class<?> c = obj.getClass();
-        while (c != null && !c.getName().equals(className)) {
-            c = c.getSuperclass();
-        }
-
-        if (c == null) {
-//            logger.warn("Failed to find superclass " + className + " on obj " + obj);
-            return null;
-        }
-
-        try {
-            return c.getDeclaredMethod(methodName, parameterTypes);
-        } catch (Exception e) {
-            logger.warn("Failed to find method " + className + "::" + methodName + " on obj " + obj, e);
-            return null;
-        }
-    }
-
     private ContextInfo transformContext(XmxObjectInfo ctxObjInfo, ContextInfo ctxParent) {
         int objectId = ctxObjInfo.getObjectId();
         Object ctxObj = ctxObjInfo.getValue();
@@ -281,7 +248,7 @@ public class SmxUiService implements ISmxUiService {
 
         if (className.endsWith("WebApplicationContext")) {
             // TODO move class names to constants?
-            Object configLocations = safeFindInvokeMethod(ctxObj, "org.springframework.web.context.support.AbstractRefreshableWebApplicationContext", "getConfigLocations");
+            Object configLocations = ReflectionUtils.safeFindInvokeMethod(ctxObj, "org.springframework.web.context.support.AbstractRefreshableWebApplicationContext", "getConfigLocations");
             if (configLocations != null) {
                 ci.details.put("configLocations", configLocations);
             }
@@ -289,23 +256,22 @@ public class SmxUiService implements ISmxUiService {
         // TODO: extract details for ClassPathXmlApplicationContext (configResources)
         // TODO: extract details for annotationDriven (annotatedClasses + basePackages)
 
-        Object beanFactory = safeFindInvokeMethod(ctxObj, "org.springframework.context.support.AbstractApplicationContext", "getBeanFactory");
-        String[] bdNames = (String[])safeFindInvokeMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinitionNames");
+        Object beanFactory = ReflectionUtils.safeFindInvokeMethod(ctxObj, "org.springframework.context.support.AbstractApplicationContext", "getBeanFactory");
+        String[] bdNames = (String[]) ReflectionUtils.safeFindInvokeMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinitionNames");
 
-        Method mGetBeanDefinition = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
-        Method mGetSingleton = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultSingletonBeanRegistry", "getSingleton", String.class);
+        Method mGetBeanDefinition = ReflectionUtils.safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
+        Method mGetSingleton = ReflectionUtils.safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultSingletonBeanRegistry", "getSingleton", String.class);
 
         for (String name : bdNames) {
-            Object bd = safeInvokeMethod(mGetBeanDefinition, beanFactory, name);
+            Object bd = ReflectionUtils.safeInvokeMethod(mGetBeanDefinition, beanFactory, name);
 
-            String scope = (String) safeFindInvokeMethod(bd, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getScope");
+            String scope = (String) ReflectionUtils.safeFindInvokeMethod(bd, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getScope");
             if (scope == null) {
                 scope = "ERROR";
             }
             boolean isSingleton = ConfigurableBeanFactory.SCOPE_SINGLETON.equals(scope) || AbstractBeanDefinition.SCOPE_DEFAULT.equals(scope);
             if (isSingleton) {
-                // TODO check isAbstract?
-                // TODO: do we need bean here? Why? (maybe class name?)
+                // TODO use different groups for instantiated singletons, not instantiated singletons, abstract beans and prototypes
 //                Object bean = safeInvokeMethod(mGetSingleton, beanFactory, name);
 //                    safeInvokeMethod()
             }

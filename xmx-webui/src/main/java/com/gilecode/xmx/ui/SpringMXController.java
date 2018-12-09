@@ -7,10 +7,8 @@ import com.gilecode.xmx.ui.smx.dto.VisData;
 import com.gilecode.xmx.ui.smx.service.ISmxUiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriUtils;
 
 import java.util.List;
 
@@ -44,5 +42,9 @@ public class SpringMXController implements UIConstants {
         return smxUiService.getBeans("null".equals(appName) ? null : appName);
     }
 
+    @GetMapping("bean/{beanId:.+}")
+    public String beanDetailsPage(@PathVariable("beanId") String beanId) {
+        return "forward:/getObjectDetails/" + UriUtils.encodePathSegment(beanId, "UTF-8") + "?sid=" + smxUiService.getCurrentSessionId();
+    }
 
 }

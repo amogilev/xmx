@@ -13,6 +13,7 @@ import com.gilecode.xmx.service.IMapperService;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.UIConstants;
 import com.gilecode.xmx.ui.dto.*;
+import com.gilecode.xmx.util.ReflectionUtils;
 import com.gilecode.yagson.YaGson;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -277,17 +278,63 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			return new SearchObjectResult(rootObjectInfo.getValue(), rootObjectInfo);
 		}
 
-		String[] parts = subPath.split("\\.");
+		List<String> parts = extractPathElements(subPath, rootPath);
 		Object curObj = rootObjectInfo.getValue();
-		for (int curLevel = 0; curLevel < parts.length; curLevel++) {
+		for (int curLevel = 0; curLevel < parts.size(); curLevel++) {
 			curObj = getNextLevelElement(rootPath, parts, curObj, curLevel);
 		}
 		XmxObjectInfo foundObjectInfo = getUnmanagedObjectInfo(curObj);
 		return new SearchObjectResult(rootObjectInfo.getValue(), foundObjectInfo);
 	}
 
-	private Object getNextLevelElement(String rootPath, String[] parts, Object source, int level) throws RefPathSyntaxException {
-		String pathPart = parts[level];
+	// splits to path elements by '.' with respect to quoted names, unquotes names and unescapes quotes
+	// TODO looks ugly, maybe refactor
+	public List<String> extractPathElements(String subPath, String rootPath) throws RefPathSyntaxException {
+		List<String> parts = new ArrayList<>(5);
+		StringBuilder partSB = new StringBuilder();
+		boolean inQuote = false;
+		boolean quoteEscape = false;
+		for (char ch : subPath.toCharArray()) {
+			if (ch == '\'') {
+				if (!inQuote) {
+					inQuote = true;
+				} else if (quoteEscape) {
+					quoteEscape = false;
+					partSB.append('\'');
+				} else {
+					quoteEscape = true;
+				}
+			} else {
+				if (inQuote) {
+					if (quoteEscape) {
+						inQuote = false;
+						quoteEscape = false;
+					} else {
+						// allow any character in quoted line
+						partSB.append(ch);
+						continue;
+					}
+				}
+				assert !quoteEscape : "Escaped quote outside of quote!";
+				if (ch == '.') {
+					parts.add(partSB.toString());
+					partSB.setLength(0);
+				} else {
+					partSB.append(ch);
+				}
+			}
+		}
+		if (inQuote && !quoteEscape) {
+			throw new RefPathSyntaxException("Missing closing quote character", buildPath(rootPath, Collections.singletonList(subPath), 0));
+		}
+		parts.add(partSB.toString());
+
+//		return subPath.split("\\.");
+		return parts;
+	}
+
+	private Object getNextLevelElement(String rootPath, List<String> parts, Object source, int level) throws RefPathSyntaxException {
+		String pathPart = parts.get(level);
 		if (source == null) {
 			throw new RefPathSyntaxException("Null object for path", buildPath(rootPath, parts, level));
 		}
@@ -302,6 +349,23 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			} catch (NumberFormatException | IndexOutOfBoundsException e) {
 				throw new RefPathSyntaxException("Invalid array index '" + pathPart + "'", buildPath(rootPath, parts, level));
 			}
+		} else if (pathPart.charAt(0) == '#') {
+			// expect a Spring bean name
+			Class<?> c = source.getClass();
+			Object beanFactory = ReflectionUtils.safeFindInvokeMethod(source, "org.springframework.context.support.AbstractApplicationContext", "getBeanFactory");
+			if (beanFactory == null) {
+				throw new RefPathSyntaxException("Expects a Spring ApplicationContext as parent object but got " + c + " instead",
+						buildPath(rootPath, parts, level));
+			}
+			String beanName = pathPart.substring(1);
+			Method mGetBean = ReflectionUtils.safeFindMethod(beanFactory, "org.springframework.beans.factory.support.AbstractBeanFactory", "getBean", String.class);
+			Object bean = ReflectionUtils.safeInvokeMethod(mGetBean, beanFactory, beanName);
+			if (bean == null) {
+				throw new RefPathSyntaxException("Failed to get bean named '" + beanName + "' in " + source,
+						buildPath(rootPath, parts, level));
+			}
+			source = bean;
+
 		} else {
 			// expect a path part to indicate a field
 			Class<?> c = source.getClass();
@@ -317,11 +381,11 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return source;
 	}
 
-	private String buildPath(String rootPath, String[] refpathParts, int curLevel) {
+	private String buildPath(String rootPath, List<String> refpathParts, int curLevel) {
 		StringBuilder sb = new StringBuilder(rootPath);
 		sb.append(rootPath.startsWith(PERMA_PATH_PREFIX) ? ':' : '.');
 		for (int i = 0; i <= curLevel; i++) {
-			sb.append(refpathParts[i]);
+			sb.append(refpathParts.get(i));
 			if (i != curLevel) {
 				sb.append('.');
 			}
