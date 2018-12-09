@@ -134,6 +134,14 @@ public interface ConfigDefaults {
 			new OptionDescription(Properties.M_ADVICES,
 					"xmx-advices.jar:com.gilecode.xmx.advices.SpringBeanProxyInterceptor"));
 
+	SectionDescription INTERNAL_SPRING_CONTEXTS_SECTION = new SectionDescription(
+			"App=*;" +
+					"Class=org.springframework.*context.*ApplicationContext",
+			null,
+			new OptionDescription(Properties.SP_MANAGED, true));
+
+
 	List<SectionDescription> HIDDEN_INTERNAL_SECTIONS = Collections.unmodifiableList(Arrays.asList(
-			INTERNAL_SECTION_XMX_WEBAPP, INTERNAL_SPRING_ADVICES_SECTION1, INTERNAL_SPRING_ADVICES_SECTION2));
+			INTERNAL_SECTION_XMX_WEBAPP, INTERNAL_SPRING_ADVICES_SECTION1, INTERNAL_SPRING_ADVICES_SECTION2,
+			INTERNAL_SPRING_CONTEXTS_SECTION));
 }
