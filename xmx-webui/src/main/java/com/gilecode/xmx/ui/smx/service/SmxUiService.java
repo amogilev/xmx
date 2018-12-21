@@ -285,16 +285,19 @@ public class SmxUiService implements ISmxUiService {
         Method mGetBeanDefinition = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
         Method mGetSingleton = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultSingletonBeanRegistry", "getSingleton", String.class);
 
+        ClassLoader springCL = beanFactory.getClass().getClassLoader();
+        Method mGetScope = safeFindClassAndMethod(springCL, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getScope");
+        Method mGetRole = safeFindClassAndMethod(springCL, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getRole");
+
         for (String name : bdNames) {
             Object bd = safeInvokeMethod(mGetBeanDefinition, beanFactory, name);
 
-            String scope = (String) safeFindInvokeMethod(bd, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getScope");
+            String scope = (String) safeInvokeMethod(mGetScope, bd);
             if (scope == null) {
                 scope = "ERROR";
             }
 
-            Integer role = (Integer) safeFindInvokeMethod(bd, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getRole");
-
+            Integer role = (Integer) safeInvokeMethod(mGetRole, bd);
 //            Object instance = null;
 //            boolean isSingleton = ConfigurableBeanFactory.SCOPE_SINGLETON.equals(scope) || AbstractBeanDefinition.SCOPE_DEFAULT.equals(scope);
 //            if (isSingleton) {

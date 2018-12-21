@@ -90,4 +90,22 @@ public class ReflectionUtils {
 			return null;
 		}
 	}
+
+	public static Method safeFindClassAndMethod(ClassLoader cl, String className, String methodName, Class<?>...parameterTypes) {
+		Class<?> c = null;
+		try {
+			c = Class.forName(className, false, cl);
+		} catch (ClassNotFoundException e) {
+            logger.warn("Failed to find class " + className + " in the class loader " + cl);
+			return null;
+		}
+
+		try {
+			return c.getDeclaredMethod(methodName, parameterTypes);
+		} catch (Exception e) {
+			logger.warn("Failed to find method " + className + "::" + methodName, e);
+			return null;
+		}
+	}
+
 }
