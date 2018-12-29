@@ -49,7 +49,10 @@ public class SmxUiService implements ISmxUiService {
         final String text;
         final String contextClassName;
         final Map<String, Object> details = new LinkedHashMap<>();
-        final List<BeanInfo> beans = new ArrayList<>();
+
+        // either beans or beansCount is used, depending on whether the context is expanded
+        List<BeanInfo> beans;
+        int beansCount;
 
         public ContextInfo(String id, String parentId, String text, String contextClassName) {
             this.id = id;
@@ -75,19 +78,99 @@ public class SmxUiService implements ISmxUiService {
     }
 
     @Override
-    public VisData getVisData(String appNameOrNull, String beanIdOrNull) {
+    public VisData getVisData(String appNameOrNull, String beanIdOrNull, String expandContextIdOrNull) {
         VisData data = new VisData();
         if (appNameOrNull == null) {
             for (String appName2 : xmxService.getApplicationNames()) {
-                fillVisData(data, appName2, beanIdOrNull);
+                fillVisData(data, appName2, beanIdOrNull, expandContextIdOrNull);
             }
         } else {
-            fillVisData(data, appNameOrNull, beanIdOrNull);
+            fillVisData(data, appNameOrNull, beanIdOrNull, expandContextIdOrNull);
         }
         return data;
     }
 
-    private void fillVisData(VisData data, String appName, String beanIdOrNull) {
+    enum ContextBeansDisplayMode {
+        NONE, COUNT_ONLY, SELECTED, ALL
+    }
+
+    interface ContextBeansDisplayPredicate {
+        ContextBeansDisplayMode mode();
+        boolean displayBean(String beanName);
+
+        ContextBeansDisplayPredicate COUNT_ONLY = new ContextBeansDisplayPredicate() {
+            @Override
+            public ContextBeansDisplayMode mode() {
+                return ContextBeansDisplayMode.COUNT_ONLY;
+            }
+
+            @Override
+            public boolean displayBean(String beanName) {
+                return false;
+            }
+        };
+
+        ContextBeansDisplayPredicate NONE = new ContextBeansDisplayPredicate() {
+            @Override
+            public ContextBeansDisplayMode mode() {
+                return ContextBeansDisplayMode.NONE;
+            }
+
+            @Override
+            public boolean displayBean(String beanName) {
+                return false;
+            }
+        };
+
+        ContextBeansDisplayPredicate ALL = new ContextBeansDisplayPredicate() {
+            @Override
+            public ContextBeansDisplayMode mode() {
+                return ContextBeansDisplayMode.ALL;
+            }
+
+            @Override
+            public boolean displayBean(String beanName) {
+                return true;
+            }
+        };
+    }
+
+    static class ContextBeanDisplayPredicateProvider {
+        final String beanIdOrNull;
+        final String expandContextOrNull;
+
+        public ContextBeanDisplayPredicateProvider(String beanIdOrNull, String expandContextOrNull) {
+            this.beanIdOrNull = beanIdOrNull;
+            this.expandContextOrNull = expandContextOrNull;
+        }
+
+        public ContextBeansDisplayPredicate getPredicate(final String contextId) {
+            if (beanIdOrNull != null) {
+                if (beanIdOrNull.startsWith(contextId)) {
+                    return new ContextBeansDisplayPredicate() {
+                        @Override
+                        public ContextBeansDisplayMode mode() {
+                            return ContextBeansDisplayMode.SELECTED;
+                        }
+
+                        @Override
+                        public boolean displayBean(String beanName) {
+                            // TODO: refactor: extract bean name from the path instead
+                            return beanIdOrNull.equals(makeBeanPath(contextId, beanName));
+                        }
+                    };
+                } else {
+                    return ContextBeansDisplayPredicate.NONE;
+                }
+            } else if (contextId.equals(expandContextOrNull)) {
+                return ContextBeansDisplayPredicate.ALL;
+            } else {
+                return ContextBeansDisplayPredicate.COUNT_ONLY;
+            }
+        }
+    }
+
+    private void fillVisData(VisData data, String appName, String beanIdOrNull, String expandContextIdOrNull) {
         // TODO: maybe provide more restrictive better pattern
         List<XmxClassInfo> contextClassInfos = getContextClasses(appName);
         if (contextClassInfos.size() > 0) {
@@ -98,35 +181,38 @@ public class SmxUiService implements ISmxUiService {
                 ctxObjectInfos.addAll(xmxService.getManagedObjects(classInfo.getId()));
             }
 
-            // transform all contexts to ContextInfo starting from root ones
-            Collection<ContextInfo> contextInfos = transformContexts(ctxObjectInfos);
+            ContextBeanDisplayPredicateProvider pp = new ContextBeanDisplayPredicateProvider(beanIdOrNull, expandContextIdOrNull);
+            Collection<ContextInfo> contextInfos = transformContexts(ctxObjectInfos, pp);
             for (ContextInfo ci : contextInfos) {
-                // TODO: make multi-line label
                 if (ci.parentId == null) {
                     data.addRootContext(appName, ci.id, makeContextLabel(ci), ci.text);
                 } else {
                     data.addChildContext(ci.parentId, ci.id, makeContextLabel(ci), ci.text);
                 }
 
-                if (beanIdOrNull == null || beanIdOrNull.startsWith(ci.id)) {
+                if (ci.beansCount > 0) {
+                    data.addBeansCluster(ci.id, ci.beansCount);
+                } else if (ci.beans != null) {
                     for (BeanInfo bi : ci.beans) {
                         // TODO: maybe add custom title (e.g. toString(), not sure yet)
-                        if (beanIdOrNull == null || beanIdOrNull.equals(makeBeanPath(ci, bi))) {
-                            // FIXME: also add all "sourcepath" beans! Probably dynamic beans set is needed...
-                            data.addBean(ci.id, makeBeanPath(ci, bi), makeBeanLabel(bi));
-                        }
+                        // FIXME: in future, shall also add "sourcepath" for a selected bean
+                        data.addBean(ci.id, makeBeanPath(ci, bi), makeBeanLabel(bi));
                     }
                 }
             }
         }
     }
 
-    private String makeBeanPath(ContextInfo ci, BeanInfo bi) {
-        return ci.id + "." + encodeBeanNamePathPart(bi.name);
+    private static String makeBeanPath(ContextInfo ci, BeanInfo bi) {
+        return makeBeanPath(ci.id, bi.name);
+    }
+
+    private static String makeBeanPath(String ctxId, String beanName) {
+        return ctxId + "." + encodeBeanNamePathPart(beanName);
     }
 
     // TODO: move to core? (+ decode there)
-    private String encodeBeanNamePathPart(String beanName) {
+    private static String encodeBeanNamePathPart(String beanName) {
         return "#'" + beanName.replace("'", "''") + "'";
     }
 
@@ -162,13 +248,31 @@ public class SmxUiService implements ISmxUiService {
     private void fillBeans(String appName, List<BeanInfoDto> result) {
         for (XmxClassInfo classInfo : getContextClasses(appName)) {
             for (XmxObjectInfo ctxObjInfo : xmxService.getManagedObjects(classInfo.getId())) {
-                // TODO: refactor - we only need bean infos and ctx id, nothing else
-                ContextInfo ci = transformContext(ctxObjInfo, null);
-                for (BeanInfo bi : ci.beans) {
-                    result.add(new BeanInfoDto(makeBeanPath(ci, bi), bi.name));
+                String ctxId = toContextId(ctxObjInfo);
+                String[] bdNames = getBeanDefinitionNames(ctxObjInfo);
+                for (String beanName : bdNames) {
+                    result.add(new BeanInfoDto(makeBeanPath(ctxId, beanName), beanName));
                 }
             }
         }
+    }
+
+    private Object getBeanFactory(XmxObjectInfo ctxObjInfo) {
+        Object ctxObj = ctxObjInfo.getValue();
+        return safeFindInvokeMethod(ctxObj, "org.springframework.context.support.AbstractApplicationContext", "getBeanFactory");
+    }
+
+    private String[] getFactoryBeanDefinitionNames(Object beanFactory) {
+        return (String[]) safeFindInvokeMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinitionNames");
+    }
+
+    private String[] getBeanDefinitionNames(XmxObjectInfo ctxObjInfo) {
+        Object beanFactory = getBeanFactory(ctxObjInfo);
+        return getFactoryBeanDefinitionNames(beanFactory);
+    }
+
+    private String toContextId(XmxObjectInfo ctxObjInfo) {
+        return "$" + ctxObjInfo.getObjectId();
     }
 
     private String makeBeanLabel(BeanInfo bi) {
@@ -217,7 +321,7 @@ public class SmxUiService implements ISmxUiService {
         return sb.toString();
     }
 
-    private Collection<ContextInfo> transformContexts(List<XmxObjectInfo> ctxObjectInfos) {
+    private Collection<ContextInfo> transformContexts(List<XmxObjectInfo> ctxObjectInfos, ContextBeanDisplayPredicateProvider pp) {
         Map<Object, ContextInfo> contextInfosMap = new IdentityHashMap<>();
         List<ContextInfo> contextInfos = new ArrayList<>(); // ordered parent-first
         while (!ctxObjectInfos.isEmpty()) {
@@ -233,8 +337,7 @@ public class SmxUiService implements ISmxUiService {
                     foundNext = true;
                     it.remove();
 
-
-                    ContextInfo ci = transformContext(ctxObjInfo, ctxParent);
+                    ContextInfo ci = transformContext(ctxObjInfo, ctxParent, pp);
                     contextInfosMap.put(ctxObj, ci);
                     contextInfos.add(ci);
                 }
@@ -261,13 +364,13 @@ public class SmxUiService implements ISmxUiService {
         }
     }
 
-    private ContextInfo transformContext(XmxObjectInfo ctxObjInfo, ContextInfo ctxParent) {
-        int objectId = ctxObjInfo.getObjectId();
+    private ContextInfo transformContext(XmxObjectInfo ctxObjInfo, ContextInfo ctxParent, ContextBeanDisplayPredicateProvider pp) {
+        String contextId = toContextId(ctxObjInfo);
         Object ctxObj = ctxObjInfo.getValue();
         String className = ctxObjInfo.getClassInfo().getClassName();
         String simpleClassName = className.substring(className.lastIndexOf('.') + 1);
 
-        ContextInfo ci = new ContextInfo("$" + objectId, ctxParent == null ? null : ctxParent.id, ctxObj.toString(), simpleClassName);
+        ContextInfo ci = new ContextInfo(contextId, ctxParent == null ? null : ctxParent.id, ctxObj.toString(), simpleClassName);
 
         if (className.endsWith("WebApplicationContext")) {
             // TODO move class names to constants?
@@ -279,42 +382,59 @@ public class SmxUiService implements ISmxUiService {
         // TODO: extract details for ClassPathXmlApplicationContext (configResources)
         // TODO: extract details for annotationDriven (annotatedClasses + basePackages)
 
-        Object beanFactory = safeFindInvokeMethod(ctxObj, "org.springframework.context.support.AbstractApplicationContext", "getBeanFactory");
-        String[] bdNames = (String[]) safeFindInvokeMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinitionNames");
+        Object beanFactory = getBeanFactory(ctxObjInfo);
+        String[] bdNames = getFactoryBeanDefinitionNames(beanFactory);
 
-        Method mGetBeanDefinition = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
-        Method mGetSingleton = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultSingletonBeanRegistry", "getSingleton", String.class);
+        ContextBeansDisplayPredicate dispPred = pp.getPredicate(contextId);
 
-        ClassLoader springCL = beanFactory.getClass().getClassLoader();
-        Method mGetScope = safeFindClassAndMethod(springCL, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getScope");
-        Method mGetRole = safeFindClassAndMethod(springCL, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getRole");
-
-        for (String name : bdNames) {
-            Object bd = safeInvokeMethod(mGetBeanDefinition, beanFactory, name);
-
-            String scope = (String) safeInvokeMethod(mGetScope, bd);
-            if (scope == null) {
-                scope = "ERROR";
-            }
-
-            Integer role = (Integer) safeInvokeMethod(mGetRole, bd);
-//            Object instance = null;
-//            boolean isSingleton = ConfigurableBeanFactory.SCOPE_SINGLETON.equals(scope) || AbstractBeanDefinition.SCOPE_DEFAULT.equals(scope);
-//            if (isSingleton) {
-//                // TODO use different groups for instantiated singletons, not instantiated singletons, abstract beans and prototypes
-//                instance = safeInvokeMethod(mGetSingleton, beanFactory, name);
-//            }
+//        if (dispPred.mode() == ContextBeansDisplayMode.SELECTED) {
+//        Method mGetBeanDefinition = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
+//            Object bd = safeInvokeMethod(mGetBeanDefinition, beanFactory, dispPred.displayBean());
+//            "BeanDefinition getBeanDefinition(String beanName)"
+//        }
 //
-//            // FIXME seems source is useless, maybe check attributes instead
-//            Object source =  safeFindInvokeMethod(bd, "org.springframework.beans.BeanMetadataAttributeAccessor", "getSource");
-//            if (source != null) {
-//                logger.info("source={}", source);
-//            }
+        if (dispPred.mode() == ContextBeansDisplayMode.COUNT_ONLY) {
+            ci.beansCount = bdNames.length;
+        } else if (dispPred.mode() != ContextBeansDisplayMode.NONE) {
+            ci.beans = new ArrayList<>(bdNames.length);
 
-            // TODO think : maybe use actual class from the instance
-            String beanClassName = (String) safeFindInvokeMethod(bd, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getBeanClassName");
+            Method mGetBeanDefinition = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
+            Method mGetSingleton = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultSingletonBeanRegistry", "getSingleton", String.class);
 
-            ci.beans.add(new BeanInfo(name, scope, role, beanClassName));
+            ClassLoader springCL = beanFactory.getClass().getClassLoader();
+            Method mGetScope = safeFindClassAndMethod(springCL, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getScope");
+            Method mGetRole = safeFindClassAndMethod(springCL, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getRole");
+
+            for (String name : bdNames) {
+                if (dispPred.displayBean(name)) {
+                    Object bd = safeInvokeMethod(mGetBeanDefinition, beanFactory, name);
+                    if (bd != null) {
+                        String scope = (String) safeInvokeMethod(mGetScope, bd);
+                        if (scope == null) {
+                            scope = "ERROR";
+                        }
+
+                        Integer role = (Integer) safeInvokeMethod(mGetRole, bd);
+                        //            Object instance = null;
+                        //            boolean isSingleton = ConfigurableBeanFactory.SCOPE_SINGLETON.equals(scope) || AbstractBeanDefinition.SCOPE_DEFAULT.equals(scope);
+                        //            if (isSingleton) {
+                        //                // TODO use different groups for instantiated singletons, not instantiated singletons, abstract beans and prototypes
+                        //                instance = safeInvokeMethod(mGetSingleton, beanFactory, name);
+                        //            }
+                        //
+                        //            // FIXME seems source is useless, maybe check attributes instead
+                        //            Object source =  safeFindInvokeMethod(bd, "org.springframework.beans.BeanMetadataAttributeAccessor", "getSource");
+                        //            if (source != null) {
+                        //                logger.info("source={}", source);
+                        //            }
+
+                        // TODO think : maybe use actual class from the instance
+                        String beanClassName = (String) safeFindInvokeMethod(bd, "org.springframework.beans.factory.support.AbstractBeanDefinition", "getBeanClassName");
+
+                        ci.beans.add(new BeanInfo(name, scope, role, beanClassName));
+                    }
+                }
+            }
         }
 
         return ci;

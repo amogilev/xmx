@@ -22,6 +22,10 @@ public class VisNode {
         return new VisNode(id, "bean", label, null, contextId);
     }
 
+    public static VisNode beansCluster(String path, String contextId, int count) {
+        return new VisNode(path, "beanCluster", count + " beans...", null, contextId);
+    }
+
     public static VisNode app(String id, String label) {
         return new VisNode(id, "app", label, null, null);
     }

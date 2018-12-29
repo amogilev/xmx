@@ -45,4 +45,10 @@ public class VisData {
         nodes.add(VisNode.bean(path, label, contextId));
         edges.add(new VisEdge(contextId, path));
     }
+
+    public void addBeansCluster(String contextId, int beansCount) {
+        String path = contextId + "#";
+        nodes.add(VisNode.beansCluster(path, contextId, beansCount));
+        edges.add(new VisEdge(contextId, path));
+    }
 }

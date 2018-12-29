@@ -26,8 +26,9 @@ public class SpringMXController implements UIConstants {
     @GetMapping(path="visdata", produces = "application/json")
     @ResponseBody
     public VisData data(@RequestParam(name="appName", required = false) String appName,
-                        @RequestParam(name="beanId", required = false) String beanId) {
-        return smxUiService.getVisData(appName, beanId);
+                        @RequestParam(name="beanId", required = false) String beanId,
+                        @RequestParam(name="expandContextId", required = false) String expandContextId) {
+        return smxUiService.getVisData(appName, beanId, expandContextId);
     }
 
     @GetMapping(path="apps", produces = "application/json")

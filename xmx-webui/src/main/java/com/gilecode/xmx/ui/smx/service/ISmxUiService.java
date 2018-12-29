@@ -23,5 +23,5 @@ public interface ISmxUiService {
 
 	List<BeanInfoDto> getBeans(String appName);
 
-	VisData getVisData(String appNameOrNull, String beanNameOrNull);
+	VisData getVisData(String appNameOrNull, String beanNameOrNull, String expandContextIdOrNull);
 }
