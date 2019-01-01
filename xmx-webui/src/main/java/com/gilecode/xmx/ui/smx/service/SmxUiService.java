@@ -5,6 +5,7 @@ package com.gilecode.xmx.ui.smx.service;
 import com.gilecode.xmx.model.XmxClassInfo;
 import com.gilecode.xmx.model.XmxObjectInfo;
 import com.gilecode.xmx.service.IXmxService;
+import com.gilecode.xmx.ui.refpath.RefPathUtils;
 import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.smx.dto.BeanInfoDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
@@ -140,6 +141,7 @@ public class SmxUiService implements ISmxUiService {
         final String expandContextOrNull;
 
         public ContextBeanDisplayPredicateProvider(String beanIdOrNull, String expandContextOrNull) {
+            // TODO: refactor: extract bean name from the path instead
             this.beanIdOrNull = beanIdOrNull;
             this.expandContextOrNull = expandContextOrNull;
         }
@@ -155,7 +157,6 @@ public class SmxUiService implements ISmxUiService {
 
                         @Override
                         public boolean displayBean(String beanName) {
-                            // TODO: refactor: extract bean name from the path instead
                             return beanIdOrNull.equals(makeBeanPath(contextId, beanName));
                         }
                     };
@@ -208,12 +209,7 @@ public class SmxUiService implements ISmxUiService {
     }
 
     private static String makeBeanPath(String ctxId, String beanName) {
-        return ctxId + "." + encodeBeanNamePathPart(beanName);
-    }
-
-    // TODO: move to core? (+ decode there)
-    private static String encodeBeanNamePathPart(String beanName) {
-        return "#'" + beanName.replace("'", "''") + "'";
+        return ctxId + "." + RefPathUtils.encodeBeanNamePathPart(beanName);
     }
 
     public List<XmxClassInfo> getContextClasses(String appName) {

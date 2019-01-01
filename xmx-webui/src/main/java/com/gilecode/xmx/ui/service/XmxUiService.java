@@ -5,14 +5,12 @@ package com.gilecode.xmx.ui.service;
 import com.gilecode.reflection.ReflectionAccessUtils;
 import com.gilecode.reflection.ReflectionAccessor;
 import com.gilecode.xmx.core.type.IMethodInfoService;
-import com.gilecode.xmx.model.NotSingletonException;
-import com.gilecode.xmx.model.XmxClassInfo;
-import com.gilecode.xmx.model.XmxObjectInfo;
-import com.gilecode.xmx.model.XmxRuntimeException;
+import com.gilecode.xmx.model.*;
 import com.gilecode.xmx.service.IMapperService;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.UIConstants;
 import com.gilecode.xmx.ui.dto.*;
+import com.gilecode.xmx.ui.refpath.*;
 import com.gilecode.xmx.util.ReflectionUtils;
 import com.gilecode.yagson.YaGson;
 import org.apache.commons.collections4.CollectionUtils;
@@ -38,14 +36,17 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	private static final ReflectionAccessor reflAccessor = ReflectionAccessUtils.getReflectionAccessor();
 	private static final String sessionId = initSessionId();
 
-	private IMethodInfoService methodInfoService;
-	private IXmxService xmxService;
-	private IMapperService mapperService;
+	private final IMethodInfoService methodInfoService;
+	private final IXmxService xmxService;
+	private final IMapperService mapperService;
+	private final RefPathParser refPathParser;
 
-	public XmxUiService(IMethodInfoService methodInfoService, IXmxService xmxService, IMapperService mapperService) {
+	public XmxUiService(IMethodInfoService methodInfoService, IXmxService xmxService, IMapperService mapperService,
+			RefPathParser refPathParser) {
 		this.methodInfoService = methodInfoService;
 		this.xmxService = xmxService;
 		this.mapperService = mapperService;
+		this.refPathParser = refPathParser;
 	}
 
 	@Override
@@ -136,7 +137,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 
 	private String getPermaRefPath(XmxObjectInfo objectInfo, String refpath) {
 		if (objectInfo.getValue() != null && !refpath.startsWith(PERMA_PATH_PREFIX)) {
-			String permaId = xmxService.getSingletonPermanentId(objectInfo.getObjectId());
+			SingletonPermanentId permaId = xmxService.getSingletonPermanentId(objectInfo.getObjectId());
 			if (permaId != null) {
 				int n = refpath.indexOf('.');
 				return PERMA_PATH_PREFIX + permaId + ':' + (n < 0 ? "" : refpath.substring(n + 1));
@@ -211,21 +212,6 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		return null;
 	}
 
-	private Integer parseRefId(String path) throws RefPathSyntaxException {
-		if (path.startsWith(REFPATH_PREFIX)) {
-			String idStr = path.substring(REFPATH_PREFIX.length());
-			try {
-				return Integer.parseInt(idStr);
-			} catch (NumberFormatException e) {
-				throw new RefPathSyntaxException("Illegal refpath: integer ID expected after starting '" +
-						REFPATH_PREFIX + "'", path, e);
-			}
-		} else {
-			throw new RefPathSyntaxException("Illegal refpath: shall start with '" + REFPATH_PREFIX +
-					"' followed by integer ID", path);
-		}
-	}
-
 	/**
 	 * {@inheritDoc}
 	 */
@@ -233,42 +219,23 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	public SearchObjectResult findObject(String refpath) throws MissingObjectException, MissingProxyException,
 			RefPathSyntaxException, NotSingletonException {
 
-		String rootPath;
-		String subPath;
-		XmxObjectInfo rootObjectInfo;
-		boolean requireProxy = false;
+		RefPath refPathInfo = refPathParser.parse(refpath);
+		RefPathRoot root = refPathInfo.getRoot();
+		List<RefPathSuffix> suffixes = refPathInfo.getSuffixes();
 
-		if (refpath.startsWith(PROXY_PATH_PREFIX)) {
-			refpath = refpath.substring(PROXY_PATH_PREFIX.length());
-			requireProxy = true;
-		}
-		if (refpath.startsWith(PERMA_PATH_PREFIX)) {
-			// permanent path like "$:APP:CLASS:" or "$:APP:CLASS:.f1.f2"
-			int endClass = refpath.lastIndexOf(':');
-			if (endClass <= 1) {
-				throw new RefPathSyntaxException("Missing ':' after the class name", refpath);
-			}
-			String singletonId = refpath.substring(2, endClass);
-			rootObjectInfo = xmxService.getSingletonObject(singletonId);
-			rootPath = refpath.substring(0, endClass + 1);
-			if (endClass == refpath.length() - 1) {
-				subPath = "";
-			} else if (refpath.charAt(endClass + 1) != '.') {
-				throw new RefPathSyntaxException("Missing \":.\" between the class name and subcomponents", refpath);
-			} else {
-				subPath = refpath.substring(endClass + 2);
-			}
+		XmxObjectInfo rootObjectInfo;
+		if (root instanceof RefPathSingletonRoot) {
+			// permanent path like "$:'APP':CLASS:" or "$:'APP':CLASS:.f1.f2"
+			RefPathSingletonRoot sr = (RefPathSingletonRoot) root;
+			rootObjectInfo = xmxService.getSingletonObject(new SingletonPermanentId(sr.getAppName(), sr.getClassName()));
 		} else {
+			assert root instanceof RefPathIdRoot : "Unknown RefPathRoot class";
 			// general refpath like "$123" or "$123.f1.f2"
-			int endId = refpath.indexOf('.');
-			String refId = endId < 0 ? refpath : refpath.substring(0, endId);
-			subPath = endId < 0 ? "" : refpath.substring(endId + 1);
-			rootPath = refId;
-			Integer objectId = parseRefId(refId);
+			int objectId = ((RefPathIdRoot) root).getObjectId();
 			rootObjectInfo = getXmxObject(objectId);
 		}
 
-		if (requireProxy) {
+		if (refPathInfo.isRequireProxy()) {
 			Object proxy = rootObjectInfo.getProxy();
 			if (proxy == null) {
 				throw new MissingProxyException(rootObjectInfo.getObjectId());
@@ -276,136 +243,78 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 			rootObjectInfo = getUnmanagedObjectInfo(proxy);
 		}
 
-		if (subPath.isEmpty()) {
+		if (suffixes.isEmpty()) {
 			return new SearchObjectResult(rootObjectInfo.getValue(), rootObjectInfo);
 		}
 
-		List<String> parts = extractPathElements(subPath, rootPath);
 		Object curObj = rootObjectInfo.getValue();
-		for (int curLevel = 0; curLevel < parts.size(); curLevel++) {
-			curObj = getNextLevelElement(rootPath, parts, curObj, curLevel);
+		for (int curLevel = 0; curLevel < suffixes.size(); curLevel++) {
+			curObj = getNextLevelElement(refPathInfo, curObj, curLevel);
 		}
 		XmxObjectInfo foundObjectInfo = getUnmanagedObjectInfo(curObj);
 		return new SearchObjectResult(rootObjectInfo.getValue(), foundObjectInfo);
 	}
 
-	// splits to path elements by '.' with respect to quoted names, unquotes names and unescapes quotes
-	// TODO looks ugly, maybe refactor
-	public List<String> extractPathElements(String subPath, String rootPath) throws RefPathSyntaxException {
-		List<String> parts = new ArrayList<>(5);
-		StringBuilder partSB = new StringBuilder();
-		boolean inQuote = false;
-		boolean quoteEscape = false;
-		for (char ch : subPath.toCharArray()) {
-			if (ch == '\'') {
-				if (!inQuote) {
-					inQuote = true;
-				} else if (quoteEscape) {
-					quoteEscape = false;
-					partSB.append('\'');
-				} else {
-					quoteEscape = true;
-				}
-			} else {
-				if (inQuote) {
-					if (quoteEscape) {
-						inQuote = false;
-						quoteEscape = false;
-					} else {
-						// allow any character in quoted line
-						partSB.append(ch);
-						continue;
-					}
-				}
-				assert !quoteEscape : "Escaped quote outside of quote!";
-				if (ch == '.') {
-					parts.add(partSB.toString());
-					partSB.setLength(0);
-				} else {
-					partSB.append(ch);
-				}
-			}
-		}
-		if (inQuote && !quoteEscape) {
-			throw new RefPathSyntaxException("Missing closing quote character", buildPath(rootPath, Collections.singletonList(subPath), 0));
-		}
-		parts.add(partSB.toString());
-
-//		return subPath.split("\\.");
-		return parts;
-	}
-
-	private Object getNextLevelElement(String rootPath, List<String> parts, Object source, int level) throws RefPathSyntaxException {
-		String pathPart = parts.get(level);
+	private Object getNextLevelElement(RefPath refPath, Object source, int level) throws RefPathSyntaxException {
+//		String rootPath, List<String> parts;
+		RefPathSuffix suffix = refPath.getSuffixes().get(level);
 		if (source == null) {
-			throw new RefPathSyntaxException("Null object for path", buildPath(rootPath, parts, level));
+			throw new RefPathSyntaxException("Null object for path", refPath.buildPath(level));
 		}
-		if (Character.isDigit(pathPart.charAt(0))) {
+		if (suffix instanceof RefPathArrayElementSuffix) {
 			if (!source.getClass().isArray()) {
 				throw new RefPathSyntaxException("Expected an array, but got " + source.getClass(),
-						buildPath(rootPath, parts, level));
+						refPath.buildPath(level));
 			}
 			try {
-				int idx = Integer.parseInt(pathPart);
-				source = Array.get(source, idx);
-			} catch (NumberFormatException | IndexOutOfBoundsException e) {
-				throw new RefPathSyntaxException("Invalid array index '" + pathPart + "'", buildPath(rootPath, parts, level));
+				source = Array.get(source, ((RefPathArrayElementSuffix) suffix).getElementIndex());
+			} catch (IndexOutOfBoundsException e) {
+				throw new RefPathSyntaxException("Invalid array index '" + suffix + "'", refPath.buildPath(level));
 			}
-		} else if (pathPart.charAt(0) == '#') {
+		} else if (suffix instanceof RefPathBeanSuffix) {
 			// expect a Spring bean name
 			Class<?> c = source.getClass();
 			Object beanFactory = ReflectionUtils.safeFindInvokeMethod(source, "org.springframework.context.support.AbstractApplicationContext", "getBeanFactory");
 			if (beanFactory == null) {
 				throw new RefPathSyntaxException("Expects a Spring ApplicationContext as parent object but got " + c + " instead",
-						buildPath(rootPath, parts, level));
+						refPath.buildPath(level));
 			}
-			if (pathPart.length() > 1 && pathPart.charAt(1) == '#') {
+			String beanName = ((RefPathBeanSuffix) suffix).getBeanName();
+			if (((RefPathBeanSuffix) suffix).isUseDefinition()) {
 				// look for a bean definition
-				String beanName = pathPart.substring(2);
 				Method mGetBeanDefinition = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
 				Object bd = ReflectionUtils.safeInvokeMethod(mGetBeanDefinition, beanFactory, beanName);
 				if (bd == null) {
 					throw new RefPathSyntaxException("Failed to get bean definition named '" + beanName + "' in " + source,
-							buildPath(rootPath, parts, level));
+							refPath.buildPath(level));
 				}
 				source = bd;
 			} else {
 				// look for a bean
-				String beanName = pathPart.substring(1);
 				Method mGetBean = ReflectionUtils.safeFindMethod(beanFactory, "org.springframework.beans.factory.support.AbstractBeanFactory", "getBean", String.class);
 				Object bean = ReflectionUtils.safeInvokeMethod(mGetBean, beanFactory, beanName);
 				if (bean == null) {
 					throw new RefPathSyntaxException("Failed to get bean named '" + beanName + "' in " + source,
-							buildPath(rootPath, parts, level));
+							refPath.buildPath(level));
 				}
 				source = bean;
 			}
 
 		} else {
+			assert suffix instanceof RefPathFieldSuffix : "Unknown suffix kind " + suffix;
+			String fieldName = ((RefPathFieldSuffix) suffix).getFieldName();
 			// expect a path part to indicate a field
 			Class<?> c = source.getClass();
-			Field f = getField(c, pathPart, buildPath(rootPath, parts, level));
+			Field f = getField(c, fieldName, refPath.buildPath(level));
 			try {
 				reflAccessor.makeAccessible(f);
 				source = f.get(source);
 			} catch (IllegalAccessException e) {
-				throw new RefPathSyntaxException("Failed to get field '" + pathPart + "' in class " + c,
-						buildPath(rootPath, parts, level));
+				throw new RefPathSyntaxException("Failed to get field '" + fieldName + "' in class " + c,
+						refPath.buildPath(level));
 			}
 		}
 		return source;
-	}
-
-	private String buildPath(String rootPath, List<String> refpathParts, int curLevel) {
-		StringBuilder sb = new StringBuilder(rootPath);
-		sb.append(rootPath.startsWith(PERMA_PATH_PREFIX) ? ':' : '.');
-		for (int i = 0; i <= curLevel; i++) {
-			sb.append(refpathParts.get(i));
-			if (i != curLevel) {
-				sb.append('.');
-			}
-		}
-		return sb.toString();
 	}
 
 	private Field getField(Class<?> origClass, String fid, String refpath) throws RefPathSyntaxException {

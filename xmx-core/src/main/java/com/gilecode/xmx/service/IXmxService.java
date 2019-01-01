@@ -2,10 +2,7 @@
 
 package com.gilecode.xmx.service;
 
-import com.gilecode.xmx.model.NotSingletonException;
-import com.gilecode.xmx.model.XmxClassInfo;
-import com.gilecode.xmx.model.XmxObjectInfo;
-import com.gilecode.xmx.model.XmxRuntimeException;
+import com.gilecode.xmx.model.*;
 
 import java.util.List;
 
@@ -65,7 +62,7 @@ public interface IXmxService {
 	 *
 	 * @return {@code null} if an object ID does not represent singleton, or permanent singleton ID otherwise
 	 */
-	String getSingletonPermanentId(int objectId);
+	SingletonPermanentId getSingletonPermanentId(int objectId);
 
 	/**
 	 * Find an object by its permanent singleton ID previously returned by {@link #getSingletonPermanentId(int)}.
@@ -78,5 +75,5 @@ public interface IXmxService {
 	 *
 	 * @throws NotSingletonException if the singleton object can not be found, or not singleton anymore
 	 */
-	XmxObjectInfo getSingletonObject(String permanentId) throws NotSingletonException;
+	XmxObjectInfo getSingletonObject(SingletonPermanentId permanentId) throws NotSingletonException;
 }

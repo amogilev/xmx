@@ -9,6 +9,7 @@ import com.gilecode.xmx.ui.dto.ExtendedClassInfoDto;
 import com.gilecode.xmx.ui.dto.ExtendedObjectInfoDto;
 import com.gilecode.xmx.ui.dto.ObjectInfoDto;
 import com.gilecode.xmx.ui.dto.XmxMethodResult;
+import com.gilecode.xmx.ui.refpath.RefPathSyntaxException;
 
 import java.io.IOException;
 import java.io.PrintWriter;

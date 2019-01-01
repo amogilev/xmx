@@ -11,21 +11,21 @@ public class NotSingletonException extends Exception {
 		MISSING_APP, MULTIPLE_CLASSES, MULTIPLE_OBJECTS, NO_OBJECTS
 	}
 
-	private final String permanentId;
+	private final SingletonPermanentId permanentId;
 	private final Reason reason;
 	private final List<Integer> objectInfos;
 
-	public NotSingletonException(String permanentId, Reason reason) {
+	public NotSingletonException(SingletonPermanentId permanentId, Reason reason) {
 		this(permanentId, reason, Collections.<Integer>emptyList());
 	}
 
-	public NotSingletonException(String permanentId, Reason reason, List<Integer> objectIds) {
+	public NotSingletonException(SingletonPermanentId permanentId, Reason reason, List<Integer> objectIds) {
 		this.permanentId = permanentId;
 		this.reason = reason;
 		this.objectInfos = objectIds;
 	}
 
-	public static NotSingletonException of(String permanentId, boolean multipleClasses, List<Integer> objectIds) {
+	public static NotSingletonException of(SingletonPermanentId permanentId, boolean multipleClasses, List<Integer> objectIds) {
 		Reason reason = multipleClasses ? Reason.MULTIPLE_CLASSES :
 				(objectIds.size() == 0 ? Reason.NO_OBJECTS : Reason.MULTIPLE_OBJECTS);
 		return new NotSingletonException(permanentId, reason, objectIds);
@@ -39,7 +39,7 @@ public class NotSingletonException extends Exception {
 		return objectInfos;
 	}
 
-	public String getPermanentId() {
+	public SingletonPermanentId getPermanentId() {
 		return permanentId;
 	}
 }

@@ -1,6 +1,6 @@
-// Copyright © 2017 Andrey Mogilev. All rights reserved.
+// Copyright © 2019 Andrey Mogilev. All rights reserved.
 
-package com.gilecode.xmx.ui.service;
+package com.gilecode.xmx.ui.refpath;
 
 /**
  * Indicates errors in refpaths syntax.

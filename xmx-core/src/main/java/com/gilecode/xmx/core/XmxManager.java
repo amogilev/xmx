@@ -17,10 +17,7 @@ import com.gilecode.xmx.core.instrument.ClassWriterWithCustomLoader;
 import com.gilecode.xmx.core.instrument.XmxManagedClassTransformer;
 import com.gilecode.xmx.core.jmx.JmxSupport;
 import com.gilecode.xmx.log.AdviceLoggerWrapper;
-import com.gilecode.xmx.model.NotSingletonException;
-import com.gilecode.xmx.model.XmxClassInfo;
-import com.gilecode.xmx.model.XmxObjectInfo;
-import com.gilecode.xmx.model.XmxRuntimeException;
+import com.gilecode.xmx.model.*;
 import com.gilecode.xmx.server.IXmxServerLauncher;
 import com.gilecode.xmx.service.IXmxCoreService;
 import com.gilecode.xmx.service.IXmxService;
@@ -580,7 +577,7 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 	}
 
 	@Override
-	public String getSingletonPermanentId(int objectId) {
+	public SingletonPermanentId getSingletonPermanentId(int objectId) {
 		ManagedObjectWeakRef ref = objectsStorage.get(objectId);
 		if (ref != null) {
 			if (ref.classInfo.getObjectIds().size() == 1) {
@@ -603,7 +600,7 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 					}
 
 					// OK, singleton verified
-					return appInfo.getName() + ":" + className;
+					return new SingletonPermanentId(appInfo.getName(), className);
 				}
 			}
 		}
@@ -612,13 +609,9 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 	}
 
 	@Override
-	public XmxObjectInfo getSingletonObject(String permanentId) throws NotSingletonException {
-		int n = permanentId.indexOf(':');
-		if (n < 0) {
-			throw new XmxRuntimeException("Bad PermaRef \"" + permanentId + "\"");
-		}
-		String appName = permanentId.substring(0, n);
-		String className = permanentId.substring(n + 1);
+	public XmxObjectInfo getSingletonObject(SingletonPermanentId permanentId) throws NotSingletonException {
+		String appName = permanentId.getAppName();
+		String className = permanentId.getClassName();
 
 		ManagedAppInfo appInfo = appInfosByName.get(appName);
 		if (appInfo == null) {
