@@ -7,7 +7,7 @@ import com.gilecode.xmx.model.XmxObjectInfo;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.refpath.RefPathUtils;
 import com.gilecode.xmx.ui.service.IXmxUiService;
-import com.gilecode.xmx.ui.smx.dto.BeanInfoDto;
+import com.gilecode.xmx.ui.smx.dto.BeanNameDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,14 +79,14 @@ public class SmxUiService implements ISmxUiService {
     }
 
     @Override
-    public VisData getVisData(String appNameOrNull, String beanIdOrNull, String expandContextIdOrNull) {
+    public VisData getVisData(String appNameOrNull, String beanNameOrNull, String expandContextIdOrNull) {
         VisData data = new VisData();
         if (appNameOrNull == null) {
-            for (String appName2 : xmxService.getApplicationNames()) {
-                fillVisData(data, appName2, beanIdOrNull, expandContextIdOrNull);
+            for (String appName : xmxService.getApplicationNames()) {
+                fillVisData(data, appName, beanNameOrNull, expandContextIdOrNull);
             }
         } else {
-            fillVisData(data, appNameOrNull, beanIdOrNull, expandContextIdOrNull);
+            fillVisData(data, appNameOrNull, beanNameOrNull, expandContextIdOrNull);
         }
         return data;
     }
@@ -137,32 +137,27 @@ public class SmxUiService implements ISmxUiService {
     }
 
     static class ContextBeanDisplayPredicateProvider {
-        final String beanIdOrNull;
+        final String beanNameOrNull;
         final String expandContextOrNull;
 
-        public ContextBeanDisplayPredicateProvider(String beanIdOrNull, String expandContextOrNull) {
-            // TODO: refactor: extract bean name from the path instead
-            this.beanIdOrNull = beanIdOrNull;
+        public ContextBeanDisplayPredicateProvider(String beanNameOrNull, String expandContextOrNull) {
+            this.beanNameOrNull = beanNameOrNull;
             this.expandContextOrNull = expandContextOrNull;
         }
 
         public ContextBeansDisplayPredicate getPredicate(final String contextId) {
-            if (beanIdOrNull != null) {
-                if (beanIdOrNull.startsWith(contextId)) {
-                    return new ContextBeansDisplayPredicate() {
-                        @Override
-                        public ContextBeansDisplayMode mode() {
-                            return ContextBeansDisplayMode.SELECTED;
-                        }
+            if (beanNameOrNull != null) {
+                return new ContextBeansDisplayPredicate() {
+                    @Override
+                    public ContextBeansDisplayMode mode() {
+                        return ContextBeansDisplayMode.SELECTED;
+                    }
 
-                        @Override
-                        public boolean displayBean(String beanName) {
-                            return beanIdOrNull.equals(makeBeanPath(contextId, beanName));
-                        }
-                    };
-                } else {
-                    return ContextBeansDisplayPredicate.NONE;
-                }
+                    @Override
+                    public boolean displayBean(String beanName) {
+                        return beanNameOrNull.equals(beanName);
+                    }
+                };
             } else if (contextId.equals(expandContextOrNull)) {
                 return ContextBeansDisplayPredicate.ALL;
             } else {
@@ -171,7 +166,7 @@ public class SmxUiService implements ISmxUiService {
         }
     }
 
-    private void fillVisData(VisData data, String appName, String beanIdOrNull, String expandContextIdOrNull) {
+    private void fillVisData(VisData data, String appName, String beanNameOrNull, String expandContextIdOrNull) {
         // TODO: maybe provide more restrictive better pattern
         List<XmxClassInfo> contextClassInfos = getContextClasses(appName);
         if (contextClassInfos.size() > 0) {
@@ -182,7 +177,7 @@ public class SmxUiService implements ISmxUiService {
                 ctxObjectInfos.addAll(xmxService.getManagedObjects(classInfo.getId()));
             }
 
-            ContextBeanDisplayPredicateProvider pp = new ContextBeanDisplayPredicateProvider(beanIdOrNull, expandContextIdOrNull);
+            ContextBeanDisplayPredicateProvider pp = new ContextBeanDisplayPredicateProvider(beanNameOrNull, expandContextIdOrNull);
             Collection<ContextInfo> contextInfos = transformContexts(ctxObjectInfos, pp);
             for (ContextInfo ci : contextInfos) {
                 if (ci.parentId == null) {
@@ -223,31 +218,35 @@ public class SmxUiService implements ISmxUiService {
     }
 
     @Override
-    public List<BeanInfoDto> getBeans(String appNameOrNull) {
-        List<BeanInfoDto> result = new ArrayList<>();
-        if (appNameOrNull == null) {
-            for (String appName : getAppNames()) {
-                fillBeans(appName, result);
-            }
-        } else {
-            fillBeans(appNameOrNull, result);
-        }
-        Collections.sort(result, new Comparator<BeanInfoDto>() {
+    public List<BeanNameDto> getBeans(String appNameOrNull) {
+        Map<String, Integer> beanNamesAndCounts = new TreeMap<>(new Comparator<String>() {
             @Override
-            public int compare(BeanInfoDto o1, BeanInfoDto o2) {
-                return o1.getName().compareToIgnoreCase(o2.getName());
+            public int compare(String s1, String s2) {
+                return s1.compareToIgnoreCase(s2);
             }
         });
+        if (appNameOrNull == null) {
+            for (String appName : getAppNames()) {
+                fillBeans(appName, beanNamesAndCounts);
+            }
+        } else {
+            fillBeans(appNameOrNull, beanNamesAndCounts);
+        }
+
+        List<BeanNameDto> result = new ArrayList<>(beanNamesAndCounts.size());
+        for (Map.Entry<String, Integer> nameAndCount : beanNamesAndCounts.entrySet()) {
+            result.add(new BeanNameDto(nameAndCount.getKey(), nameAndCount.getValue()));
+        }
         return result;
     }
 
-    private void fillBeans(String appName, List<BeanInfoDto> result) {
+    private void fillBeans(String appName, Map<String, Integer> beanNamesAndCounts) {
         for (XmxClassInfo classInfo : getContextClasses(appName)) {
             for (XmxObjectInfo ctxObjInfo : xmxService.getManagedObjects(classInfo.getId())) {
-                String ctxId = toContextId(ctxObjInfo);
                 String[] bdNames = getBeanDefinitionNames(ctxObjInfo);
                 for (String beanName : bdNames) {
-                    result.add(new BeanInfoDto(makeBeanPath(ctxId, beanName), beanName));
+                    Integer count = beanNamesAndCounts.get(beanName);
+                    beanNamesAndCounts.put(beanName, count == null ? 1 : count + 1);
                 }
             }
         }

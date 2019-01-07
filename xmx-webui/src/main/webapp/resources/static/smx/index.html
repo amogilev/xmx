@@ -94,9 +94,9 @@
 		groups : {
 			app : { color:{background:'#ffffcc'}, level:0, title:"Web Application"},
 			rootCtx : { color:{background:'#ffffcc'}, level:2, shape:'box'},
-			childCtx : { color:{background:' #ffff80'}, level:5, shape:'box'},
-			bean : { color:{background:'#f2f2f2'}, level:8, shape:'box', title:"Bean", },
-            beanCluster : { color:{background:'#f2f2f2'}, level:8, shape:'box',
+			childCtx : { color:{background:' #ffff80'}, level:2, shape:'box'},
+			bean : { color:{background:'#f2f2f2'}, level:7, shape:'box', title:"Bean", },
+            beanCluster : { color:{background:'#f2f2f2'}, level:7, shape:'box',
                 title:"Beans Cluster: double-click to expand", borderWidth:4, shadow:true},
         },
         edges : {
@@ -128,7 +128,7 @@
 	var network = new vis.Network(container, networkData, options);
 
 	var $selApp = $("#selApp"), $selBean = $("#selBean");
-    var filterAppName = null, filterBeanId = null;
+    var filterAppName = null, filterBeanName = null;
     var expandContextId = null;
 
 	network.on('doubleClick', function(params) {
@@ -148,13 +148,13 @@
         }
     });
 
-    function queryParams(appName, beanId, expandContextId) {
+    function queryParams(appName, beanName, expandContextId) {
         var p = {};
         if (appName !== null) {
             p.appName = appName;
         }
-        if (beanId !== null) {
-            p.beanId = beanId;
+        if (beanName !== null) {
+            p.beanName = beanName;
         } else if (expandContextId !== null) {
             p.expandContextId = expandContextId;
         }
@@ -162,14 +162,8 @@
     }
 
     function loadAndDrawNetwork() {
-		$.get("/smxs/visdata", queryParams(filterAppName, filterBeanId, expandContextId), function(data) {
+		$.get("/smxs/visdata", queryParams(filterAppName, filterBeanName, expandContextId), function(data) {
 		    networkData.update(data);
-
-            if (filterBeanId) {
-                // move a single bean below so that contexts edges do not overlap
-                var position = network.getPositions([filterBeanId])[filterBeanId];
-                network.moveNode(filterBeanId, position.x, position.y + 100);
-            }
         });
     }
 
@@ -190,7 +184,10 @@
             var $sel = $selBean.empty();
             $sel.append($('<option></option>').attr("value", "").text("All"));
             data.forEach(function(beanInfo) {
-                var option = $('<option></option>').attr("value", beanInfo.id).text(beanInfo.name);
+                var option = $('<option></option>').attr("value", beanInfo.name).text(beanInfo.name);
+                if (beanInfo.count > 1) {
+                    option.attr('data-subtext', '(' + beanInfo.count + ' beans)')
+                }
                 $sel.append(option);
             });
             $selBean.selectpicker('refresh');
@@ -206,13 +203,13 @@
         $("#selApp").on("changed.bs.select", function(e, clickedIndex, isSelected, oldValue) {
             var newValue = $selApp.val();
             filterAppName = newValue === 'null' ? null : newValue;
-            filterBeanId = null;
+            filterBeanName = null;
             expandContextId = null;
             reloadBeans();
         });
         $("#selBean").on("changed.bs.select", function(e, clickedIndex, isSelected, oldValue) {
             var newValue = $selBean.val();
-            filterBeanId = newValue ? newValue : null;
+            filterBeanName = newValue ? newValue : null;
             expandContextId = null;
             loadAndDrawNetwork();
         });

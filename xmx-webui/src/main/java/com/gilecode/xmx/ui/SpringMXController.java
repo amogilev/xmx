@@ -2,7 +2,7 @@
 
 package com.gilecode.xmx.ui;
 
-import com.gilecode.xmx.ui.smx.dto.BeanInfoDto;
+import com.gilecode.xmx.ui.smx.dto.BeanNameDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
 import com.gilecode.xmx.ui.smx.service.ISmxUiService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,9 +26,9 @@ public class SpringMXController implements UIConstants {
     @GetMapping(path="visdata", produces = "application/json")
     @ResponseBody
     public VisData data(@RequestParam(name="appName", required = false) String appName,
-                        @RequestParam(name="beanId", required = false) String beanId,
+                        @RequestParam(name="beanName", required = false) String beanName,
                         @RequestParam(name="expandContextId", required = false) String expandContextId) {
-        return smxUiService.getVisData(appName, beanId, expandContextId);
+        return smxUiService.getVisData(appName, beanName, expandContextId);
     }
 
     @GetMapping(path="apps", produces = "application/json")
@@ -39,7 +39,7 @@ public class SpringMXController implements UIConstants {
 
     @GetMapping(path="beanNames", produces = "application/json")
     @ResponseBody
-    public List<BeanInfoDto> beanNames(@RequestParam(name="appName", required = false) String appName) {
+    public List<BeanNameDto> beanNames(@RequestParam(name="appName", required = false) String appName) {
         return smxUiService.getBeans("null".equals(appName) ? null : appName);
     }
 

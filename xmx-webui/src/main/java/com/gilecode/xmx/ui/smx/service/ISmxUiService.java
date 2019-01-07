@@ -3,7 +3,7 @@
 package com.gilecode.xmx.ui.smx.service;
 
 import com.gilecode.xmx.service.IXmxService;
-import com.gilecode.xmx.ui.smx.dto.BeanInfoDto;
+import com.gilecode.xmx.ui.smx.dto.BeanNameDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
 
 import java.util.Collection;
@@ -21,7 +21,7 @@ public interface ISmxUiService {
 
     List<String> getAppNames();
 
-	List<BeanInfoDto> getBeans(String appName);
+	List<BeanNameDto> getBeans(String appName);
 
 	VisData getVisData(String appNameOrNull, String beanNameOrNull, String expandContextIdOrNull);
 }
