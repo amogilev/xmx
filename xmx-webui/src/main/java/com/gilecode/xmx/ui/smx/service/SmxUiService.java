@@ -382,12 +382,6 @@ public class SmxUiService implements ISmxUiService {
 
         ContextBeansDisplayPredicate dispPred = pp.getPredicate(contextId);
 
-//        if (dispPred.mode() == ContextBeansDisplayMode.SELECTED) {
-//        Method mGetBeanDefinition = safeFindMethod(beanFactory, "org.springframework.beans.factory.support.DefaultListableBeanFactory", "getBeanDefinition", String.class);
-//            Object bd = safeInvokeMethod(mGetBeanDefinition, beanFactory, dispPred.displayBean());
-//            "BeanDefinition getBeanDefinition(String beanName)"
-//        }
-//
         if (dispPred.mode() == ContextBeansDisplayMode.COUNT_ONLY) {
             ci.beansCount = bdNames.length;
         } else if (dispPred.mode() != ContextBeansDisplayMode.NONE) {

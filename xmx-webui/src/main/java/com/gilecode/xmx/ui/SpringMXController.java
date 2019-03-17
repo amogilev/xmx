@@ -46,10 +46,15 @@ public class SpringMXController implements UIConstants {
     @GetMapping("bean/{beanId:.+}")
     public String beanDetailsPage(@PathVariable("beanId") String beanId,
             @RequestParam(name="mode", required = false) String mode) {
-        if ("def".equals(mode)) {
-            beanId = beanId.replaceFirst("#", "##");
+        final String refpath;
+        if ("def".equalsIgnoreCase(mode)) {
+            refpath = beanId.replaceFirst("#", "##");
+        } else if ("factory".equalsIgnoreCase(mode)) {
+            refpath = beanId + ".beanFactory";
+        } else {
+            refpath = beanId;
         }
-        return "forward:/getObjectDetails/" + UriUtils.encodePathSegment(beanId, "UTF-8") + "?sid=" + smxUiService.getCurrentSessionId();
+        return "redirect:/getObjectDetails/" + UriUtils.encodePathSegment(refpath, "UTF-8") + "?sid=" + smxUiService.getCurrentSessionId();
     }
 
 }

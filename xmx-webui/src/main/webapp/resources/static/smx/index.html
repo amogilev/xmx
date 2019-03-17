@@ -12,9 +12,9 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.js"></script>
 
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <!--<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>-->
 
     <!-- Bootstrap -->
-    <!--<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 
@@ -36,7 +36,6 @@
 <div class="container-fluid">
 
 <h1>Contexts Hierarchy</h1>
-
 
 <form>
     <div class="form-row">
@@ -77,6 +76,8 @@
 
 </div>
 
+<div id="contextMenu" class="dropdown-menu" role="menu" style="display: none">
+</div>
 
 <script type="text/javascript">
 
@@ -131,22 +132,182 @@
     var filterAppName = null, filterBeanName = null;
     var expandContextId = null;
 
+    function expandBeansCluster(ctxId) {
+        expandContextId = ctxId;
+        loadAndDrawNetwork();
+    }
+
+    function expandBeansClusterForNode(n) {
+        if (n.group === 'beanCluster') {
+            expandBeansCluster(n.id.slice(0, -1))
+        } else {
+            // context
+            expandBeansCluster(n.id);
+        }
+    }
+
+    function collapseBeansClusters() {
+        expandContextId = null;
+        loadAndDrawNetwork();
+    }
+
 	network.on('doubleClick', function(params) {
         if (params.nodes.length === 1) {
             var nodeId = params.nodes[0];
             var n = networkData.nodes.get(nodeId);
             if ((n.group === 'rootCtx' || n.group === 'childCtx') && expandContextId === n.id) {
-                expandContextId = null;
-                loadAndDrawNetwork();
+                collapseBeansClusters();
             } else if (n.group === 'beanCluster') {
-                expandContextId = nodeId.slice(0, -1);
-                loadAndDrawNetwork();
+                expandBeansClusterForNode(n);
             } else if (n.group === 'bean') {
-                window.open('/smxs/bean/' + encodeURIComponent(n.id) + "?mode=def", '_blank');
-                window.open('/smxs/bean/' + encodeURIComponent(n.id), '_blank');
+                openBeanObjectWindow(n);
             }
         }
     });
+
+    function openBeanObjectWindow(n) {
+        window.open('/smxs/bean/' + encodeURIComponent(n.id), '_blank');
+    }
+
+    function openBeanDefinitionObjectWindow(n) {
+        window.open('/smxs/bean/' + encodeURIComponent(n.id) + '?mode=def', '_blank');
+    }
+
+    function openContextFactoryObjectWindow(n) {
+        window.open('/smxs/bean/' + encodeURIComponent(n.id) + '?mode=factory', '_blank');
+    }
+
+    var $contextMenu = $('#contextMenu');
+
+    function hideContextMenu()  {
+        $contextMenu.hide();
+        enablePopups();
+    }
+
+    $('body').click(hideContextMenu);
+    network.on('dragStart', hideContextMenu);
+    network.on('zoom', hideContextMenu);
+
+    $contextMenu.on('click', 'a', function(e) {
+        hideContextMenu();
+
+        const menuItem = e.target;
+        const node = $contextMenu.data("node");
+        const menuAction = _menuActionsRegistry.get(menuItem.id);
+        if (menuAction) {
+            menuAction.action(node);
+        }
+    });
+    document.onkeyup = function (e) {
+        if (e.code === 'Escape' && $contextMenu.is(':visible')) {
+            // close context menu on Esc
+            hideContextMenu();
+        }
+    };
+
+    function disablePopups() {
+        network.setOptions({
+            interaction : {
+                tooltipDelay : 1000000
+            }
+        });
+        if (network.interactionHandler.popupTimer) {
+            clearTimeout(network.interactionHandler.popupTimer);
+        }
+        if (network.interactionHandler.popup) {
+            network.interactionHandler.popupObj = undefined;
+            network.interactionHandler.popup.hide();
+        }
+    }
+    function enablePopups() {
+        network.setOptions({
+            interaction : {
+                tooltipDelay : 300
+            }
+        });
+    }
+
+    network.on('oncontext', function(params) {
+        const e = params.event;
+        if (e.ctrlKey) {
+	        return;
+        }
+        e.preventDefault();
+
+        disablePopups();
+
+        const clickedNodeId = network.getNodeAt(params.pointer.DOM);
+        const n = clickedNodeId ? networkData.nodes.get(clickedNodeId) : null;
+        buildContextMenu(n);
+        $contextMenu
+            .data("node", n)
+            .show()
+            .css({
+                position: "absolute",
+                left: e.pageX,
+                top: e.pageY
+            });
+    });
+
+    let _nextActionId = 1;
+    let _menuActionsRegistry = new Map();
+    class ContextMenuAction {
+        constructor(name, action) {
+            this.id = 'cma' + _nextActionId++;
+            this.name = name;
+            this.action = action;
+            _menuActionsRegistry.set(this.id, this);
+        }
+    }
+
+    const MenuActions = {
+        REFRESH : new ContextMenuAction('Refresh', reloadBeans),
+        COLLAPSE_BEANS_CLUSTERS : new ContextMenuAction('Collapse beans', collapseBeansClusters),
+        EXPAND_BEANS_CLUSTER : new ContextMenuAction('Expand beans', expandBeansClusterForNode),
+        SHOW_BEAN_OBJECT : new ContextMenuAction('Show the bean object', openBeanObjectWindow),
+        SHOW_BEAN_DEFINITION : new ContextMenuAction('Show the bean definition object', openBeanDefinitionObjectWindow),
+        SHOW_CONTEXT_BEAN : new ContextMenuAction('Show the context object', openBeanObjectWindow),
+        SHOW_CONTEXT_FACTORY : new ContextMenuAction('Show the context factory', openContextFactoryObjectWindow)
+    };
+
+    class ContextMenu {
+        constructor() {
+            this.html = '';
+        }
+        addItem(contextMenuAction) {
+            this.html += '<a class="dropdown-item" href="#" id="' + contextMenuAction.id + '">' + contextMenuAction.name + '</a>';
+        }
+        addDivider() {
+            this.html += '<div class="dropdown-divider"/>';
+        }
+        isEmpty() {
+            return this.html.length === 0;
+        }
+    }
+    function buildContextMenu(node) {
+        const menu = new ContextMenu();
+        if (node) {
+            if (node.group === 'childCtx' || node.group === 'rootCtx') {
+                menu.addItem(MenuActions.SHOW_CONTEXT_BEAN);
+                menu.addItem(MenuActions.SHOW_CONTEXT_FACTORY);
+                if (expandContextId) {
+                    menu.addItem(MenuActions.COLLAPSE_BEANS_CLUSTERS);
+                } else {
+                    menu.addItem(MenuActions.EXPAND_BEANS_CLUSTER);
+                }
+            } else if (node.group === 'bean') {
+                menu.addItem(MenuActions.SHOW_BEAN_OBJECT);
+                menu.addItem(MenuActions.SHOW_BEAN_DEFINITION);
+            } else if (node.group === 'beanCluster') {
+                menu.addItem(MenuActions.EXPAND_BEANS_CLUSTER);
+            }
+        }
+        if (!menu.isEmpty()) {
+            menu.addDivider();
+        }
+        menu.addItem(MenuActions.REFRESH);
+        $contextMenu.html(menu.html);
+    }
 
     function queryParams(appName, beanName, expandContextId) {
         var p = {};
