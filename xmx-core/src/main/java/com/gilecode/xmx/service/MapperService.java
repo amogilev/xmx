@@ -19,10 +19,7 @@ public class MapperService implements IMapperService {
 		// although Gson is thread-safe, do not use single 'static' instance for all work, as its typeTokenCache would
 		//  prevent Class GC for serialized classes
 
-		// return new YaGson();
-
-		// TODO: set as default in YaGson() instead! And need to support in JsonTreeWriter.java:191
-		return new YaGsonBuilder().serializeSpecialFloatingPointValues().create();
+		return new YaGsonBuilder().create();
 	}
 
 	/**
