@@ -140,16 +140,16 @@ public class TestSmartReference {
 		final ManagedClassLoaderWeakRef.SmartReference<Object> ref = uut.createSmartReference(obj);
 		ExecutorService executorService = Executors.newFixedThreadPool(4);
 
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 100; i++) {
 			executorService.invokeAll(createTasks(ref, 100, 100));
-			assertWeak(ref);
 			assertFalse(failureFlag.get());
+			assertWeak(ref);
 		}
 
 		for (int i = 0; i < 10; i++) {
 			executorService.invokeAll(createTasks(ref, 101, 100));
-			assertStrong(ref);
 			assertFalse(failureFlag.get());
+			assertStrong(ref);
 			uut.decrementManagedInstancesCount();
 			assertWeak(ref);
 		}

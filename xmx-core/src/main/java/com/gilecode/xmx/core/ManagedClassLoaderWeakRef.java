@@ -66,7 +66,7 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 	 * On the other hand, such binding is not absolutely reliable (it is possible that all managed instances are
 	 * collected but then created again; or there are non-managed instances left; or there are concurrency issues
 	 * between creating/removing managed instances and references, etc.), so this mechanism shall be considered
-	 * only as an optimization. There is still a possibility that teh reference is GC'ed, so the users of the smart
+	 * only as an optimization. There is still a possibility that the reference is GC'ed, so the users of the smart
 	 * references shall be able to re-load the actual referents at any time.
 	 */
 	public static class SmartReference<T> {
@@ -98,6 +98,7 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 		}
 
 		void update(boolean newStrong) {
+			// NOTE: this code is not thread-safe, but it is invoked only from synchronized code, or init/destroy, so it's fine
 			T localStrongRef = strongReference;
 			boolean curStrong = localStrongRef != null;
 			if (curStrong != newStrong) {
@@ -207,7 +208,7 @@ public class ManagedClassLoaderWeakRef extends WeakReference<ClassLoader> {
 	void decrementManagedInstancesCount() {
 		if (managedInstancesCount.decrementAndGet() == 0) {
 			synchronized (this) {
-				if (managedInstancesCount.get() == 0) {
+				if (managedInstancesCount.get() <= 0) { // negative is only expected in tests
 					for (Iterator<SmartReference<?>> iterator = smartReferences.iterator(); iterator.hasNext(); ) {
 						SmartReference<?> sr = iterator.next();
 						if (sr.get() == null) {
