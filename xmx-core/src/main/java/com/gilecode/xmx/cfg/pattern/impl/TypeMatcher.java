@@ -70,8 +70,24 @@ public class TypeMatcher implements ITypeMatcher {
 		    typeName = getTypeNameWithoutPackage(typeName);
 	    }
 
-	    return name.equals(typeName);
+	    if (name.equals(typeName)) {
+	    	return true;
+		}
+	    return matchesAnyNestedClassName(name, typeName);
     }
+
+	private boolean matchesAnyNestedClassName(String name, String typeName) {
+		int start = 0;
+    	while (true) {
+			int i = typeName.indexOf('$', start);
+			if (i < 0) {
+				return false;
+			} else if (typeName.regionMatches(i + 1, name, 0, name.length())) {
+				return true;
+			}
+			start = i + 1;
+		}
+	}
 
 	private String getTypeNameWithoutPackage(String typeName) {
 		// NOTE: works even if there is no dot, as (1 + -1 == 0)
