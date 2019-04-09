@@ -116,32 +116,41 @@ public interface ConfigDefaults {
 	// Hidden (internal) options
 	//
 
+	// TODO: maybe add "hiddenly-managed" flag, to NOT return such bean in general lists
+
 	SectionDescription INTERNAL_SECTION_XMX_WEBAPP = new SectionDescription("App=\"" + IXmxServerLauncher.APPNAME + "\"",
 			null, new OptionDescription(Properties.APP_ENABLED, false));
-
-	// TODO: maybe make full-qualified classes with advices auto-managed, or "hiddenly" managed
-	SectionDescription INTERNAL_SPRING_ADVICES_SECTION1 = new SectionDescription(
-			"App=*;" +
-			"Class=org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory",
-			null,
-			new OptionDescription(Properties.SP_MANAGED, true));
-
-	SectionDescription INTERNAL_SPRING_ADVICES_SECTION2 = new SectionDescription(
-			"App=*;" +
-			"Class=org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory;" +
-			"Method=\"protected Object initializeBean(String beanName, Object bean, RootBeanDefinition mbd)\"",
-			null,
-			new OptionDescription(Properties.M_ADVICES,
-					"xmx-advices.jar:com.gilecode.xmx.advices.SpringBeanProxyInterceptor"));
 
 	SectionDescription INTERNAL_SPRING_CONTEXTS_SECTION = new SectionDescription(
 			"App=*;" +
 					"Class=org.springframework.*context.*ApplicationContext",
 			null,
-			new OptionDescription(Properties.SP_MANAGED, true));
+			new OptionDescription(Properties.SP_MANAGED, true),
+			new OptionDescription(Properties.CLASS_MAX_INSTANCES, -1));
 
+	SectionDescription INTERNAL_SPRING_CONTEXTS_ADVICES_SECTION = new SectionDescription(
+			"App=*;" +
+					"Class=org.springframework.context.support.AbstractApplicationContext;" +
+					"Method=\"public void refresh()\"",
+			null,
+			new OptionDescription(Properties.M_ADVICES,
+					"xmx-advices.jar:com.gilecode.xmx.advices.SpringContextRefreshInterceptor"));
 
-	List<SectionDescription> HIDDEN_INTERNAL_SECTIONS = Collections.unmodifiableList(Arrays.asList(
-			INTERNAL_SECTION_XMX_WEBAPP, INTERNAL_SPRING_ADVICES_SECTION1, INTERNAL_SPRING_ADVICES_SECTION2,
-			INTERNAL_SPRING_CONTEXTS_SECTION));
+	List<SectionDescription> HIDDEN_INTERNAL_SECTIONS = ConfigUtils.unionList(
+			Arrays.asList(INTERNAL_SECTION_XMX_WEBAPP, INTERNAL_SPRING_CONTEXTS_SECTION, INTERNAL_SPRING_CONTEXTS_ADVICES_SECTION),
+			ConfigUtils.adviceSections(
+					"org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory",
+					"protected Object initializeBean(String beanName, Object bean, RootBeanDefinition mbd)",
+					"com.gilecode.xmx.advices.SpringBeanProxyInterceptor"),
+			ConfigUtils.adviceSections(
+					"org.springframework.util.PropertyPlaceholderHelper",
+					"public String replacePlaceholders(String value, PlaceholderResolver placeholderResolver)",
+					"com.gilecode.xmx.advices.SpringResolvedPlaceholderInterceptor"),
+			ConfigUtils.adviceSections(
+					"org.springframework.core.env.PropertySourcesPropertyResolver",
+// TODO support method generics in AOP!
+//					"protected <T> T getProperty(String key, Class<T> targetValueType, boolean resolveNestedPlaceholders)",
+					"protected Object getProperty(String key, Class<T> targetValueType, boolean resolveNestedPlaceholders)",
+					"com.gilecode.xmx.advices.SpringResolvedPropertyInterceptor")
+			);
 }

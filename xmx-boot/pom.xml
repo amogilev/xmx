@@ -10,5 +10,13 @@
 
   <name>XMX Bootstrap</name>
   <description>Bootstrap API used as a bridge between the agent, the transformed classes and the core services</description>
-  
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>xmx-aop-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
 </project>

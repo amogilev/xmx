@@ -2,6 +2,7 @@
 
 package com.gilecode.xmx.ui;
 
+import com.gilecode.xmx.spring.ResolvedValueKind;
 import com.gilecode.xmx.ui.smx.dto.BeanNameDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
 import com.gilecode.xmx.ui.smx.service.ISmxUiService;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriUtils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/smxs")
@@ -55,6 +58,14 @@ public class SpringMXController implements UIConstants {
             refpath = beanId;
         }
         return "redirect:/getObjectDetails/" + UriUtils.encodePathSegment(refpath, "UTF-8") + "?sid=" + smxUiService.getCurrentSessionId();
+    }
+
+    @GetMapping(path="values", produces = "application/json")
+    @ResponseBody
+    public Map<String, Set<String>> resolvedValues(
+            @RequestParam(name="kind") ResolvedValueKind kind,
+            @RequestParam(name="appName", required = false) String appName) {
+        return smxUiService.getResolvedValues(kind, "null".equals(appName) ? null : appName);
     }
 
 }

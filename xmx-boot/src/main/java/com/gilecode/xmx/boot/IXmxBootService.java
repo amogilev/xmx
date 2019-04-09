@@ -2,6 +2,8 @@
 
 package com.gilecode.xmx.boot;
 
+import com.gilecode.xmx.aop.log.IAdviceLogger;
+
 /**
  * Provides bootstrap functionality for the agent and transformed classes, including the
  * class transformation method and registering of beans.
@@ -49,8 +51,27 @@ public interface IXmxBootService {
 
 	/**
 	 * Creates and returns a wrapper to a logger which can be used by advices.
-	 * The returned wrapper will have interface {@link com.gilecode.xmx.aop.log.IAdviceLogger},
+	 * The returned wrapper will have interface {@link IAdviceLogger},
 	 * which is not declared to avoid extra dependencies for xmx-boot module.
 	 */
-	Object getAdviceLogger(String name);
+	IAdviceLogger getAdviceLogger(String name);
+
+	/**
+	 * Propagates an event with one argument from some advice to the XMX core and plugins.
+	 *
+	 * @param pluginId  optional ID of the target plugin for the event; should be propagated to all if {@code null}
+	 * @param eventName the name of the event
+	 * @param arg       the only event argument, or {@code null} for 0-arguments events
+	 */
+	void fireAdviceEvent(String pluginId, String eventName, Object arg);
+
+	/**
+	 * Propagates an event with two arguments from some advice to the XMX core and plugins.
+	 *
+	 * @param pluginId  optional ID of the target plugin for the event; should be propagated to all if {@code null}
+	 * @param eventName the name of the event
+	 * @param arg1      the first of two event arguments
+	 * @param arg2      the second of two event arguments
+	 */
+	void fireAdviceEvent(String pluginId, String eventName, Object arg1, Object arg2);
 }

@@ -1,0 +1,162 @@
+<!-- Copyright © 2019 Andrey Mogilev. All rights reserved. -->
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <link rel="stylesheet" href="../css/smx.css">
+
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.2/css/bootstrap-select.min.css">
+
+<!--    <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.0.js"></script>-->
+    <script src="https://code.jquery.com/jquery-3.4.0.min.js" integrity="sha256-BJeo0qm959uMBGb65z40ejJYGSgR7REI4+CW1fNKwOg=" crossorigin="anonymous"></script>
+
+    <!-- Bootstrap -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+
+    <!-- Bootstrap Select -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.2/js/bootstrap-select.min.js"></script>
+
+    <title>SpringMX: Resolved Values</title>
+</head>
+<body>
+<div class="container-fluid flex-maximized">
+
+    <h2>Resolved Values</h2>
+
+    <form>
+        <div style="display: flex; align-items : center">
+            Displaying resolved
+            <select id="selKind" name="kind" class="selectpicker" data-width="fit">
+                <option value="PLACEHOLDER">placeholders</option>
+                <option value="PROPERTY">properties</option>
+            </select>
+            &nbsp;for application(s):
+            <select id="selApp" name="app" class="selectpicker">
+                <option value="null">Loading...</option>
+            </select>
+        </div>
+    </form>
+
+    <div style="padding-bottom: 10px; padding-top: 10px">
+        <input class="form-control" id="filter" type="text" placeholder="Search..">
+    </div>
+
+    <div class="flex-filler-last-v">
+        <div class="flex-table-wrapper-outer">
+            <div class="flex-table-wrapper-inner">
+                <table id="valuesTable" class="table table-bordered table-striped flex-table">
+                    <thead>
+                    <tr>
+                        <th id="keyHeader">Placeholder</th>
+                        <th>Resolved Value</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tableContent">
+                    <tr>
+                        <td>Doe</td>
+                        <td>john@example.com</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+
+    const $selKind = $("#selKind"), $selApp = $("#selApp");
+    const $filter = $("#filter");
+    const $tableContent = $("#tableContent"), $tableKindHeader = $("#keyHeader");
+
+    let curAppId = "null", curKind = 'PLACEHOLDER';
+
+    function initFromSearchParams() {
+        let searchParams = new URLSearchParams(window.location.search);
+        if (searchParams.has("appId")) {
+            curAppId = searchParams.get("appId");
+            // select will be changed after app names are loaded
+        }
+        if (searchParams.has("kind")) {
+            curKind = searchParams.get("kind").toUpperCase();
+
+            $selKind.val(curKind);
+            $selKind.selectpicker('refresh');
+        }
+    }
+
+    function loadApps() {
+        $.get("/smxs/apps", function(data) {
+            var $sel = $selApp.empty();
+            $sel.append($('<option></option>').attr("value", "null").text("<All>"));
+            data.forEach(function(appName) {
+                var option = $('<option></option>').attr("value", appName).text(appName ? appName : '<Global>');
+                $sel.append(option);
+            });
+            $selApp.val(curAppId);
+            $selApp.selectpicker('refresh');
+        });
+    }
+
+    function valuesQueryParams() {
+        let p = {"kind" : curKind};
+        let appId = curAppId === 'null' ? null : curAppId;
+        if (appId !== null) {
+            p.appName = appId;
+        }
+        return p;
+    }
+
+    function loadValues() {
+        $.get("/smxs/values", valuesQueryParams(), function(data) {
+            $tableContent.empty();
+            $tableKindHeader.text(curKind === 'PLACEHOLDER' ? 'Placeholder' : 'Property');
+            Object.keys(data).forEach(key => {
+                let values = data[key];
+                let trClass = values.length > 1 ? 'table-danger' : '';
+                values.forEach(val => {
+                    let tr = $('<tr></tr>').addClass(trClass);
+                    tr.append($('<td></td>').text(key));
+                    tr.append($('<td></td>').text(val));
+                    $tableContent.append(tr);
+                });
+            });
+        });
+    }
+
+    function wireSelectChangedEvents() {
+        $selApp.on("changed.bs.select", function() {
+            curAppId = $selApp.val();
+            loadValues();
+        });
+        $selKind.on("changed.bs.select", function() {
+            curKind = $selKind.val();
+            loadValues();
+        });
+    }
+
+    function wireFilter() {
+        $filter.on("keyup", function() {
+            let value = $(this).val().toLowerCase();
+            $("#valuesTable tbody>tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+    }
+
+    $(document).ready(function () {
+        $('.selectpicker').selectpicker();
+        initFromSearchParams();
+        loadApps();
+        loadValues();
+        wireSelectChangedEvents();
+        wireFilter();
+    });
+
+</script>
+</body>
+</html>

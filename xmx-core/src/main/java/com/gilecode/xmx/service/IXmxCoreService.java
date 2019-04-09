@@ -2,12 +2,14 @@
 
 package com.gilecode.xmx.service;
 
+import com.gilecode.xmx.boot.IXmxBootService;
 import com.gilecode.xmx.core.ManagedClassLoaderWeakRef;
+import com.gilecode.xmx.core.ManagedObjectWeakRef;
 
 /**
  * Extended service available for core classes.
  */
-public interface IXmxCoreService extends IXmxService {
+public interface IXmxCoreService extends IXmxService, IXmxBootService {
 
 	/**
 	 * Obtain a managed class loader reference for the given class loader, making it
@@ -15,4 +17,15 @@ public interface IXmxCoreService extends IXmxService {
 	 */
 	ManagedClassLoaderWeakRef getOrInitManagedClassLoader(ClassLoader classLoader);
 
+	/**
+	 * Finds and returns the reference to a managed object instance.
+	 * If the instance is not currently managed, returns {@code null}.
+	 */
+	ManagedObjectWeakRef findManagedObjectRef(Object obj);
+
+	/**
+	 * Finds and returns the managed object reference by internal ID.
+	 * If the instance is not currently managed, returns {@code null}.
+	 */
+	ManagedObjectWeakRef getManagedObjectRef(int objectId);
 }

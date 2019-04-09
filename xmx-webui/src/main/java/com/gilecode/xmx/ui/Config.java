@@ -6,6 +6,7 @@ import com.gilecode.xmx.core.type.IMethodInfoService;
 import com.gilecode.xmx.service.IMapperService;
 import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.service.XmxServiceRegistry;
+import com.gilecode.xmx.spring.IXmxSpringService;
 import com.gilecode.xmx.ui.refpath.RefPathParser;
 import com.gilecode.xmx.ui.refpath.RefPathParserImpl;
 import com.gilecode.xmx.ui.service.IXmxUiService;
@@ -21,6 +22,11 @@ public class Config {
 	@Bean
 	public IXmxService xmxService() {
 		return XmxServiceRegistry.getXmxService();
+	}
+
+	@Bean
+	public IXmxSpringService xmxSpringService() {
+		return XmxServiceRegistry.getXmxSpringService();
 	}
 
 	@Bean
@@ -45,7 +51,7 @@ public class Config {
 
 	@Bean
 	public ISmxUiService smxUiService() {
-		return new SmxUiService(xmxUiService(), xmxService());
+		return new SmxUiService(xmxUiService(), xmxService(), xmxSpringService());
 	}
 
 }

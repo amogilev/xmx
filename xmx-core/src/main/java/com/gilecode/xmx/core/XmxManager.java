@@ -6,8 +6,8 @@ package com.gilecode.xmx.core;
 import com.gilecode.specr.SpeculativeProcessorFactory;
 import com.gilecode.xmx.aop.data.AdviceLoadResult;
 import com.gilecode.xmx.aop.impl.XmxAopManager;
+import com.gilecode.xmx.aop.log.IAdviceLogger;
 import com.gilecode.xmx.boot.IXmxAopService;
-import com.gilecode.xmx.boot.IXmxBootService;
 import com.gilecode.xmx.boot.XmxURLClassLoader;
 import com.gilecode.xmx.cfg.IAppPropertiesSource;
 import com.gilecode.xmx.cfg.IXmxConfig;
@@ -18,9 +18,10 @@ import com.gilecode.xmx.core.instrument.XmxManagedClassTransformer;
 import com.gilecode.xmx.core.jmx.JmxSupport;
 import com.gilecode.xmx.log.AdviceLoggerWrapper;
 import com.gilecode.xmx.model.*;
+import com.gilecode.xmx.plugin.IXmxPlugin;
 import com.gilecode.xmx.server.IXmxServerLauncher;
 import com.gilecode.xmx.service.IXmxCoreService;
-import com.gilecode.xmx.service.IXmxService;
+import com.gilecode.xmx.spring.XmxSpringManager;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -43,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
-public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootService {
+public final class XmxManager implements IXmxCoreService {
 
 	private final static Logger logger = LoggerFactory.getLogger(XmxManager.class);
 
@@ -56,6 +57,7 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 	private final File homeDir;
 	private final XmxAopManager xmxAopManager;
 	private MBeanServer jmxServer;
+	private List<IXmxPlugin> plugins = new ArrayList<>(2);
 
 	XmxManager(IXmxConfig config, File homeDir) {
 		this.config = config;
@@ -71,6 +73,8 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 			if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
 				startUI();
 			}
+			// TODO support enable/disable in config
+			plugins.add(new XmxSpringManager(this));
 		} else {
 			this.xmxAopManager = null;
 			logger.warn("XMX functionality is disabled by configuration");
@@ -770,7 +774,8 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 	 * Finds and returns the reference to a managed object instance.
 	 * If the instance is not currently managed, returns {@code null}.
 	 */
-	private ManagedObjectWeakRef findManagedObjectRef(Object obj) {
+	@Override
+	public ManagedObjectWeakRef findManagedObjectRef(Object obj) {
 		XmxClassManager mci = findManagedClassInfo(obj.getClass());
 		if (mci != null) {
 			// check if the target instance is managed
@@ -788,6 +793,15 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 		return null;
 	}
 
+	/**
+	 * Finds and returns the managed object reference by internal ID.
+	 * If the instance is not currently managed, returns {@code null}.
+	 */
+	@Override
+	public ManagedObjectWeakRef getManagedObjectRef(int objectId) {
+		return objectsStorage.get(objectId);
+	}
+
 	@Override
 	public void registerProxyObject(Object target, Object proxy) {
 		ManagedObjectWeakRef objRef = findManagedObjectRef(target);
@@ -802,7 +816,38 @@ public final class XmxManager implements IXmxService, IXmxCoreService, IXmxBootS
 	}
 
     @Override
-    public Object getAdviceLogger(String name) {
+    public IAdviceLogger getAdviceLogger(String name) {
         return new AdviceLoggerWrapper(LoggerFactory.getLogger(name));
     }
+
+	@Override
+	public void fireAdviceEvent(String pluginId, String eventName, Object arg) {
+		for (IXmxPlugin plugin : plugins) {
+			if ((pluginId == null || pluginId.equals(plugin.getPluginId()))
+					&& plugin.processEvent(eventName, arg)) {
+				return;
+			}
+		}
+		logger.error("Unknown advice event: " + eventName);
+	}
+
+	@Override
+	public void fireAdviceEvent(String pluginId, String eventName, Object arg1, Object arg2) {
+		for (IXmxPlugin plugin : plugins) {
+			if ((pluginId == null || pluginId.equals(plugin.getPluginId()))
+				&& plugin.processEvent(eventName, arg1, arg2)) {
+				return;
+			}
+		}
+		logger.error("Unknown advice event: " + eventName);
+	}
+
+	public <T> T findPlugin(Class<T> pluginClass) {
+		for (IXmxPlugin plugin : plugins) {
+			if (pluginClass.isInstance(plugin)) {
+				return pluginClass.cast(plugin);
+			}
+		}
+		return null;
+	}
 }

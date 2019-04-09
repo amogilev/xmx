@@ -7,6 +7,7 @@ import com.gilecode.xmx.core.params.IParamNamesFetcher;
 import com.gilecode.xmx.core.params.ParamNamesFetcher;
 import com.gilecode.xmx.core.type.IMethodInfoService;
 import com.gilecode.xmx.core.type.MethodInfoServiceImpl;
+import com.gilecode.xmx.spring.IXmxSpringService;
 
 /**
  * Provides implementations of services for use in core and Web UI.
@@ -31,6 +32,10 @@ public class XmxServiceRegistry {
 
 	public static IXmxService getXmxService() {
 		return XmxLoader.getServiceInstance();
+	}
+
+	public static IXmxSpringService getXmxSpringService() {
+		return XmxLoader.getServiceInstance().findPlugin(IXmxSpringService.class);
 	}
 
 	private static class ParamNamesFetcherHolder {

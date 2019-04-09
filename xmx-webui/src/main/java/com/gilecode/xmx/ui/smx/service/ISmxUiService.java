@@ -3,11 +3,14 @@
 package com.gilecode.xmx.ui.smx.service;
 
 import com.gilecode.xmx.service.IXmxService;
+import com.gilecode.xmx.spring.ResolvedValueKind;
 import com.gilecode.xmx.ui.smx.dto.BeanNameDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Handles all accesses to {@link IXmxService} from XMX UI, wraps them with additional logic
@@ -24,4 +27,6 @@ public interface ISmxUiService {
 	List<BeanNameDto> getBeans(String appName);
 
 	VisData getVisData(String appNameOrNull, String beanNameOrNull, String expandContextIdOrNull);
+
+	Map<String, Set<String>> getResolvedValues(ResolvedValueKind kind, String s);
 }

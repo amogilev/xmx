@@ -5,10 +5,13 @@ package com.gilecode.xmx.ui.smx.service;
 import com.gilecode.xmx.model.XmxClassInfo;
 import com.gilecode.xmx.model.XmxObjectInfo;
 import com.gilecode.xmx.service.IXmxService;
+import com.gilecode.xmx.spring.IXmxSpringService;
+import com.gilecode.xmx.spring.ResolvedValueKind;
 import com.gilecode.xmx.ui.refpath.RefPathUtils;
 import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.smx.dto.BeanNameDto;
 import com.gilecode.xmx.ui.smx.dto.VisData;
+import com.gilecode.xmx.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,11 +30,13 @@ public class SmxUiService implements ISmxUiService {
 
     private final IXmxUiService xmxUiService;
     private final IXmxService xmxService;
+    private final IXmxSpringService xmxSpringService;
 
     @Autowired
-    public SmxUiService(IXmxUiService xmxUiService, IXmxService xmxService) {
+    public SmxUiService(IXmxUiService xmxUiService, IXmxService xmxService, IXmxSpringService xmxSpringService) {
         this.xmxUiService = xmxUiService;
         this.xmxService = xmxService;
+        this.xmxSpringService = xmxSpringService;
     }
 
     @Override
@@ -89,6 +94,29 @@ public class SmxUiService implements ISmxUiService {
             fillVisData(data, appNameOrNull, beanNameOrNull, expandContextIdOrNull);
         }
         return data;
+    }
+
+    @Override
+    public Map<String, Set<String>> getResolvedValues(ResolvedValueKind kind, String appName) {
+        Map<String, Set<String>> result = new TreeMap<>();
+
+        List<XmxObjectInfo> ctxObjectInfos = getContextObjects(appName);
+        for (XmxObjectInfo ctxObjectInfo : ctxObjectInfos) {
+            Set<Pair<String, String>> valuesForCtx = xmxSpringService.getContextResolvedValues(kind,
+                    ctxObjectInfo.getObjectId());
+            for (Pair<String, String> resolvedPair : valuesForCtx) {
+                String key = resolvedPair.getFirst();
+                String value = resolvedPair.getSecond();
+                Set<String> values = result.get(key);
+                if (values == null) {
+                    values = new TreeSet<>();
+                    result.put(key, values);
+                }
+                values.add(value);
+            }
+        }
+
+        return result;
     }
 
     enum ContextBeansDisplayMode {
@@ -166,16 +194,22 @@ public class SmxUiService implements ISmxUiService {
         }
     }
 
-    private void fillVisData(VisData data, String appName, String beanNameOrNull, String expandContextIdOrNull) {
-        // TODO: maybe provide more restrictive better pattern
-        List<XmxClassInfo> contextClassInfos = getContextClasses(appName);
-        if (contextClassInfos.size() > 0) {
-            data.addApp(appName);
+    private List<XmxObjectInfo> getContextObjects(String appNameOrNull) {
+        List<XmxClassInfo> contextClassInfos = getContextClasses(appNameOrNull);
+        if (contextClassInfos.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<XmxObjectInfo> ctxObjectInfos = new LinkedList<>();
+        for (XmxClassInfo classInfo : contextClassInfos) {
+            ctxObjectInfos.addAll(xmxService.getManagedObjects(classInfo.getId()));
+        }
+        return ctxObjectInfos;
+    }
 
-            List<XmxObjectInfo> ctxObjectInfos = new LinkedList<>();
-            for (XmxClassInfo classInfo : contextClassInfos) {
-                ctxObjectInfos.addAll(xmxService.getManagedObjects(classInfo.getId()));
-            }
+    private void fillVisData(VisData data, String appName, String beanNameOrNull, String expandContextIdOrNull) {
+        List<XmxObjectInfo> ctxObjectInfos = getContextObjects(appName);
+        if (!ctxObjectInfos.isEmpty()) {
+            data.addApp(appName);
 
             ContextBeanDisplayPredicateProvider pp = new ContextBeanDisplayPredicateProvider(beanNameOrNull, expandContextIdOrNull);
             Collection<ContextInfo> contextInfos = transformContexts(ctxObjectInfos, pp);
@@ -208,6 +242,7 @@ public class SmxUiService implements ISmxUiService {
     }
 
     public List<XmxClassInfo> getContextClasses(String appName) {
+        // TODO: maybe provide more restrictive better pattern
         return xmxService.findManagedClassInfos(appName, ".*ApplicationContext");
     }
 

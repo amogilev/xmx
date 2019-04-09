@@ -2,6 +2,8 @@
 
 package com.gilecode.xmx.boot;
 
+import com.gilecode.xmx.aop.log.IAdviceLogger;
+
 import java.io.File;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -143,6 +145,7 @@ public class XmxProxy {
 		}
 	}
 
+	// TODO: do we need that IXmxSpringProxyAware iface? Or better just always call XmxProxy, e.g. using event?
 	public static IXmxSpringProxyAware getSpringProxyRegistrator() {
 		return new IXmxSpringProxyAware() {
 			@Override
@@ -163,10 +166,25 @@ public class XmxProxy {
 		e.printStackTrace(System.err);
 	}
 
-	public static Object getAdviceLogger(String name) {
+	public static IAdviceLogger getAdviceLogger(String name) {
 		if (xmxService == null) {
 			throw new IllegalStateException("Not expected with non-initialized XMX service");
 		}
 		return xmxService.getAdviceLogger(name);
 	}
+
+	public static void fireAdviceEvent(String pluginId, String eventName, Object arg) {
+		if (xmxService == null) {
+			throw new IllegalStateException("Not expected with non-initialized XMX service");
+		}
+		xmxService.fireAdviceEvent(pluginId, eventName, arg);
+	}
+
+	public static void fireAdviceEvent(String pluginId, String eventName, Object arg1, Object arg2) {
+		if (xmxService == null) {
+			throw new IllegalStateException("Not expected with non-initialized XMX service");
+		}
+		xmxService.fireAdviceEvent(pluginId, eventName, arg1, arg2);
+	}
+
 }
