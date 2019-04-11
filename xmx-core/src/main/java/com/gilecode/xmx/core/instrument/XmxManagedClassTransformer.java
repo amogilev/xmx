@@ -18,11 +18,15 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
 public class XmxManagedClassTransformer extends ClassVisitor {
-	
+
+    private final static Logger logger = LoggerFactory.getLogger(XmxManagedClassTransformer.class);
+
 	private static final String CONSTR_NAME = "<init>";
 	
 	/**
@@ -49,7 +53,7 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 	 * Which advice classes from this map shall be applied to which method is defined by the
 	 * configuration.
 	 * <br/>
-	 * All advice classes here are loaded and verified (by {@link AdviceVerifier#verifyAdviceClass(java.io.InputStream)}
+	 * All advice classes here are loaded and verified (by {@link AdviceVerifier#verifyAdviceClass(java.io.InputStream, String)}
 	 * <br/>
 	 * The use of {@link AdviceLoadResult} prevents early GC of weak refs to the advice classes.
 	 */
@@ -74,6 +78,11 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 	 * Supplier of the target class, initialized lazily. Used for implementing @TargetMethod advice arguments.
 	 */
 	private WeakCachedSupplier<Class<?>> targetClassSupplier;
+
+	/**
+	 * Wheher some advices were weaved into methods of the transformed class
+	 */
+	private boolean advicesWeaved;
 
 	public XmxManagedClassTransformer(ClassVisitor cv, int classId, String bcClassName,
 			String javaClassName,
@@ -136,6 +145,9 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 						javaClassName, name, getTargetClassSupplier());
 
 				if (!ctx.getAdviceInfoByKind().isEmpty()) {
+				    logger.debug("Injecting advices invocation into method {}.{}() : {}",
+							javaClassName, name, ctx.getAdviceInfoByKind());
+				    advicesWeaved = true;
 					return new XmxAdviceMethodWeaver(access, name, desc, parentVisitor, ctx);
 				}
 			}
@@ -167,5 +179,15 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 			};
 		}
 		return targetClassSupplier;
+	}
+
+	@Override
+	public void visitEnd() {
+		super.visitEnd();
+		if (!loadedAdvices.isEmpty() && !advicesWeaved && logger.isDebugEnabled()) {
+			logger.debug("Advices were registered for class {}, but none were weaved (probably, " +
+					"no method matches were found): {}",
+					javaClassName, loadedAdvices.getAdviceClassesByDesc().keySet());
+		}
 	}
 }

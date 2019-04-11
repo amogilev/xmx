@@ -18,9 +18,13 @@ public class MethodDeclarationInfo {
     private final AnnotatedTypeInfo[] parameters;
     private final Type returnType;
 
-    public MethodDeclarationInfo(String methodName, Type[] parameterTypes, Type returnType) {
+    // only for logging/debugging aims
+    private final String classDesc;
+
+    public MethodDeclarationInfo(String methodName, Type[] parameterTypes, Type returnType, String classDesc) {
         this.methodName = methodName;
         this.returnType = returnType;
+        this.classDesc = classDesc;
         this.methodAnnotations = new LinkedList<>();
         this.parameters = new AnnotatedTypeInfo[parameterTypes.length];
         for (int i = 0; i < parameterTypes.length; i++) {
@@ -63,9 +67,14 @@ public class MethodDeclarationInfo {
         return null;
     }
 
+    public String getMethodDesc() {
+        return classDesc + "::" + methodName;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(128);
+        sb.append(classDesc).append("::");
         sb.append("'").append(returnType.getClassName()).append(' ').append(methodName).append('(');
         for (AnnotatedTypeInfo param : parameters) {
             sb.append(param.getType().getClassName()).append(',');
@@ -73,7 +82,7 @@ public class MethodDeclarationInfo {
         if (parameters.length > 0) {
             sb.setLength(sb.length() - 1);
         }
-        sb.append(')');
+        sb.append(")'");
         return sb.toString();
     }
 }

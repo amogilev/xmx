@@ -41,13 +41,17 @@ public class WeavingAdviceInfo {
 
 	private boolean fastProxyArgsAllowed;
 
+	// only for debugging/logging aims
+	private final String methodDesc;
+
 	public WeavingAdviceInfo(WeavingContext context, ISupplier<Method> adviceSupplier, AdviceKind adviceKind, List<AdviceArgument> adviceArguments,
-	                         boolean hasOverrideRetVal) {
+			boolean hasOverrideRetVal, String methodDesc) {
 		this.context = context;
 		this.adviceSupplier = adviceSupplier;
 		this.adviceKind = adviceKind;
 		this.adviceArguments = adviceArguments;
 		this.hasOverrideRetVal = hasOverrideRetVal;
+		this.methodDesc = methodDesc;
 	}
 
 	public Method getAdvice() {
@@ -85,5 +89,14 @@ public class WeavingAdviceInfo {
 
 	public void setFastProxyArgsAllowed(boolean fastProxyArgsAllowed) {
 		this.fastProxyArgsAllowed = fastProxyArgsAllowed;
+	}
+
+	public String getMethodDesc() {
+		return methodDesc;
+	}
+
+	@Override
+	public String toString() {
+		return methodDesc;
 	}
 }

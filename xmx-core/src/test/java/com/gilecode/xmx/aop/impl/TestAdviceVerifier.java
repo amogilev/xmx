@@ -169,7 +169,7 @@ public class TestAdviceVerifier {
 	}
 
 	private void verify(Class<?> c) throws IOException, BadAdviceException {
-		uut.verifyAdviceClass(AopTestUtils.getClassAsStream(c));
+		uut.verifyAdviceClass(AopTestUtils.getClassAsStream(c), "test:" + c.getName());
 	}
 
 	@Test

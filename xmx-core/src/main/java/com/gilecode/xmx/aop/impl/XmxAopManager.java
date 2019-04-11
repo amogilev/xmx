@@ -211,7 +211,7 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 				}
 
 				try (InputStream is = jf.getInputStream(classEntry)) {
-					adviceMethods = adviceVerifier.verifyAdviceClass(is);
+					adviceMethods = adviceVerifier.verifyAdviceClass(is, desc);
 				}
 
 			} catch (IOException e) {
@@ -222,7 +222,7 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 			//   or duplicate loading of dependent classes!
 			WeakCachedSupplier<Class<?>> sup = new JarClassLoadingSupplier(jarName, className, classLoaderRef);
 
-			adviceClassInfo = new AdviceClassInfo(sup, adviceMethods);
+			adviceClassInfo = new AdviceClassInfo(sup, adviceMethods, desc);
 			classLoaderRef.getVerifiedAdvicesByDesc().put(desc, adviceClassInfo);
 			return adviceClassInfo;
 
@@ -395,7 +395,7 @@ public class XmxAopManager extends BasicAdviceArgumentsProcessor implements IXmx
 
 		// check @OverrideRetVal if present
 		hasOverrideRetVal = advice.getAnnotation(OverrideRetVal.class) != null;
-		return new WeavingAdviceInfo(ctx, adviceSup, adviceKind, arguments, hasOverrideRetVal);
+		return new WeavingAdviceInfo(ctx, adviceSup, adviceKind, arguments, hasOverrideRetVal, advice.getMethodDesc());
 	}
 
 	private static boolean isFastProxyArgsAllowed(List<AdviceArgument> adviceArguments, int interceptedArgumentsCount) {

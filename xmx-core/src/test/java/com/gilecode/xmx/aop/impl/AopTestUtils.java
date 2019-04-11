@@ -67,7 +67,8 @@ public class AopTestUtils {
 					return adviceClasses[classIdx];
 				}
 			};
-			adviceClassesByDesc.put(desc, new AdviceClassInfo(adviceClassSupplier, getMethodDeclarations(adviceClass)));
+			adviceClassesByDesc.put(desc, new AdviceClassInfo(adviceClassSupplier, getMethodDeclarations(adviceClass),
+					desc));
 		}
 
 
@@ -83,8 +84,9 @@ public class AopTestUtils {
 	}
 
 	public static List<MethodDeclarationInfo> getMethodDeclarations(Class<?> adviceClass) throws IOException {
+		String classDesc = "test:" + adviceClass.getName();
 		try (InputStream classStream = getClassAsStream(adviceClass)) {
-			return MethodDeclarationAsmReader.readMethodDeclarations(classStream);
+			return MethodDeclarationAsmReader.readMethodDeclarations(classStream, classDesc);
 		}
 	}
 

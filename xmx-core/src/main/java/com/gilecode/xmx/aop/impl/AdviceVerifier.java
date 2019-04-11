@@ -59,12 +59,13 @@ public class AdviceVerifier extends BasicAdviceArgumentsProcessor {
 	 * that all parameters are correctly annotated.
 	 *
 	 * @param classAsStream the input stream which contain the class byte code
+	 * @param classDesc the descriptor of the class (jar plus class names)
 	 * @return the methods declared in the class verified to be advice candidates
 	 *
 	 * @throws BadAdviceException if any of verification problems is found
 	 */
-	public List<MethodDeclarationInfo> verifyAdviceClass(InputStream classAsStream) throws BadAdviceException, IOException {
-		List<MethodDeclarationInfo> declaredMethods = MethodDeclarationAsmReader.readMethodDeclarations(classAsStream);
+	public List<MethodDeclarationInfo> verifyAdviceClass(InputStream classAsStream, String classDesc) throws BadAdviceException, IOException {
+		List<MethodDeclarationInfo> declaredMethods = MethodDeclarationAsmReader.readMethodDeclarations(classAsStream, classDesc);
 
 		List<MethodDeclarationInfo> adviceMethods = new ArrayList<>();
 		for (MethodDeclarationInfo adviceCandidate : declaredMethods) {
@@ -141,7 +142,7 @@ public class AdviceVerifier extends BasicAdviceArgumentsProcessor {
 	 * Checks whether the advice method is compatible (by types) to the specified target method. Log DEBUG-level
 	 * message if the advice is not compatible.
 	 * <p/>
-	 * <strong>NOTE:</strong> The advice class MUST be verified with {@link #verifyAdviceClass(InputStream)} before
+	 * <strong>NOTE:</strong> The advice class MUST be verified with {@link #verifyAdviceClass(InputStream, String)} before
 	 * this compatibility check!
 	 */
 	public boolean isAdviceCompatibleMethod(MethodDeclarationInfo advice,

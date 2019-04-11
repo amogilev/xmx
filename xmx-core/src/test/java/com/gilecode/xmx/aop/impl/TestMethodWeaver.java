@@ -101,7 +101,8 @@ public class TestMethodWeaver {
 
 		// do not call aopManager.loadAndVerifyAdvices() as the advice class is not in jar
 		for (Class<?> adviceClass : adviceClasses) {
-			aopManager.getAdviceVerifier().verifyAdviceClass(AopTestUtils.getClassAsStream(adviceClass));
+			aopManager.getAdviceVerifier().verifyAdviceClass(AopTestUtils.getClassAsStream(adviceClass),
+					"test:" + adviceClass.getName());
 		}
 
 		Method targetMethod = findMethod(targetClass, targetMethodName);

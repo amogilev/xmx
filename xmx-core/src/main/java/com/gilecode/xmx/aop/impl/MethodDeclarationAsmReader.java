@@ -23,11 +23,13 @@ public class MethodDeclarationAsmReader {
      * Parses the class bytecode (passed as a stream) and extracts the information about all method declarations.
      *
      * @param classStream the input stream which contains class bytecode
+     * @param classDesc the class descriptor (jar plus class names)
      * @return information about all methods declared in the class
      *
      * @throws IOException if I/O failure occurs
      */
-    public static List<MethodDeclarationInfo> readMethodDeclarations(InputStream classStream) throws IOException {
+    public static List<MethodDeclarationInfo> readMethodDeclarations(InputStream classStream,
+            final String classDesc) throws IOException {
         final List<MethodDeclarationInfo> methods = new ArrayList<>();
         ClassReader cr = new ClassReader(classStream);
         cr.accept(new ClassVisitor(Opcodes.ASM6) {
@@ -39,7 +41,7 @@ public class MethodDeclarationAsmReader {
                 Type[] argumentTypes = Type.getArgumentTypes(descriptor);
                 Type returnType = Type.getReturnType(descriptor);
 
-                final MethodDeclarationInfo methodInfo = new MethodDeclarationInfo(name, argumentTypes, returnType);
+                final MethodDeclarationInfo methodInfo = new MethodDeclarationInfo(name, argumentTypes, returnType, classDesc);
                 methods.add(methodInfo);
 
                 return new MethodVisitor(Opcodes.ASM6) {

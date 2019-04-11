@@ -11,27 +11,33 @@ import java.util.List;
  */
 public class AdviceClassInfo {
 
-    private WeakCachedSupplier<Class<?>> classSupplier;
-    private List<MethodDeclarationInfo> adviceMethods;
+    private final WeakCachedSupplier<Class<?>> classSupplier;
+    private final List<MethodDeclarationInfo> adviceMethods;
 
-    public AdviceClassInfo(WeakCachedSupplier<Class<?>> classSupplier, List<MethodDeclarationInfo> adviceMethods) {
+    // used for debugging aims, not really needed
+    private final String classDesc;
+
+    public AdviceClassInfo(WeakCachedSupplier<Class<?>> classSupplier, List<MethodDeclarationInfo> adviceMethods,
+            String classDesc) {
         this.classSupplier = classSupplier;
         this.adviceMethods = adviceMethods;
+        this.classDesc = classDesc;
     }
 
     public WeakCachedSupplier<Class<?>> getClassSupplier() {
         return classSupplier;
     }
 
-    public void setClassSupplier(WeakCachedSupplier<Class<?>> classSupplier) {
-        this.classSupplier = classSupplier;
-    }
-
     public List<MethodDeclarationInfo> getAdviceMethods() {
         return adviceMethods;
     }
 
-    public void setAdviceMethods(List<MethodDeclarationInfo> adviceMethods) {
-        this.adviceMethods = adviceMethods;
+    public String getClassDesc() {
+        return classDesc;
+    }
+
+    @Override
+    public String toString() {
+        return classDesc;
     }
 }
