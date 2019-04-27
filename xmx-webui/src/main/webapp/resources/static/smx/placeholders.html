@@ -90,7 +90,7 @@
     }
 
     function loadApps() {
-        $.get("/smxs/apps", function(data) {
+        $.get("/smxapi/apps", function(data) {
             var $sel = $selApp.empty();
             $sel.append($('<option></option>').attr("value", "null").text("<All>"));
             data.forEach(function(appName) {
@@ -112,7 +112,7 @@
     }
 
     function loadValues() {
-        $.get("/smxs/values", valuesQueryParams(), function(data) {
+        $.get("/smxapi/values", valuesQueryParams(), function(data) {
             $tableContent.empty();
             $tableKindHeader.text(curKind === 'PLACEHOLDER' ? 'Placeholder' : 'Property');
             Object.keys(data).forEach(key => {

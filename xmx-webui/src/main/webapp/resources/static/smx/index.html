@@ -168,15 +168,15 @@
     });
 
     function openBeanObjectWindow(n) {
-        window.open('/smxs/bean/' + encodeURIComponent(n.id), '_blank');
+        window.open('/smxapi/bean/' + encodeURIComponent(n.id), '_blank');
     }
 
     function openBeanDefinitionObjectWindow(n) {
-        window.open('/smxs/bean/' + encodeURIComponent(n.id) + '?mode=def', '_blank');
+        window.open('/smxapi/bean/' + encodeURIComponent(n.id) + '?mode=def', '_blank');
     }
 
     function openContextFactoryObjectWindow(n) {
-        window.open('/smxs/bean/' + encodeURIComponent(n.id) + '?mode=factory', '_blank');
+        window.open('/smxapi/bean/' + encodeURIComponent(n.id) + '?mode=factory', '_blank');
     }
 
     function openResolvedPlaceholdersWindow(n) {
@@ -346,13 +346,13 @@
     }
 
     function loadAndDrawNetwork() {
-		$.get("/smxs/visdata", queryParams(filterAppName, filterBeanName, expandContextId), function(data) {
+		$.get("/smxapi/visdata", queryParams(filterAppName, filterBeanName, expandContextId), function(data) {
 		    networkData.update(data);
         });
     }
 
     function loadApps() {
-        $.get("/smxs/apps", function(data) {
+        $.get("/smxapi/apps", function(data) {
             var $sel = $selApp.empty();
             $sel.append($('<option></option>').attr("value", "null").text("<All>"));
             data.forEach(function(appName) {
@@ -364,7 +364,7 @@
     }
 
     function loadBeanNames() {
-        $.get("/smxs/beanNames", queryParams(filterAppName), function(data) {
+        $.get("/smxapi/beanNames", queryParams(filterAppName), function(data) {
             var $sel = $selBean.empty();
             $sel.append($('<option></option>').attr("value", "").text("All"));
             data.forEach(function(beanInfo) {

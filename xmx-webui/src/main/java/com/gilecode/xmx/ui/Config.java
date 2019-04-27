@@ -11,8 +11,11 @@ import com.gilecode.xmx.ui.refpath.RefPathParser;
 import com.gilecode.xmx.ui.refpath.RefPathParserImpl;
 import com.gilecode.xmx.ui.service.IXmxUiService;
 import com.gilecode.xmx.ui.service.XmxUiService;
+import com.gilecode.xmx.ui.smx.context.ContextDataExtractor;
 import com.gilecode.xmx.ui.smx.service.ISmxUiService;
+import com.gilecode.xmx.ui.smx.service.IVisDataService;
 import com.gilecode.xmx.ui.smx.service.SmxUiService;
+import com.gilecode.xmx.ui.smx.service.SmxVisDataService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -45,13 +48,23 @@ public class Config {
 	}
 
 	@Bean
+	public IVisDataService visDataService() {
+		return new SmxVisDataService(contextDataExtractor());
+	}
+
+	@Bean
+	public ContextDataExtractor contextDataExtractor() {
+		return new ContextDataExtractor();
+	}
+
+	@Bean
 	public RefPathParser refPathParser() {
 		return new RefPathParserImpl();
 	}
 
 	@Bean
 	public ISmxUiService smxUiService() {
-		return new SmxUiService(xmxUiService(), xmxService(), xmxSpringService());
+		return new SmxUiService(xmxUiService(), xmxService(), xmxSpringService(), visDataService(), contextDataExtractor());
 	}
 
 }

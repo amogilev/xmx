@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Controller
-@RequestMapping("/smxs")
+@RequestMapping("/smxapi")
 public class SpringMXController implements UIConstants {
 
     private ISmxUiService smxUiService;

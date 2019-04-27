@@ -57,6 +57,21 @@ public class ReflectionUtils {
 		return safeInvokeMethod(m, obj);
 	}
 
+	public static <T> T safeFindGetField(Object obj, String className, String fieldName, Class<T> fieldClass) {
+		Field f = safeFindField(obj, className, fieldName);
+		if (f == null) {
+			return null;
+		}
+		try {
+			f.setAccessible(true);
+			Object fieldObj = f.get(obj);
+			return fieldClass.cast(fieldObj);
+		} catch (Exception e) {
+			logger.warn("Failed to get field " + f + " on obj " + obj, e);
+			return null;
+		}
+	}
+
 	public static Object safeInvokeMethod(Method m, Object obj, Object...args) {
 		if (m == null) {
 			return null;
@@ -70,6 +85,16 @@ public class ReflectionUtils {
 	}
 
 	public static Method safeFindMethod(Object obj, String className, String methodName, Class<?>...parameterTypes) {
+		Class<?> c = findInstanceOrParentClass(obj, className);
+		try {
+			return c.getDeclaredMethod(methodName, parameterTypes);
+		} catch (Exception e) {
+			logger.warn("Failed to find method " + className + "::" + methodName + " on obj " + obj, e);
+			return null;
+		}
+	}
+
+	private static Class<?> findInstanceOrParentClass(Object obj, String className) {
 		if (obj == null) {
 			return null;
 		}
@@ -77,16 +102,19 @@ public class ReflectionUtils {
 		while (c != null && !c.getName().equals(className)) {
 			c = c.getSuperclass();
 		}
+		return c;
+	}
 
+	public static Field safeFindField(Object obj, String className, String fieldName) {
+		Class<?> c = findInstanceOrParentClass(obj, className);
 		if (c == null) {
-//            logger.warn("Failed to find superclass " + className + " on obj " + obj);
 			return null;
 		}
 
 		try {
-			return c.getDeclaredMethod(methodName, parameterTypes);
+			return c.getDeclaredField(fieldName);
 		} catch (Exception e) {
-			logger.warn("Failed to find method " + className + "::" + methodName + " on obj " + obj, e);
+			logger.warn("Failed to find field " + className + "::" + fieldName + " on obj " + obj, e);
 			return null;
 		}
 	}
