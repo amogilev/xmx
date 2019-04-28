@@ -22,5 +22,9 @@
         <property name="suffix" value=".jsp"/>
     </bean>
 
+    <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping">
+        <property name="order" value="-1"/>
+        <property name="urlDecode" value="false"/>
+    </bean>
 
 </beans>
