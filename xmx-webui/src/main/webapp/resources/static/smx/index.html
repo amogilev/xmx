@@ -91,15 +91,17 @@
 			hierarchical : {
 				enabled : true,
 				direction : 'LR',
-                levelSeparation : 100
+                levelSeparation : 100,
+                nodeSpacing : 100,
+                treeSpacing : 100
 			}
         },
 		groups : {
 			app : { color:{background:'#ffffcc'}, level:0, title:"Web Application"},
-			rootCtx : { color:{background:'#ffffcc'}, level:2, shape:'box'},
-			childCtx : { color:{background:' #ffff80'}, level:2, shape:'box'},
-			bean : { color:{background:'#f2f2f2'}, level:7, shape:'box', title:"Bean", },
-            beanCluster : { color:{background:'#f2f2f2'}, level:7, shape:'box',
+			rootCtx : { color:{background:'#ffffcc'}, level:3, shape:'box'},
+			childCtx : { color:{background:' #ffff80'}, level:3, shape:'box'},
+			bean : { color:{background:'#f2f2f2'}, level:9, shape:'box', title:"Bean", },
+            beanCluster : { color:{background:'#f2f2f2'}, level:6, shape:'box',
                 title:"Beans Cluster: double-click to expand", borderWidth:4, shadow:true},
         },
         edges : {

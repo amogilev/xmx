@@ -76,7 +76,7 @@ public class SmxVisDataService implements IVisDataService {
                 if (ci.parentId == null) {
                     data.addRootContext(appName, ci.id, makeContextLabel(ci), ci.text);
                 } else {
-                    data.addChildContext(ci.parentId, ci.id, makeContextLabel(ci), ci.text);
+                    data.addChildContext(appName, ci.parentId, ci.id, makeContextLabel(ci), ci.text);
                 }
 
                 if (ci.beansCount > 0) {

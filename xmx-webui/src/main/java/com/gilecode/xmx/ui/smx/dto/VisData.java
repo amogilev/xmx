@@ -26,19 +26,15 @@ public class VisData {
         nodes.add(VisNode.app(name, name));
     }
 
-    public String addRootContext(String appName, String path, String label, String tooltip) {
-        return addContext(appName, true, path, label, tooltip);
+    public void addRootContext(String appName, String path, String label, String tooltip) {
+        nodes.add(VisNode.context(path, label, tooltip, true, appName));
+        edges.add(new VisEdge(appName, path));
     }
 
-    public String addChildContext(String parentId, String path, String label, String tooltip) {
-        return addContext(parentId, false, path, label, tooltip);
-    }
-
-    private String addContext(String parentId, boolean isRoot, String path, String label, String tooltip) {
-        nodes.add(VisNode.context(path, label, tooltip, isRoot, parentId));
+    public void addChildContext(String appName, String parentId, String path, String label, String tooltip) {
+        nodes.add(VisNode.context(path, label, tooltip, false, parentId));
+        edges.add(new VisEdge(appName, path));
         edges.add(new VisEdge(parentId, path));
-        return path;
-
     }
 
     public void addBean(String contextId, String path, String label) {
