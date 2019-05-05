@@ -483,6 +483,7 @@ public final class XmxManager implements IXmxCoreService {
 		for (ManagedAppInfo appInfo : appInfosByName.values()) {
 			result.add(appInfo.getName());
 		}
+		Collections.sort(result);
 		return result;
 	}
 	
