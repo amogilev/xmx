@@ -63,7 +63,11 @@ public class XmxProxy {
 				try {
 					List<String> optCoreJars = findLibraryJars(libFileNames, "xmx-core-opt", versionSuffix);
 					URL[] urls = makeJarsUrls(xmxLibDir, Collections.singleton(coreImplName), optCoreJars);
-					ClassLoader xmxClassLoader = new XmxURLClassLoader(urls, ClassLoader.getSystemClassLoader());
+
+					// NOTE: cannot use AppClassLoader as parent, as need to use our version os some jars (e.g. logback)
+					//       Bootstrap CL as parent seems fine though. Alternatively, implement "local-first"
+					//       policy in XmxUrlClassLoader
+					ClassLoader xmxClassLoader = new XmxURLClassLoader(urls, null);
 
 					Class<?> xmxLoaderClass =
 							Class.forName("com.gilecode.xmx.core.XmxLoader", true, xmxClassLoader);
