@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static com.gilecode.xmx.util.ReflectionUtils.safeFindGetField;
 import static com.gilecode.xmx.util.ReflectionUtils.safeFindInvokeMethod;
@@ -16,6 +17,7 @@ import static com.gilecode.xmx.util.ReflectionUtils.safeFindInvokeMethod;
 public class ContextDataExtractor {
 
     private static final String JAVA_WEB_CTX_CLASSNAME = "org.springframework.web.context.support.AnnotationConfigWebApplicationContext";
+    private static final String JAVA_WEB_BOOT_CTX_CLASSNAME = "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext";
 
     /**
      * Extracts the bean factory from a Spring context object.
@@ -69,14 +71,7 @@ public class ContextDataExtractor {
                 details.put("configLocations", configLocations);
             }
             if (className.equals(JAVA_WEB_CTX_CLASSNAME)) {
-                Collection<?> annoClasses = safeFindGetField(ctxObj, JAVA_WEB_CTX_CLASSNAME, "annotatedClasses", Collection.class);
-                if (annoClasses != null && !annoClasses.isEmpty()) {
-                    details.put("annotatedClasses", annoClasses);
-                }
-                Collection<?> basePackages = safeFindGetField(ctxObj, JAVA_WEB_CTX_CLASSNAME, "basePackages", Collection.class);
-                if (basePackages != null && !basePackages.isEmpty()) {
-                    details.put("basePackages", basePackages);
-                }
+                details.putAll(extractAnnotationConfigDetailsFields(ctxObj, JAVA_WEB_CTX_CLASSNAME));
             }
         } else if (className.equals("org.springframework.context.support.ClassPathXmlApplicationContext")) {
             Object configLocations = safeFindInvokeMethod(ctxObj, "org.springframework.context.support.AbstractRefreshableConfigApplicationContext", "getConfigLocations");
@@ -87,9 +82,31 @@ public class ContextDataExtractor {
             if (configResources != null) {
                 details.put("configResources", configResources);
             }
+        } else if (className.equals(JAVA_WEB_BOOT_CTX_CLASSNAME)) {
+            details.putAll(extractAnnotationConfigDetailsFields(ctxObj, JAVA_WEB_BOOT_CTX_CLASSNAME));
+//        } else if (className.equals("org.springframework.boot.web.servlet.context.XmlServletWebServerApplicationContext")) {
+//            // TODO: use advices to catch initial resources provided
+//
         }
         // TODO: extract details for annotationDriven generic: AnnotationConfigApplicationContext (how? Advice or get from reader!)
-        // TODO: same for GenericGroovyApplicationContext
+        // TODO: also support GenericGroovyApplicationContext, reactibe SpringBoot contexts etc.
         return details;
+    }
+
+    private Map<String,Object> extractAnnotationConfigDetailsFields(Object ctxObj, String fieldsOwnerClass) {
+        Map<String, Object> details = new TreeMap<>();
+        Collection<?> annoClasses = safeFindGetField(ctxObj, fieldsOwnerClass, "annotatedClasses", Collection.class);
+        if (annoClasses != null && !annoClasses.isEmpty()) {
+            details.put("annotatedClasses", annoClasses);
+        }
+        Collection<?> basePackages = safeFindGetField(ctxObj, fieldsOwnerClass, "basePackages", Collection.class);
+        if (basePackages != null && !basePackages.isEmpty()) {
+            details.put("basePackages", basePackages);
+        }
+        return details;
+    }
+
+    private void extractAnnotationConfigDetailsFields(Map<String, Object> details, Object ctxObj, String javaWebCtxClassname) {
+
     }
 }
