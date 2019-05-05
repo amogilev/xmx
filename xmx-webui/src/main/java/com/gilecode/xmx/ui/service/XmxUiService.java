@@ -136,7 +136,7 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	}
 
 	private String getPermaRefPath(XmxObjectInfo objectInfo, String refpath) {
-		if (objectInfo.getValue() != null && !refpath.startsWith(PERMA_PATH_PREFIX)) {
+		if (objectInfo.getObjectId() > 0 && objectInfo.getValue() != null && !refpath.startsWith(PERMA_PATH_PREFIX)) {
 			SingletonPermanentId permaId = xmxService.getSingletonPermanentId(objectInfo.getObjectId());
 			if (permaId != null) {
 				int n = refpath.indexOf('.');

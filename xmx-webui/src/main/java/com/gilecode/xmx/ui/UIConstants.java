@@ -18,9 +18,9 @@ public interface UIConstants {
 	// the number of array element to display in one page
 	int ARRAY_PAGE_LENGTH = 10;
 
-	// a special ID which means that an object or class is not actuallly managed, and
+	// a special ID which means that an object or class is not actually managed, and
 	// the information about it is obtained using refpaths
-	int ID_UNMANAGED = 0;
+	int ID_UNMANAGED = -1;
 
 	String ATTR_SESSION_ID = "sid";
 

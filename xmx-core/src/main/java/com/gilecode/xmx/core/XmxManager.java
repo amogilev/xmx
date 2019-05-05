@@ -266,7 +266,7 @@ public final class XmxManager implements IXmxCoreService {
 			}
 			
 			// not registered yet, store internally and optionally register as JMX bean
-			int objectId = managedObjectsCounter.getAndIncrement();
+			int objectId = managedObjectsCounter.incrementAndGet();
 			ObjectName jmxObjectName = null;
 			if (jmxServer != null && classInfo.getJmxClassModel() != null) {
 				// register as JMX bean
