@@ -30,12 +30,7 @@ public class ReflectionMethodSpec extends MethodSpec {
 
 	@Override
 	public TypeSpec[] getParameterTypes() {
-		Class<?>[] types = m.getParameterTypes();
-		TypeSpec[] result = new TypeSpec[types.length];
-		for (int i = 0; i < types.length; i++) {
-			result[i] = TypeSpec.of(types[i]);
-		}
-		return result;
+		return TypeSpec.of(m.getParameterTypes());
 	}
 
 	@Override

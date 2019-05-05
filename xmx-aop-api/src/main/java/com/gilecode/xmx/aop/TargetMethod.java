@@ -5,7 +5,8 @@ package com.gilecode.xmx.aop;
 import java.lang.annotation.*;
 
 /**
- * Used to pass a target {@link java.lang.reflect.Method} as an advice argument.
+ * Used to pass a target {@link java.lang.reflect.Method} as an advice argument. Note that this annotation shall not
+ * be used for constructors advices!
  * <br/>
  * The advice parameter must have the type {@link java.lang.reflect.Method}.
  */

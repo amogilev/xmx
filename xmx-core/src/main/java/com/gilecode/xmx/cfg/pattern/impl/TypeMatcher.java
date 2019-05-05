@@ -27,6 +27,8 @@ public class TypeMatcher implements ITypeMatcher {
 			return matchesClass(((ClassTypeSpec) typeSpec).getType());
 		} else if (typeSpec instanceof DescriptorTypeSpec) {
 			return matchesDescriptor(((DescriptorTypeSpec) typeSpec).getDescriptor());
+		} else if (typeSpec == null) {
+			return false;
 		} else {
 			throw new IllegalArgumentException("Unknown TypeSpec class:" + typeSpec.getClass());
 		}

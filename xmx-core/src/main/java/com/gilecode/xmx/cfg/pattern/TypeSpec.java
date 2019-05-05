@@ -17,6 +17,15 @@ public abstract class TypeSpec {
 		return new ClassTypeSpec(type);
 	}
 
+	public static TypeSpec[] of(Class<?>[] types) {
+		TypeSpec[] result = new TypeSpec[types.length];
+		for (int i = 0; i < types.length; i++) {
+			result[i] = TypeSpec.of(types[i]);
+		}
+		return result;
+	}
+
+
 	public static TypeSpec of(String typeDescriptor) {
 		return new DescriptorTypeSpec(typeDescriptor);
 	}

@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 public class MethodPatternParser {
 
     private static Map<String, ModifierKeyword> modifiersByNameUC = new HashMap<>();
-    private static Map<String, VisibilityKeyword> visibiltyByNameUC = new HashMap<>();
+    private static Map<String, VisibilityKeyword> visibilityByNameUC = new HashMap<>();
 
     private final IMethodMatcher matcher;
     private final ParseContext ctx;
@@ -77,7 +77,9 @@ public class MethodPatternParser {
                 if (idxTokenStart < 0) {
                     if (!Character.isWhitespace(c)) {
                         idxTokenStart = i;
-                        if (c != '*' && c != '.' && !Character.isJavaIdentifierStart(c)) {
+                        if (c == '<' && ctx.regionMatches(i, "<init>")) {
+                            return new ParseToken("<init>", i);
+                        } else if (c != '*' && c != '.' && !Character.isJavaIdentifierStart(c)) {
                             // single-char token
                             return new ParseToken(ctx.original.substring(i, i+1), i);
                         }
@@ -373,25 +375,29 @@ public class MethodPatternParser {
     }
 
     private static VisibilityKeyword tryParseVisibility(String token) {
-        return visibiltyByNameUC.get(token.toUpperCase(Locale.ENGLISH));
+        return visibilityByNameUC.get(token.toUpperCase(Locale.ENGLISH));
     }
 
     private Pattern parseMethodNamePattern(ParseToken pt) throws XmxIniParseException {
         // check that all characters are allowed in the method name pattern
-        int fromIncl = pt.pos;
-        char ch = ctx.ca[fromIncl];
-        if (ch != '*' && !Character.isJavaIdentifierStart(ch)) {
-            throwInvalidCharacterParseException(fromIncl, "Wrong method name pattern");
-        }
-        int length = pt.token.length();
-        for (int i = 1; i < length; i++) {
-            ch = ctx.ca[fromIncl + i];
-            if (ch != '*' && !Character.isJavaIdentifierPart(ch)) {
-                throwInvalidCharacterParseException(i, "Wrong method name pattern");
+        if (pt.token.equals("<init>")) {
+            return PatternsSupport.parse("^<init>$");
+        } else {
+            int fromIncl = pt.pos;
+            char ch = ctx.ca[fromIncl];
+            if (ch != '*' && !Character.isJavaIdentifierStart(ch)) {
+                throwInvalidCharacterParseException(fromIncl, "Wrong method name pattern");
             }
+            int length = pt.token.length();
+            for (int i = 1; i < length; i++) {
+                ch = ctx.ca[fromIncl + i];
+                if (ch != '*' && !Character.isJavaIdentifierPart(ch)) {
+                    throwInvalidCharacterParseException(i, "Wrong method name pattern");
+                }
+            }
+            // matches "simple" pattern with additional restrictions, so can use general "parse"
+            return PatternsSupport.parse(pt.token);
         }
-        // matches "simple" pattern with additional restrictions, so can use general "parse"
-        return PatternsSupport.parse(pt.token);
     }
 
     private TypePatternSpec parseTypeToken(ParseToken pt) throws XmxIniParseException {
@@ -565,6 +571,10 @@ public class MethodPatternParser {
             original = pattern;
             ca = original.toCharArray();
         }
+
+        public boolean regionMatches(int start, String str) {
+            return str.regionMatches(0, original, start, str.length());
+        }
     }
 
     static class ParseToken {
@@ -635,7 +645,7 @@ public class MethodPatternParser {
             modifiersByNameUC.put(m.name(), m);
         }
         for (MethodPatternParser.VisibilityKeyword v : MethodPatternParser.VisibilityKeyword.values()) {
-            visibiltyByNameUC.put(v.name(), v);
+            visibilityByNameUC.put(v.name(), v);
         }
     }
 }

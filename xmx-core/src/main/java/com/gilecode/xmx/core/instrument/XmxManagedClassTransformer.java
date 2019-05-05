@@ -80,7 +80,7 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 	private WeakCachedSupplier<Class<?>> targetClassSupplier;
 
 	/**
-	 * Wheher some advices were weaved into methods of the transformed class
+	 * Whether some advices were weaved into methods of the transformed class
 	 */
 	private boolean advicesWeaved;
 
@@ -106,36 +106,37 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 	public MethodVisitor visitMethod(final int access, final String name, final String desc, String signature, String[] exceptions) {
 		MethodVisitor parentVisitor = super.visitMethod(access, name, desc, signature, exceptions);
 
-		if (name.startsWith(CONSTR_NAME)) {
-			if (needTraceInstances()) {
-				// add registering managed objects to constructors
-				return new XmxManagedConstructorTransformer(classId, bcClassName, parentVisitor);
-			} else {
-				return parentVisitor;
-			}
+		boolean isConstructor = name.startsWith(CONSTR_NAME);
+		if (isConstructor && needTraceInstances()) {
+			// add registering managed objects to constructors
+			parentVisitor = new XmxManagedConstructorTransformer(classId, bcClassName, parentVisitor);
 		}
 
-		Type[] argumentTypes = Type.getArgumentTypes(desc);
-		if (extractParamNames && argumentTypes.length > 0) {
-			parentVisitor = new LocalVariableTableParamNamesExtractor(access, parentVisitor, argumentTypes,
-					new IParamNamesConsumer() {
-				@Override
-				public void consume(String[] argNames) {
-					ParamNamesCache paramNamesCache = classLoaderRef.getParamNamesCache();
-					boolean found = argNames != null && argNames.length > 0 && argNames[0] != null;
-					if (found) {
-						paramNamesCache.store(javaClassName, name, desc, argNames);
-					} else {
-						paramNamesCache.storeMissingClassInfo(javaClassName);
-						extractParamNames = false;
-					}
-				}
-			});
+		if (!isConstructor) {
+			Type[] argumentTypes = Type.getArgumentTypes(desc);
+			if (extractParamNames && argumentTypes.length > 0) {
+				parentVisitor = new LocalVariableTableParamNamesExtractor(access, parentVisitor, argumentTypes,
+						new IParamNamesConsumer() {
+							@Override
+							public void consume(String[] argNames) {
+								ParamNamesCache paramNamesCache = classLoaderRef.getParamNamesCache();
+								boolean found = argNames != null && argNames.length > 0 && argNames[0] != null;
+								if (found) {
+									paramNamesCache.store(javaClassName, name, desc, argNames);
+								} else {
+									paramNamesCache.storeMissingClassInfo(javaClassName);
+									extractParamNames = false;
+								}
+							}
+						});
+			}
 		}
 
 		if (!loadedAdvices.isEmpty()) {
 			// weave advices
-			MethodSpec spec = MethodSpec.of(access, name, desc);
+			MethodSpec spec = isConstructor
+					? MethodSpec.special(access, getSimpleClassName(), desc, CONSTR_NAME)
+					: MethodSpec.of(access, name, desc);
 			PropertyValue advices = appConfig.getMethodProperty(javaClassName, spec, Properties.M_ADVICES);
 			if (advices != null) {
 				String[] adviceDescs = advices.asString().split(",");
@@ -154,6 +155,10 @@ public class XmxManagedClassTransformer extends ClassVisitor {
 		}
 
 		return parentVisitor;
+	}
+
+	private String getSimpleClassName() {
+		return javaClassName.substring(1 + javaClassName.lastIndexOf('.'));
 	}
 
 	private boolean needTraceInstances() {

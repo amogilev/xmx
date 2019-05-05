@@ -9,12 +9,16 @@ import com.gilecode.xmx.cfg.pattern.PatternsSupport;
 import org.junit.Test;
 import org.objectweb.asm.Type;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.Assert.*;
 
 abstract class TestMethodPatternsDemo {
+    public TestMethodPatternsDemo() {}
+    public TestMethodPatternsDemo(String a) {}
+
     public static void main0(String[] args) {}
     public static void main0(String[] args, int n) {}
     public static int main0(String[] args, long n) { return 0; }
@@ -48,10 +52,14 @@ public class TestMethodPatternMatcher {
 
     private void checkCount_Refl(String pattern, int expectedCount) {
         IMethodMatcher matcher = PatternsSupport.parseMethodPattern(pattern);
-        Method[] methods = TestMethodPatternsDemo.class.getDeclaredMethods();
         int count = 0;
-        for (Method m : methods) {
+        for (Method m : TestMethodPatternsDemo.class.getDeclaredMethods()) {
             if (matcher.matches(MethodSpec.of(m))) {
+                count++;
+            }
+        }
+        for (Constructor<?> c : TestMethodPatternsDemo.class.getDeclaredConstructors()) {
+            if (matcher.matches(MethodSpec.of(c))) {
                 count++;
             }
         }
@@ -61,10 +69,16 @@ public class TestMethodPatternMatcher {
 
     private void checkCount_Desc(String pattern, int expectedCount) {
         IMethodMatcher matcher = PatternsSupport.parseMethodPattern(pattern);
-        Method[] methods = TestMethodPatternsDemo.class.getDeclaredMethods();
         int count = 0;
-        for (Method m : methods) {
+        for (Method m : TestMethodPatternsDemo.class.getDeclaredMethods()) {
 	        MethodSpec spec = MethodSpec.of(m.getModifiers(), m.getName(), Type.getType(m).getDescriptor());
+            if (matcher.matches(spec)) {
+                count++;
+            }
+        }
+        for (Constructor c : TestMethodPatternsDemo.class.getDeclaredConstructors()) {
+	        MethodSpec spec = MethodSpec.special(c.getModifiers(), c.getDeclaringClass().getSimpleName(),
+                    Type.getType(c).getDescriptor(), "<init>");
             if (matcher.matches(spec)) {
                 count++;
             }
@@ -221,4 +235,16 @@ public class TestMethodPatternMatcher {
         checkCount("public <T> void main*(T)", 0);
     }
 
+    @Test
+    public void testConstructors() {
+        checkCount("public <init>()", 1);
+        checkCount("public TestMethodPatternsDemo()", 1);
+
+        checkCount("public <init>(...)", 2);
+        checkCount("public TestMethodPatternsDemo(...)", 2);
+
+        // * shall not include constructors
+        checkCount("public <init>(String)", 1);
+        checkCount("public *(String)", 0);
+    }
 }

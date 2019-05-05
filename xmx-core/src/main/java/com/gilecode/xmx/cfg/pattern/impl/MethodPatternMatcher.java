@@ -31,7 +31,7 @@ public class MethodPatternMatcher implements IMethodMatcher {
             return false;
         }
 
-        if (namePattern != null && !namePattern.matcher(m.getName()).matches()) {
+        if (namePattern != null && !matchesName(m)) {
             return false;
         }
 
@@ -44,5 +44,17 @@ public class MethodPatternMatcher implements IMethodMatcher {
         }
 
         return true;
+    }
+
+    private boolean matchesName(MethodSpec m) {
+        if (m.isSpecial()) {
+            if (namePattern.pattern().contains(".*")) {
+                // require explicit name for special methods (constructors)
+                return false;
+            } else if (namePattern.matcher(m.getSpecialName()).matches()) {
+                return true;
+            }
+        }
+        return namePattern.matcher(m.getName()).matches();
     }
 }
