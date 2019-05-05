@@ -13,7 +13,7 @@
     <!--<link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css" />-->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.js"></script>
 
-<!--    <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.0.js"></script>-->
+    <!--    <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.0.js"></script>-->
     <script src="https://code.jquery.com/jquery-3.4.0.min.js" integrity="sha256-BJeo0qm959uMBGb65z40ejJYGSgR7REI4+CW1fNKwOg=" crossorigin="anonymous"></script>
 
     <!-- Bootstrap -->
@@ -37,41 +37,41 @@
 
 <div class="container-fluid">
 
-<h1>Contexts Hierarchy</h1>
+    <h1>Contexts Hierarchy</h1>
 
-<form>
-    <div class="form-row">
-        <div class="form-group col-md-2">
-            <div class="row">
-                <div class="col-md-12">
-                    <label for="selApp">App</label>
+    <form>
+        <div class="form-row">
+            <div class="form-group col-md-2">
+                <div class="row">
+                    <div class="col-md-12">
+                        <label for="selApp">App</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <select id="selApp" name="app" class="selectpicker form-control">
+                            <option>Loading...</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-12">
-                <select id="selApp" name="app" class="selectpicker form-control">
-                    <option>Loading...</option>
-                </select>
+            <div class="form-group col-md-6 offset-md-1">
+                <div class="row">
+                    <div class="col-md-12">
+                        <label for="selBean">Bean</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <select id="selBean" name="bean" class="selectpicker form-control" data-live-search="true">
+                            <option>Loading...</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="form-group col-md-6 offset-md-1">
-            <div class="row">
-                <div class="col-md-12">
-                    <label for="selBean">Bean</label>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <select id="selBean" name="bean" class="selectpicker form-control" data-live-search="true">
-                        <option>Loading...</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </div>
 
-</form>
+    </form>
 
     <div id="mynetwork">
     </div>
@@ -83,38 +83,38 @@
 
 <script type="text/javascript">
 
-	// create a network
-	var container = document.getElementById('mynetwork');
+    // create a network
+    var container = document.getElementById('mynetwork');
 
-	var options = {
-		layout : {
-			hierarchical : {
-				enabled : true,
-				direction : 'LR',
+    var options = {
+        layout : {
+            hierarchical : {
+                enabled : true,
+                direction : 'LR',
                 levelSeparation : 100,
                 nodeSpacing : 100,
                 treeSpacing : 100
-			}
+            }
         },
-		groups : {
-			app : { color:{background:'#ffffcc'}, level:0, title:"Web Application"},
-			rootCtx : { color:{background:'#ffffcc'}, level:3, shape:'box'},
-			childCtx : { color:{background:' #ffff80'}, level:3, shape:'box'},
-			bean : { color:{background:'#f2f2f2'}, level:9, shape:'box', title:"Bean", },
+        groups : {
+            app : { color:{background:'#ffff80'}, level:0, title:"Web Application"},
+            rootCtx : { color:{background:'#ffff80'}, level:3, shape:'box'},
+            childCtx : { color:{background:' #ffffcc'}, level:3, shape:'box'},
+            bean : { color:{background:'#f2f2f2'}, level:9, shape:'box', title:"Bean", },
             beanCluster : { color:{background:'#f2f2f2'}, level:6, shape:'box',
                 title:"Beans Cluster: double-click to expand", borderWidth:4, shadow:true},
         },
         edges : {
-			arrows : {
-				to : {
-					enabled : true,
+            arrows : {
+                to : {
+                    enabled : true,
                     scaleFactor : 0.5
                 }
-			}
+            }
         },
         nodes : {
-			font : {
-				multi : 'html'
+            font : {
+                multi : 'html'
             }
         },
         physics : { enabled : false}
@@ -130,9 +130,9 @@
             this.edges.add(data.edges);
         }
     };
-	var network = new vis.Network(container, networkData, options);
+    var network = new vis.Network(container, networkData, options);
 
-	var $selApp = $("#selApp"), $selBean = $("#selBean");
+    var $selApp = $("#selApp"), $selBean = $("#selBean");
     var filterAppName = null, filterBeanName = null;
     var expandContextId = null;
 
@@ -155,7 +155,7 @@
         loadAndDrawNetwork();
     }
 
-	network.on('doubleClick', function(params) {
+    network.on('doubleClick', function(params) {
         if (params.nodes.length === 1) {
             var nodeId = params.nodes[0];
             var n = networkData.nodes.get(nodeId);
@@ -253,7 +253,7 @@
     network.on('oncontext', function(params) {
         const e = params.event;
         if (e.ctrlKey) {
-	        return;
+            return;
         }
         e.preventDefault();
 
@@ -348,8 +348,8 @@
     }
 
     function loadAndDrawNetwork() {
-		$.get("/smxapi/visdata", queryParams(filterAppName, filterBeanName, expandContextId), function(data) {
-		    networkData.update(data);
+        $.get("/smxapi/visdata", queryParams(filterAppName, filterBeanName, expandContextId), function(data) {
+            networkData.update(data);
         });
     }
 
