@@ -125,6 +125,7 @@
                     $tableContent.append(tr);
                 });
             });
+            applyFilter();
         });
     }
 
@@ -139,12 +140,16 @@
         });
     }
 
+    function applyFilter() {
+        let filterValue = $filter.val().toLowerCase();
+        $("#valuesTable tbody>tr").filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(filterValue) > -1)
+        });
+    }
+
     function wireFilter() {
         $filter.on("keyup", function() {
-            let value = $(this).val().toLowerCase();
-            $("#valuesTable tbody>tr").filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-            });
+            applyFilter();
         });
     }
 
