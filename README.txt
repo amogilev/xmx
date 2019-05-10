@@ -6,7 +6,13 @@ specifying them in the configuration file. Moreover, all 'service's, 'manager's 
 managed by default.
 
 XMX provides both the Web UI for advanced managing of the selected classes, and the JMX 
-bridge to use in your favorite JMX viewer, like 'jconsole'.
+bridge to use in your favorite JMX viewer, like 'jconsole'. (The JMX bridge is disabled 
+by default, by may be easily enabled in the configuration).
+
+Additionally, XMX provides a convenient Web viewer for all Spring contexts and beans, and 
+also all resolved Spring placeholders and properties in your application. The Spring beans
+may be managed in the same way as other selected classes, besides that they are managed
+automatically and require no specification in the configuration file.
 
 XMX is a pure Java library, so it is available on all platforms, including Windows, Linux 
 and MacOS.
@@ -52,6 +58,21 @@ In the Web UI, you can do the following:
 - for each instance, view values of all fields as JSON or toString;
 - set a new value for any field (primitive values and JSON are accepted);
 - run any method, specifying primitive values or JSON as the arguments.
+
+By default, the web UI is available at http://localhost:8081, but the port number may be 
+changed in the configuration file
+
+== Spring MX Web UI Features ==
+
+An advanced viewer for all Spring contexts and beans is available at 
+http://localhost:8081/smx/. It contains an interactive visual graph with all found Spring 
+contexts and beans. Please use a mouse right-button clicks to call a context menu, which 
+provides further available actions, like 
+- viewing details of the bean definition;
+- viewing details of the bean instance (which allows managing action like changing fields 
+and calling methods);
+- displaying resolved placeholders and properties related to a given context.
+
 
 == AOP Advices ==
 
