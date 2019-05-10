@@ -77,7 +77,7 @@ public interface ConfigDefaults {
 			new OptionDescription(Properties.GLOBAL_EMB_SERVER_ENABLED, true, "Whether to enable the embedded web server"),
 			new OptionDescription(Properties.GLOBAL_EMB_SERVER_IMPL, "Jetty", "The embedded web server implementation. Only Jetty is supported now"),
 			new OptionDescription(Properties.GLOBAL_EMB_SERVER_PORT, 8081, "The port for the embedded web server"),
-			new OptionDescription(Properties.GLOBAL_JMX_ENABLED, true, "Whether to publish managed objects to JMX"),
+			new OptionDescription(Properties.GLOBAL_JMX_ENABLED, false, "Whether to publish managed objects to JMX"),
 			new OptionDescription(Properties.GLOBAL_LOG_LEVEL, "INFO", "The log level: OFF, ERROR, WARN, INFO or DEBUG"),
 			new OptionDescription(Properties.GLOBAL_LOG_DIR, "${user.home}/.xmx/logs/",
 				"The directory for log files or STDOUT or STDERR"),

@@ -49,7 +49,7 @@ public final class XmxManager implements IXmxCoreService {
 	private final static Logger logger = LoggerFactory.getLogger(XmxManager.class);
 
 	// how many milliseconds to wait before starting embedded web UI
-	private static final int UI_START_DELAY = 10000;
+	private static final int UI_START_DELAY = 5_000;
 
 	private static final String LAUNCHER_CLASS_ATTR = "XMX-Server-Launcher-Class";
 
