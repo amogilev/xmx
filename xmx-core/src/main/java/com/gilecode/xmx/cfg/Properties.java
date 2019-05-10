@@ -27,6 +27,12 @@ public final class Properties {
 	public static final String GLOBAL_LOG_CFG_FILE = "Log.LogbackCfg.File";
 
 	//
+	// "hidden" global properties
+	//
+	public static final String GLOBAL_WELCOME_XMX_NAME = "Welcome.Name";
+	public static final String GLOBAL_WELCOME_SKIP_HOME = "Welcome.Home.Skip";
+
+	//
 	// known class-level (and above) properties
 	//
 	public static final String CLASS_MAX_INSTANCES = "MaxInstances";
@@ -51,7 +57,8 @@ public final class Properties {
 	// all known names of System-level properties
 	private static final Set<String> ALL_SYSTEM_PROPNAMES = new HashSet<>(Arrays.asList(
 			GLOBAL_ENABLED, GLOBAL_EMB_SERVER_ENABLED, GLOBAL_EMB_SERVER_IMPL, GLOBAL_EMB_SERVER_PORT, 
-			GLOBAL_JMX_ENABLED, GLOBAL_LOG_LEVEL, GLOBAL_LOG_DIR, GLOBAL_LOG_CFG_FILE));
+			GLOBAL_JMX_ENABLED, GLOBAL_LOG_LEVEL, GLOBAL_LOG_DIR, GLOBAL_LOG_CFG_FILE,
+			GLOBAL_WELCOME_XMX_NAME, GLOBAL_WELCOME_SKIP_HOME));
 	
 	// all known names of Class-level properties
 	private static final Set<String> ALL_CLASS_PROPNAMES = new HashSet<>(Arrays.asList(

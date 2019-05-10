@@ -2,10 +2,8 @@
 
 package com.gilecode.xmx.core;
 
-import com.gilecode.ucfg.ConfigLoadStatus;
 import com.gilecode.xmx.boot.IXmxBootService;
 import com.gilecode.xmx.cfg.IXmxConfig;
-import com.gilecode.xmx.cfg.Properties;
 import com.gilecode.xmx.cfg.impl.XmxIniConfig;
 import com.gilecode.xmx.log.LogbackConfigurator;
 import org.slf4j.LoggerFactory;
@@ -31,7 +29,7 @@ public class XmxLoader {
 		instance = new XmxManager(config, homeDir);
 
 		if (instance.isEnabled()) {
-			printWelcomeMessage(config, homeDir);
+			XmxWelcomeProvider.printWelcomeMessage(config, homeDir);
 		}
 
 		return instance;
@@ -52,30 +50,6 @@ public class XmxLoader {
 		// the following line actually initializes SLF4J/Logback logging
 		LoggerFactory.getLogger(XmxLoader.class);
 		config.onLoggingInitialized();
-	}
-
-	private static void printWelcomeMessage(IXmxConfig config, File homeDir) {
-		StringBuilder sb = new StringBuilder(1024);
-		String prefix = "=[XMX]= ";
-		String newline = System.lineSeparator();
-		String implVersion = XmxLoader.class.getPackage().getImplementationVersion();
-
-		ConfigLoadStatus cfgStatus = config.getLoadStatus();
-		sb.append(prefix).append("XMX Agent ").append(implVersion).append(" is started using configuration in ")
-				.append(config.getConfigurationFile());
-		if (cfgStatus != ConfigLoadStatus.SUCCESS) {
-			sb.append(" (").append(cfgStatus.message()).append(")");
-		}
-		sb.append(newline);
-
-		sb.append(prefix).append("XMX Home Dir=").append(homeDir).append(newline);
-
-		sb.append(prefix).append(LogbackConfigurator.getLastStatus()).append(newline);
-		if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
-			String webPort = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT).asString();
-			sb.append(prefix).append("Web console will be started at http://localhost:").append(webPort).append(newline);
-		}
-		System.out.print(sb.toString());
 	}
 }
 
