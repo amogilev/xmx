@@ -213,7 +213,7 @@
             <c:set var="truncated" value="${fieldInfo.text.jsonTruncated &&
                 (valKind == 'JSON' || (valKind == 'SMART' && fieldInfo.text.smartUsesJson))
             }"/>
-            <td><input type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldValue)}"/></td>
+            <td width="50%"><input style="width: 99%" type="text" id="value_${fieldInfo.id}" value="${fn:escapeXml(fieldValue)}"/></td>
             <td class="supportsTruncationWarning">
                 <input type="button" onclick="callSetElement('${fieldInfo.id}');" value="Set">
                 <c:if test="${truncated}">
