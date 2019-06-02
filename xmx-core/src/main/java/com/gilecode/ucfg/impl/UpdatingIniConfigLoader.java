@@ -449,17 +449,21 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 				String optionName = ((HasOption)line).getOptionName();
 				OptionDescription optionDesc = sectionDesc.getOptionsByName().get(optionName);
 				if (optionDesc == null) {
-					if (line instanceof OptionLine && !cfgInfoProvider.isSupportedOption(sectionDesc.getName(), optionName)) {
-						logger.warn("Configuration: removing unsupported option {}", optionName);
-						s.remove(optionName);
+					if (line instanceof OptionLine && cfgInfoProvider.isSupportedOption(sectionDesc.getName(), optionName)) {
+						// supported but hidden option, generate temp description for local use
+						optionDesc = new OptionDescription(optionName, "");
+					} else {
+						if (line instanceof OptionLine) {
+							logger.warn("Configuration: removing unsupported option {}", optionName);
+							s.remove(optionName);
+						}
+						// keep only user comments, clean all auto-comments found so far
+						generateAndAddCommentFromLinesTo(pendingApprovedComments, sectionLines,
+								lastProcessedOptionLine + 1, i - 1, SectionLineInfo.Kind.USERCOMMENT);
+						updated = true;
+						lastProcessedOptionLine = i;
+						continue;
 					}
-					
-					// keep only user comments, clean all auto-comments found so far
-					generateAndAddCommentFromLinesTo(pendingApprovedComments, sectionLines, 
-							lastProcessedOptionLine + 1, i - 1, SectionLineInfo.Kind.USERCOMMENT);
-					updated = true;
-					lastProcessedOptionLine = i;
-					continue;
 				}
 				foundOptions.add(optionName);
 				
@@ -470,8 +474,8 @@ public class UpdatingIniConfigLoader implements IUpdatingConfigLoader<Ini> {
 				boolean skipDefault = false;
 				
 				if (line.kind == SectionLineInfo.Kind.OPTION) {
-					// matches only if defoption already met above, and there is no extra auto-comments
-					autoCommentsMatch = foundDefOptions.contains(optionName) &&
+					// matching checks that defoption (if any) is already met above, and there are no extra auto-comments
+					autoCommentsMatch = (foundDefOptions.contains(optionName) || optionDesc.getComments().length == 0) &&
 						!containsLineKind(sectionLines.subList(lastProcessedOptionLine + 1, i), SectionLineInfo.Kind.AUTOCOMMENT);
 					if (!autoCommentsMatch) {
 						// we will add defoption on update, so consider it "found"
