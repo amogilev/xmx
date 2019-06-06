@@ -67,7 +67,7 @@ public class XmxProxy {
 					// NOTE: cannot use AppClassLoader as parent, as need to use our version os some jars (e.g. logback)
 					//       Bootstrap CL as parent seems fine though. Alternatively, implement "local-first"
 					//       policy in XmxUrlClassLoader
-					ClassLoader xmxClassLoader = new XmxURLClassLoader(urls, null);
+					ClassLoader xmxClassLoader = new XmxURLClassLoader(urls, getPlatformClassLoader());
 
 					Class<?> xmxLoaderClass =
 							Class.forName("com.gilecode.xmx.core.XmxLoader", true, xmxClassLoader);
@@ -93,6 +93,28 @@ public class XmxProxy {
 		}
 		
 		return xmxService != null;
+	}
+
+	private static ClassLoader getPlatformClassLoader() {
+		int javaVersion = getMajorJavaVersion();
+		if (javaVersion >= 9) {
+			try {
+				return (ClassLoader) ClassLoader.class.getDeclaredMethod("getPlatformClassLoader").invoke(null);
+			} catch (Exception e) {
+				logError("Failed to obtain the platform ClassLoader in Java " + javaVersion, e);
+			}
+		}
+		return null;
+	}
+
+	private static int getMajorJavaVersion() {
+		String[] parts = System.getProperty("java.version").split("[._]");
+		int firstVer = Integer.parseInt(parts[0]);
+		if (firstVer == 1 && parts.length > 1) {
+			return Integer.parseInt(parts[1]);
+		} else {
+			return firstVer;
+		}
 	}
 
 	@SafeVarargs
