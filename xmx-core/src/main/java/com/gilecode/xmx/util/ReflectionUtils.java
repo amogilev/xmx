@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Comparator;
 
 /**
@@ -57,6 +58,13 @@ public class ReflectionUtils {
 		return safeInvokeMethod(m, obj);
 	}
 
+
+	public static Object safeFindInvokeMethodWithIgnoredExceptions(Object obj, String className, String methodName,
+			Collection<? extends Class<? extends Exception>> ignored) {
+		Method m = safeFindMethod(obj, className, methodName);
+		return safeInvokeMethodWithIgnoredExceptions(m, ignored, obj);
+	}
+
 	public static <T> T safeFindGetField(Object obj, String className, String fieldName, Class<T> fieldClass) {
 		Field f = safeFindField(obj, className, fieldName);
 		if (f == null) {
@@ -80,6 +88,21 @@ public class ReflectionUtils {
 			return m.invoke(obj, args);
 		} catch (Exception e) {
 			logger.warn("Failed to invoke method " + m + " on obj " + obj, e);
+			return null;
+		}
+	}
+
+	public static Object safeInvokeMethodWithIgnoredExceptions(Method m, Collection<? extends Class<? extends Exception>> ignored,
+			Object obj, Object...args) {
+		if (m == null) {
+			return null;
+		}
+		try {
+			return m.invoke(obj, args);
+		} catch (Exception e) {
+			if (!ignored.contains(e.getClass())) {
+				logger.warn("Failed to invoke method " + m + " on obj " + obj, e);
+			}
 			return null;
 		}
 	}

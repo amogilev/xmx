@@ -44,7 +44,7 @@ public class Config {
 
 	@Bean
 	public IXmxUiService xmxUiService() {
-		return new XmxUiService(methodInfoService(), xmxService(), mapperService(), refPathParser());
+		return new XmxUiService(methodInfoService(), xmxService(), mapperService(), refPathParser(), contextDataExtractor());
 	}
 
 	@Bean

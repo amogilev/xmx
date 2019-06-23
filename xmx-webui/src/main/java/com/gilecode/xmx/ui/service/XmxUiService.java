@@ -11,6 +11,7 @@ import com.gilecode.xmx.service.IXmxService;
 import com.gilecode.xmx.ui.UIConstants;
 import com.gilecode.xmx.ui.dto.*;
 import com.gilecode.xmx.ui.refpath.*;
+import com.gilecode.xmx.ui.smx.context.ContextDataExtractor;
 import com.gilecode.xmx.util.ReflectionUtils;
 import com.gilecode.yagson.YaGson;
 import org.apache.commons.collections4.CollectionUtils;
@@ -40,13 +41,15 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 	private final IXmxService xmxService;
 	private final IMapperService mapperService;
 	private final RefPathParser refPathParser;
+	private final ContextDataExtractor contextDataExtractor;
 
 	public XmxUiService(IMethodInfoService methodInfoService, IXmxService xmxService, IMapperService mapperService,
-			RefPathParser refPathParser) {
+			RefPathParser refPathParser, ContextDataExtractor contextDataExtractor) {
 		this.methodInfoService = methodInfoService;
 		this.xmxService = xmxService;
 		this.mapperService = mapperService;
 		this.refPathParser = refPathParser;
+		this.contextDataExtractor = contextDataExtractor;
 	}
 
 	@Override
@@ -274,9 +277,9 @@ public class XmxUiService implements IXmxUiService, UIConstants {
 		} else if (suffix instanceof RefPathBeanSuffix) {
 			// expect a Spring bean name
 			Class<?> c = source.getClass();
-			Object beanFactory = ReflectionUtils.safeFindInvokeMethod(source, "org.springframework.context.support.AbstractApplicationContext", "getBeanFactory");
+			Object beanFactory = contextDataExtractor.getBeanFactory(source);
 			if (beanFactory == null) {
-				throw new RefPathSyntaxException("Expects a Spring ApplicationContext as parent object but got " + c + " instead",
+				throw new RefPathSyntaxException("Expects a refreshed Spring ApplicationContext as parent object but got " + c + " instead",
 						refPath.buildPath(level));
 			}
 			String beanName = ((RefPathBeanSuffix) suffix).getBeanName();

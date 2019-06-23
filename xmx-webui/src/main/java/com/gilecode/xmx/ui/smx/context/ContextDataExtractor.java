@@ -6,13 +6,9 @@ import com.gilecode.xmx.model.XmxObjectInfo;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
-import static com.gilecode.xmx.util.ReflectionUtils.safeFindGetField;
-import static com.gilecode.xmx.util.ReflectionUtils.safeFindInvokeMethod;
+import static com.gilecode.xmx.util.ReflectionUtils.*;
 
 public class ContextDataExtractor {
 
@@ -20,13 +16,16 @@ public class ContextDataExtractor {
     private static final String JAVA_WEB_BOOT_CTX_CLASSNAME = "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext";
 
     /**
-     * Extracts the bean factory from a Spring context object.
+     * Extracts the bean factory from a Spring context object, silently suppresses IllegalStateException for
+     * non-refreshed or otherwise invalid contexts.
      *
      * @return the bean factory, or {@code null} if invalid or unsupported context object is passed
      */
-    public Object getBeanFactory(XmxObjectInfo ctxObjInfo) {
-        Object ctxObj = ctxObjInfo.getValue();
-        return safeFindInvokeMethod(ctxObj, "org.springframework.context.support.AbstractApplicationContext", "getBeanFactory");
+    public Object getBeanFactory(Object ctxObj) {
+        return safeFindInvokeMethodWithIgnoredExceptions(ctxObj,
+                "org.springframework.context.support.AbstractApplicationContext",
+                "getBeanFactory",
+                Collections.singleton(IllegalStateException.class));
     }
 
     /**
@@ -40,7 +39,10 @@ public class ContextDataExtractor {
      * Extracts all bean definition names from the specified context object.
      */
     public String[] getBeanDefinitionNames(XmxObjectInfo ctxObjInfo) {
-        Object beanFactory = getBeanFactory(ctxObjInfo);
+        Object beanFactory = getBeanFactory(ctxObjInfo.getValue());
+        if (beanFactory == null) {
+            return new String[0];
+        }
         return getFactoryBeanDefinitionNames(beanFactory);
     }
 

@@ -133,7 +133,11 @@ public class SmxVisDataService implements IVisDataService {
                 simpleClassName,
                 contextDataExtractor.extractContextDetails(ctxObj, className));
 
-        Object beanFactory = contextDataExtractor.getBeanFactory(ctxObjInfo);
+        Object beanFactory = contextDataExtractor.getBeanFactory(ctxObjInfo.getValue());
+        if (beanFactory == null) {
+            // not available yet, e.g. the context is not refreshed
+            return ci;
+        }
         String[] bdNames = contextDataExtractor.getFactoryBeanDefinitionNames(beanFactory);
 
         ContextBeansDisplayPredicate dispPred = pp.getPredicate(contextId);
