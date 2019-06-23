@@ -2,6 +2,8 @@
 
 package com.gilecode.xmx.server;
 
+import com.gilecode.xmx.cfg.IXmxConfig;
+
 import java.io.File;
 
 /**
@@ -22,10 +24,9 @@ public interface IXmxServerLauncher {
 
 	/**
 	 * Launch the server and deploy the specified WAR application there.
-	 * 
 	 * @param warFile the web application archive file
-	 * @param port the port to use 
+	 * @param config the XMX configuration which specifies which port to use and possibly other parameters
 	 */
-	void launchServer(File warFile, int port);
+	void launchServer(File warFile, IXmxConfig config);
 	
 }

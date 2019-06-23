@@ -2,6 +2,9 @@
 
 package com.gilecode.xmx.server.impl;
 
+import com.gilecode.xmx.cfg.IXmxConfig;
+import com.gilecode.xmx.cfg.Properties;
+import com.gilecode.xmx.core.XmxWelcomeProvider;
 import com.gilecode.xmx.server.IXmxServerLauncher;
 import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
 import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
@@ -30,10 +33,11 @@ public class XmxEmbeddedJettyLauncher implements IXmxServerLauncher {
 	private final static Logger logger = LoggerFactory.getLogger(XmxEmbeddedJettyLauncher.class);
 
 	@Override
-	public void launchServer(File warFile, int port) {
+	public void launchServer(File warFile, IXmxConfig config) {
 		try {
 			Thread.currentThread().setContextClassLoader(XmxEmbeddedJettyLauncher.class.getClassLoader());
-			
+
+			int port = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT).asInt();
 			// TODO: check port for JVM_Bind, allow auto-select ranges
 			
 			// make all Jetty threads daemon so that they do not prevent apps shutdown
@@ -77,6 +81,8 @@ public class XmxEmbeddedJettyLauncher implements IXmxServerLauncher {
 	        server.start();
 
 	        logger.info("Started XMX Web Server at http://localhost:{}", port);
+
+			XmxWelcomeProvider.printWelcomeToStartedUI(config, port);
 		} catch (Exception e) {
 			logger.error("Failed to launch XMX Web Server", e);
 		}

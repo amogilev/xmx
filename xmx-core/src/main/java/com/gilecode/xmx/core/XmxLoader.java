@@ -29,7 +29,7 @@ public class XmxLoader {
 		instance = new XmxManager(config, homeDir);
 
 		if (instance.isEnabled()) {
-			XmxWelcomeProvider.printWelcomeMessage(config, homeDir);
+			XmxWelcomeProvider.printWelcomeHeader(config, homeDir);
 		}
 
 		return instance;

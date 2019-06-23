@@ -12,9 +12,24 @@ import java.io.File;
 
 public class XmxWelcomeProvider {
 
-    static void printWelcomeMessage(IXmxConfig config, File homeDir) {
+    /**
+     * Prints a message which is important and shall go to System.out rather than to log, similar to
+     * the primary welcome header.
+     */
+    public static void printWelcomeToStartedUI(IXmxConfig config, int actualPort) {
+        String prefix = getPrefix(config);
+        StringBuilder sb = new StringBuilder(256);
+        String newline = System.lineSeparator();
+        sb.append(prefix).append(newline);
+        sb.append(prefix).append("Web console is successfully started at ");
+        appendUiUrl(sb, actualPort);
+        sb.append(newline).append(prefix).append(newline);
+        System.out.print(sb.toString());
+    }
+
+    public static void printWelcomeHeader(IXmxConfig config, File homeDir) {
         StringBuilder sb = new StringBuilder(1024);
-        String prefix = "=[" + getWelcomeXmxName(config) + "]= ";
+        String prefix = getPrefix(config);
         String newline = System.lineSeparator();
         String implVersion = XmxLoader.class.getPackage().getImplementationVersion();
 
@@ -32,12 +47,15 @@ public class XmxWelcomeProvider {
 
         sb.append(prefix).append(LogbackConfigurator.getLastStatus()).append(newline);
         if (config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_ENABLED).asBool()) {
-            String webPort = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT).asString();
-            sb.append(prefix).append("Web console will be started at http://localhost:").append(webPort)
-                    .append("/smx/") // may need to configure main UI URL for different XMX editions
-                    .append(newline);
+            sb.append(prefix).append("Web console will be started at ");
+            appendUiUrl(sb, config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT));
+            sb.append(" in ~10 seconds").append(newline);
         }
         System.out.print(sb.toString());
+    }
+
+    private static String getPrefix(IXmxConfig config) {
+        return "=[" + getWelcomeXmxName(config) + "]= ";
     }
 
     private static boolean skipWelcomeHomeLocation(IXmxConfig config) {
@@ -49,4 +67,10 @@ public class XmxWelcomeProvider {
         PropertyValue prop = config.getSystemProperty(Properties.GLOBAL_WELCOME_XMX_NAME);
         return prop == null ? "XMX" : prop.asString();
     }
+
+    private static void appendUiUrl(StringBuilder sb, Object uiPort) {
+        // may need to configure main UI URL for different XMX editions
+        sb.append("http://localhost:").append(uiPort).append("/smx/");
+    }
+
 }

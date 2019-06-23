@@ -761,8 +761,7 @@ public final class XmxManager implements IXmxCoreService {
 					Thread.sleep(UI_START_DELAY);
 				} catch (InterruptedException ignored) {
 				}
-				int port = config.getSystemProperty(Properties.GLOBAL_EMB_SERVER_PORT).asInt();
-				launcher.launchServer(uiWarFile, port);
+				launcher.launchServer(uiWarFile, config);
 			}
 		}, "XMX Embedded Server Startup Thread");
 		startupThread.setDaemon(true);
