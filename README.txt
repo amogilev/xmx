@@ -98,7 +98,7 @@ patterns which match the multiple methods, like
   "String get*()"   - matches all String-returning getters
 
 The detailed specification of the method patterns with extra examples may be found in Wiki:
-https://bitbucket.org/amogilev/xmx/wiki/xmx.ini%20configuration%20file%20format
+https://github.com/amogilev/xmx/wiki/xmx.ini-configuration-file-format
 
 == How to build  ==
 
